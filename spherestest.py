@@ -3,10 +3,27 @@
 #from mayavi.mlab import *
 import sys
 import math, random
-from mpl_toolkits.mplot3d import Axes3D
+from mpl_toolkits.mplot3d import Axes3D, proj3d
 import matplotlib.pyplot as plt
+from matplotlib.mlab import PCA
+from matplotlib.patches import FancyArrowPatch
+from matplotlib.tri import Triangulation
 import numpy as np
+import numpy.linalg
 from scipy.optimize import leastsq, least_squares
+from scipy.spatial import Delaunay, ConvexHull
+import pymesh
+
+class Arrow3D(FancyArrowPatch):
+	def __init__(self, xs, ys, zs, *args, **kwargs):
+		FancyArrowPatch.__init__(self, (0,0), (0,0), *args, **kwargs)
+		self._verts3d = xs, ys, zs
+
+	def draw(self, renderer):
+		xs3d, ys3d, zs3d = self._verts3d
+		xs, ys, zs = proj3d.proj_transform(xs3d, ys3d, zs3d, renderer.M)
+		self.set_positions((xs[0],ys[0]),(xs[1],ys[1]))
+		FancyArrowPatch.draw(self, renderer)
 
 def generateSphere(samples=1,radius=1,randomize=True):
 	rnd = 1.
@@ -69,8 +86,8 @@ def measureDiameter(sphere):
 	#vertices = generateSphere(300, 35)
 	pointBounds = getPointBounds(sphere)
 
-	#p0 = [pointBounds[0][0],pointBounds[1][0],pointBounds[2][0],36]
-	centerPointGuess = [-124.63678821,-283.53124005,-334.92304383, 1]
+	centerPointGuess = [pointBounds[0][0],pointBounds[1][0],pointBounds[2][0],36]
+	#centerPointGuess = [-124.63678821,-283.53124005,-334.92304383, 1]
 	errfunc = lambda p,x: fitfunc(p,x)
 	#res = least_squares(errfunc, centerPointGuess, bounds=([pointBounds[0][0],pointBounds[1][0],pointBounds[2][0],1],
 	#[pointBounds[0][1],pointBounds[1][1],pointBounds[2][1],np.inf]), args=(vertices,))
@@ -105,7 +122,6 @@ def plotRadialDeviation(fig,sphere, center, radius, minRadius, maxRadius):
 	zValues = sphere[2]-center[2]
 	h = np.sqrt((sphere[0]-center[0])**2 + (sphere[2]-center[2])**2)
 	r = distance(sphere,center)
-	print center
 
 	alphas = np.arcsin(zValues/h)
 	zIndices = np.where(zValues<0)
@@ -129,8 +145,28 @@ if __name__ == '__main__':
 		#print "Please specify a file to open"
 		sys.exit(1)
 
-	vertices,norms = loadOBJ(sys.argv[1])
-	#vertices = generateSphere(300, 35)
+	#mesh = pymesh.load_mesh(sys.argv[1])
+	#vertices = mesh.vertices.T
+	#print mesh.faces
+
+	#vertices,norms = loadOBJ(sys.argv[1])
+	vertices = generateSphere(300, 35)
+
+	cvx = ConvexHull(vertices.T)
+	x,y,z = vertices
+
+	tri = Triangulation(x,y, triangles=cvx.simplices)
+	#tri = Delaunay(vertices.T)
+	mesh = pymesh.form_mesh(vertices, tri.triangles)
+	vertices = mesh.vertices
+	#print tri.simplices[1,:]
+
+	mesh.add_attribute("vertex_gaussian_curvature")
+	#curvature = mesh.get_attribute("vertex_gaussian_curvature")
+	#print curvature
+
+	cov = np.cov(vertices)
+	eigval, eigvec = np.linalg.eig(cov)
 
 	centerPoint = measureDiameter(vertices)
 	meanRadius = centerPoint[3]
@@ -144,13 +180,16 @@ if __name__ == '__main__':
 	plotRadialDeviation(fig, vertices, centerPoint, meanRadius, minRadius, maxRadius)
 	plt.axis('scaled')
 	ax = fig.add_subplot(212, projection='3d')
-	ax.scatter(vertices[0].tolist(), vertices[1].tolist(), vertices[2].tolist())
-	ax.scatter(centerPoint[0], centerPoint[1], centerPoint[2], c='r')
+	#ax.scatter(vertices[0].tolist(), vertices[1].tolist(), vertices[2].tolist(), c="b")
+	ax.plot_trisurf(vertices[0].tolist(), vertices[1].tolist(), vertices[2].tolist(), triangles=tri.triangles)
+	ax.scatter(centerPoint[0], centerPoint[1], centerPoint[2], c='black')
+
+	for vec,val in zip(eigvec.T,eigval):
+		arrowEndPoint = centerPoint[0:3] + vec*val*0.1
+		arrow = Arrow3D([centerPoint[0], arrowEndPoint[0]], [centerPoint[1], arrowEndPoint[1]], [centerPoint[2], arrowEndPoint[2]], mutation_scale=20, lw=2, arrowstyle='-|>', color="r")
+		ax.add_artist(arrow)
+
 	ax.set_xlabel('x')
 	ax.set_ylabel('y')
 	ax.set_zlabel('z')
 	plt.show()
-	#clf(fig)
-	#points3d(vertices[0],vertices[1],vertices[2],mode='point')
-	#raw_input("press any key to exit")
-	#show()
