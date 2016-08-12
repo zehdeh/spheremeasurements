@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 from matplotlib.mlab import PCA
 from matplotlib.patches import FancyArrowPatch
 from matplotlib.tri import Triangulation
+from matplotlib import cm
 import numpy as np
 import numpy.linalg
 from scipy.optimize import leastsq, least_squares
@@ -145,25 +146,26 @@ if __name__ == '__main__':
 		#print "Please specify a file to open"
 		sys.exit(1)
 
-	#mesh = pymesh.load_mesh(sys.argv[1])
-	#vertices = mesh.vertices.T
-	#print mesh.faces
+	mesh = pymesh.load_mesh(sys.argv[1])
+	vertices = mesh.vertices.T
+	print mesh.faces
 
 	#vertices,norms = loadOBJ(sys.argv[1])
-	vertices = generateSphere(300, 35)
+	#vertices = generateSphere(300, 35)
 
-	cvx = ConvexHull(vertices.T)
-	x,y,z = vertices
+	#cvx = ConvexHull(vertices.T)
+	#x,y,z = vertices
 
-	tri = Triangulation(x,y, triangles=cvx.simplices)
+	#tri = Triangulation(x,y, triangles=cvx.simplices)
 	#tri = Delaunay(vertices.T)
-	mesh = pymesh.form_mesh(vertices, tri.triangles)
-	vertices = mesh.vertices
+	#mesh = pymesh.form_mesh(vertices, tri.triangles)
 	#print tri.simplices[1,:]
 
 	mesh.add_attribute("vertex_gaussian_curvature")
-	#curvature = mesh.get_attribute("vertex_gaussian_curvature")
+	curvature = mesh.get_attribute("vertex_gaussian_curvature")
+	print 'Curvature min/max: ' + str(np.min(curvature)) + '/' + str(np.max(curvature))
 	#print curvature
+	print 'Total curvature: ' + str(np.sum(curvature))
 
 	cov = np.cov(vertices)
 	eigval, eigvec = np.linalg.eig(cov)
@@ -171,23 +173,32 @@ if __name__ == '__main__':
 	centerPoint = measureDiameter(vertices)
 	meanRadius = centerPoint[3]
 	[minRadius,maxRadius] = measureRadialDeviation(vertices, centerPoint, meanRadius)
+	print 'Expected curvature: ' + str(1/(meanRadius**2))
+	print curvature
 
 	print 'Expected radius: ' + str(35)
 	print 'Fitted radius: ' + str(meanRadius)
 	print 'Radial deviation: (+ ' + str(maxRadius) + ',- ' + str(minRadius) + ')'
 
 	fig = plt.figure()
-	plotRadialDeviation(fig, vertices, centerPoint, meanRadius, minRadius, maxRadius)
+	#plotRadialDeviation(fig, vertices, centerPoint, meanRadius, minRadius, maxRadius)
 	plt.axis('scaled')
-	ax = fig.add_subplot(212, projection='3d')
+	ax = fig.add_subplot(111, projection='3d')
 	#ax.scatter(vertices[0].tolist(), vertices[1].tolist(), vertices[2].tolist(), c="b")
-	ax.plot_trisurf(vertices[0].tolist(), vertices[1].tolist(), vertices[2].tolist(), triangles=tri.triangles)
+	sc = ax.scatter(vertices[0].tolist(), vertices[1].tolist(), vertices[2].tolist(), c=curvature, cmap=cm.coolwarm)
 	ax.scatter(centerPoint[0], centerPoint[1], centerPoint[2], c='black')
+	plt.colorbar(sc)
 
 	for vec,val in zip(eigvec.T,eigval):
 		arrowEndPoint = centerPoint[0:3] + vec*val*0.1
 		arrow = Arrow3D([centerPoint[0], arrowEndPoint[0]], [centerPoint[1], arrowEndPoint[1]], [centerPoint[2], arrowEndPoint[2]], mutation_scale=20, lw=2, arrowstyle='-|>', color="r")
 		ax.add_artist(arrow)
+	
+	vecToCenter = vertices.T - centerPoint[0:3]
+	distanceToPlane = np.dot(vecToCenter, eigvec.T[0])
+	print vertices.transpose().shape
+	print eigvec.T[0].shape
+	#projectedVertices = (vertices.transpose() - distanceToPlane*eigvec.T[0]).transpose()
 
 	ax.set_xlabel('x')
 	ax.set_ylabel('y')
