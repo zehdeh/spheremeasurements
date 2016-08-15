@@ -14,6 +14,10 @@ import numpy.linalg
 from scipy.optimize import leastsq, least_squares
 from scipy.spatial import Delaunay, ConvexHull
 import pymesh
+from mpl_toolkits.mplot3d.art3d import Poly3DCollection
+import mpl_toolkits.mplot3d.art3d as art3d
+from matplotlib.patches import Circle
+from mplcolorhelper import MplColorHelper
 
 class Arrow3D(FancyArrowPatch):
 	def __init__(self, xs, ys, zs, *args, **kwargs):
@@ -136,6 +140,101 @@ def plotRadialDeviation(fig,sphere, center, radius, minRadius, maxRadius):
 	ax.scatter(alphas, r)
 	ax.grid(True)
 
+def projectToPlane(vertices, pointOnPlane, planeNormalVector):
+	vecToCenter = vertices.transpose() - pointOnPlane[0:3]
+	distanceToPlane = np.dot(vecToCenter, planeNormalVector)
+	diffValues = (planeNormalVector * distanceToPlane[:,np.newaxis]).transpose()[1]
+	return (vertices.transpose() - (planeNormalVector * distanceToPlane[:,np.newaxis])).transpose()
+
+
+def PCA(vertices):
+	cov = np.cov(vertices)
+	eigval, eigvec = np.linalg.eig(cov)
+	return eigval, eigvec.T
+
+def plotEigenVectors(centerPoint, eigval, eigvec, ax):
+	for vec,val in zip(eigvec,eigval):
+		arrowEndPoint = centerPoint[0:3] + vec*val*0.1
+		arrow = Arrow3D([centerPoint[0], arrowEndPoint[0]], [centerPoint[1], arrowEndPoint[1]], [centerPoint[2], arrowEndPoint[2]], mutation_scale=20, lw=2, arrowstyle='-|>', color="r")
+		ax.add_artist(arrow)
+
+def projectPoints(vertices, limitsMin, ax):
+	for i,axis in zip(range(3),['x','y','z']):
+		others = [j for j in range(3) if j != i]
+		ax.scatter(vertices[others[0]], vertices[others[1]], zdir=axis, zs=limitsMin[i],cmap=cm.coolwarm)
+
+def getBorderFaces(vertices, faces):
+	borderEdges = set()
+	for f in faces:
+		t1 = (min(f[0],f[1]),max(f[0],f[1]))
+		t2 = (min(f[1],f[2]),max(f[1],f[2]))
+		borderEdges.add(t1)
+		borderEdges.add(t2)
+
+	borderFaces = set()
+	for i,f in enumerate(faces):
+		t1 = (min(f[0],f[1]),max(f[0],f[1]))
+		t2 = (min(f[1],f[2]),max(f[1],f[2]))
+
+		if t1 in borderEdges or t2 in borderEdges:
+			borderFaces.append(i)
+	
+	return borderFaces;
+
+
+def plot3D(vertices, triangles, curvature, centerPoint, minRadius, maxRadius):
+	maxCurvature = np.max(curvature[triangles], axis=1)
+	#maxCurvature = maxCurvature / np.max(maxCurvature)
+	colorHelper = MplColorHelper('coolwarm', np.min(maxCurvature), np.max(maxCurvature), maxCurvature)
+	polyColors = [colorHelper.get_rgb(c) for c in maxCurvature]
+
+	poly3dCollection = Poly3DCollection(vertices.T[mesh.faces], facecolors=polyColors, edgecolors='black')
+
+
+	fig = plt.figure()
+	ax3d = fig.add_subplot(221, projection='3d')
+	ax3d.add_collection(poly3dCollection)
+
+	means = [np.mean(v) for v in vertices]
+	relativeMins = [np.min(v - m) for v,m in zip(vertices,means)]
+	relativeMaxs = [np.max(v - m) for v,m in zip(vertices,means)]
+	limitsMin = np.add(means,relativeMins)
+	limitsMax = np.add(means,relativeMaxs)
+	valMin = np.min(np.add(means,relativeMins))
+	valMax = np.max(np.add(means,relativeMaxs))
+	plt.colorbar(colorHelper.get_mappable())
+
+	axX = fig.add_subplot(222)
+	axY = fig.add_subplot(223)
+	axZ = fig.add_subplot(224)
+
+	for axisI,axisS,ax in zip(range(3),['x','y','z'], [axX, axY, axZ]):
+		otherAxis = [j for j in range(3) if j != axisI]
+		circle = Circle((centerPoint[otherAxis[0]], centerPoint[otherAxis[1]]), centerPoint[3], fill=False, zorder=-1)
+		ax.add_patch(circle)
+
+		maxCircle = Circle((centerPoint[otherAxis[0]], centerPoint[otherAxis[1]]), maxRadius, fill=False, color='r', zorder=-1)
+		ax.add_patch(maxCircle)
+
+		minCircle = Circle((centerPoint[otherAxis[0]], centerPoint[otherAxis[1]]), minRadius, fill=False, color='b', zorder=-1)
+		ax.add_patch(minCircle)
+
+		ax.scatter(vertices[otherAxis[0]], vertices[otherAxis[1]], c=curvature, cmap=cm.coolwarm)
+
+
+	#projectPoints(vertices, limitsMin, ax3d)
+
+	ax3d.set_xlim(limitsMin[0], limitsMax[0])
+	ax3d.set_ylim(limitsMin[1], limitsMax[1])
+	ax3d.set_zlim(limitsMin[2], limitsMax[2])
+
+
+
+	ax3d.set_xlabel('x')
+	ax3d.set_ylabel('y')
+	ax3d.set_zlabel('z')
+	plt.show()
+
 def fitfunc(center, coords):
 	x0,y0,z0,R = center
 	x,y,z = coords
@@ -143,14 +242,12 @@ def fitfunc(center, coords):
 
 if __name__ == '__main__':
 	if len(sys.argv) < 2:
-		#print "Please specify a file to open"
+		print "Please specify a file to open"
 		sys.exit(1)
 
 	mesh = pymesh.load_mesh(sys.argv[1])
 	vertices = mesh.vertices.T
-	print mesh.faces
 
-	#vertices,norms = loadOBJ(sys.argv[1])
 	#vertices = generateSphere(300, 35)
 
 	#cvx = ConvexHull(vertices.T)
@@ -161,46 +258,23 @@ if __name__ == '__main__':
 	#mesh = pymesh.form_mesh(vertices, tri.triangles)
 	#print tri.simplices[1,:]
 
+
 	mesh.add_attribute("vertex_gaussian_curvature")
 	curvature = mesh.get_attribute("vertex_gaussian_curvature")
 	print 'Curvature min/max: ' + str(np.min(curvature)) + '/' + str(np.max(curvature))
 	#print curvature
 	print 'Total curvature: ' + str(np.sum(curvature))
 
-	cov = np.cov(vertices)
-	eigval, eigvec = np.linalg.eig(cov)
+	eigval, eigvec = PCA(vertices)
+
 
 	centerPoint = measureDiameter(vertices)
 	meanRadius = centerPoint[3]
-	[minRadius,maxRadius] = measureRadialDeviation(vertices, centerPoint, meanRadius)
+	[minRadiusDev,maxRadiusDev] = measureRadialDeviation(vertices, centerPoint, meanRadius)
 	print 'Expected curvature: ' + str(1/(meanRadius**2))
-	print curvature
 
 	print 'Expected radius: ' + str(35)
 	print 'Fitted radius: ' + str(meanRadius)
-	print 'Radial deviation: (+ ' + str(maxRadius) + ',- ' + str(minRadius) + ')'
+	print 'Radial deviation: (+ ' + str(maxRadiusDev) + ',- ' + str(minRadiusDev) + ')'
 
-	fig = plt.figure()
-	#plotRadialDeviation(fig, vertices, centerPoint, meanRadius, minRadius, maxRadius)
-	plt.axis('scaled')
-	ax = fig.add_subplot(111, projection='3d')
-	#ax.scatter(vertices[0].tolist(), vertices[1].tolist(), vertices[2].tolist(), c="b")
-	sc = ax.scatter(vertices[0].tolist(), vertices[1].tolist(), vertices[2].tolist(), c=curvature, cmap=cm.coolwarm)
-	ax.scatter(centerPoint[0], centerPoint[1], centerPoint[2], c='black')
-	plt.colorbar(sc)
-
-	for vec,val in zip(eigvec.T,eigval):
-		arrowEndPoint = centerPoint[0:3] + vec*val*0.1
-		arrow = Arrow3D([centerPoint[0], arrowEndPoint[0]], [centerPoint[1], arrowEndPoint[1]], [centerPoint[2], arrowEndPoint[2]], mutation_scale=20, lw=2, arrowstyle='-|>', color="r")
-		ax.add_artist(arrow)
-	
-	vecToCenter = vertices.T - centerPoint[0:3]
-	distanceToPlane = np.dot(vecToCenter, eigvec.T[0])
-	print vertices.transpose().shape
-	print eigvec.T[0].shape
-	#projectedVertices = (vertices.transpose() - distanceToPlane*eigvec.T[0]).transpose()
-
-	ax.set_xlabel('x')
-	ax.set_ylabel('y')
-	ax.set_zlabel('z')
-	plt.show()
+	plot3D(vertices, mesh.faces, curvature, centerPoint, centerPoint[3] - minRadiusDev, centerPoint[3] + maxRadiusDev)
