@@ -1,4 +1,4 @@
-#! /usr/bin/python
+#! bin/python
 
 #from mayavi.mlab import *
 import sys
@@ -6,122 +6,22 @@ import math, random
 from mpl_toolkits.mplot3d import Axes3D, proj3d
 import matplotlib.pyplot as plt
 from matplotlib.mlab import PCA
-from matplotlib.patches import FancyArrowPatch
 from matplotlib.tri import Triangulation
 from matplotlib import cm
 import numpy as np
 import numpy.linalg
-from scipy.optimize import leastsq, least_squares
-from scipy.spatial import Delaunay, ConvexHull
-import pymesh
+from numpy.linalg import norm
+from scipy.spatial import ConvexHull
+import scipy.interpolate
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 import mpl_toolkits.mplot3d.art3d as art3d
 from matplotlib.patches import Circle
 from mplcolorhelper import MplColorHelper
+from opendr.serialization import load_mesh
+from opendr.geometry import GaussianCurvature
+from utils import *
 
-class Arrow3D(FancyArrowPatch):
-	def __init__(self, xs, ys, zs, *args, **kwargs):
-		FancyArrowPatch.__init__(self, (0,0), (0,0), *args, **kwargs)
-		self._verts3d = xs, ys, zs
 
-	def draw(self, renderer):
-		xs3d, ys3d, zs3d = self._verts3d
-		xs, ys, zs = proj3d.proj_transform(xs3d, ys3d, zs3d, renderer.M)
-		self.set_positions((xs[0],ys[0]),(xs[1],ys[1]))
-		FancyArrowPatch.draw(self, renderer)
-
-def generateSphere(samples=1,radius=1,randomize=True):
-	rnd = 1.
-	if randomize:
-		rnd = random.random() * samples
-	
-	points = []
-	offset = 2./samples
-	increment = math.pi * (3. - math.sqrt(5.))
-
-	for i in range(samples):
-#		if(((i * offset) - 1) + (offset / 2)) < 0:
-#			continue
-		y = ((i * offset) - 1) + (offset / 2)
-		r = math.sqrt(1 - pow(y,2))
-
-		phi = ((i + rnd) % samples) * increment
-
-		y *= radius
-		x = math.cos(phi) * r * radius
-		z = math.sin(phi) * r * radius
-		points.append([x,y,z])
-	
-	return np.array(points).T
-
-def distance(p1,p2):
-	return np.sqrt((p2[0]-p1[0])**2 + (p2[1]-p1[1])**2 + (p2[2]-p1[2])**2)
-
-def loadOBJ(filename):
-	numVerts = 0
-	verts = []
-	norms = []
-	vertsOut = []
-	normsOut = []
-	for line in open(filename, "r"):
-		vals = line.split()
-		if len(vals) == 0: continue
-		if vals[0] == "v":
-			v = map(float, vals[1:4])
-			verts.append(v)
-		if vals[0] == "vn":
-			n = map(float, vals[1:4])
-			norms.append(n)
-		if vals[0] == "f":
-			for f in vals[1:]:
-				w = f.split("/")
-				# OBJ Files are 1-indexed so we must subtract 1 below
-				vertsOut.append(list(verts[int(w[0])-1]))
-				normsOut.append(list(norms[int(w[2])-1]))
-				numVerts += 1
-	return np.array(verts).T, np.array(norms).T
-
-def getPointBounds(coords):
-	xbounds = [np.min(coords[0]),np.max(coords[0])]
-	ybounds = [np.min(coords[1]),np.max(coords[1])]
-	zbounds = [np.min(coords[2]),np.max(coords[2])]
-	return [xbounds,ybounds,zbounds]
-
-def measureDiameter(sphere):
-	#vertices = generateSphere(300, 35)
-	pointBounds = getPointBounds(sphere)
-
-	centerPointGuess = [pointBounds[0][0],pointBounds[1][0],pointBounds[2][0],36]
-	#centerPointGuess = [-124.63678821,-283.53124005,-334.92304383, 1]
-	errfunc = lambda p,x: fitfunc(p,x)
-	#res = least_squares(errfunc, centerPointGuess, bounds=([pointBounds[0][0],pointBounds[1][0],pointBounds[2][0],1],
-	#[pointBounds[0][1],pointBounds[1][1],pointBounds[2][1],np.inf]), args=(vertices,))
-	res = least_squares(errfunc, centerPointGuess, bounds=(-np.inf, np.inf), args=(sphere,))
-	centerPoint = res.x
-
-	lsqerr = np.sum(errfunc(centerPoint,sphere)**2)
-	noPoints = np.size(sphere)
-
-	print "Nominal error (least squares): " + str(lsqerr)
-	print "Number of points: " + str(noPoints)
-	print "Relative error: " + str(lsqerr/noPoints)
-	print "D_A: " + str(centerPoint[3]*2)
-	return centerPoint
-
-def measureRadialDeviation(sphere, center, radius):
-	minRadius = np.inf
-	maxRadius = -np.inf
-
-	for i in sphere.T:
-		currentRadius = distance(i,center)
-
-		if minRadius > currentRadius:
-			minRadius = currentRadius
-
-		if maxRadius < currentRadius:
-			maxRadius = currentRadius
-	
-	return [abs(radius - minRadius), abs(radius - maxRadius)]
 
 def plotRadialDeviation(fig,sphere, center, radius, minRadius, maxRadius):
 	zValues = sphere[2]-center[2]
@@ -163,32 +63,13 @@ def projectPoints(vertices, limitsMin, ax):
 		others = [j for j in range(3) if j != i]
 		ax.scatter(vertices[others[0]], vertices[others[1]], zdir=axis, zs=limitsMin[i],cmap=cm.coolwarm)
 
-def getBorderFaces(vertices, faces):
-	borderEdges = set()
-	for f in faces:
-		t1 = (min(f[0],f[1]),max(f[0],f[1]))
-		t2 = (min(f[1],f[2]),max(f[1],f[2]))
-		borderEdges.add(t1)
-		borderEdges.add(t2)
-
-	borderFaces = set()
-	for i,f in enumerate(faces):
-		t1 = (min(f[0],f[1]),max(f[0],f[1]))
-		t2 = (min(f[1],f[2]),max(f[1],f[2]))
-
-		if t1 in borderEdges or t2 in borderEdges:
-			borderFaces.append(i)
-	
-	return borderFaces;
-
-
-def plot3D(vertices, triangles, curvature, centerPoint, minRadius, maxRadius):
-	maxCurvature = np.max(curvature[triangles], axis=1)
-	#maxCurvature = maxCurvature / np.max(maxCurvature)
+def plot3D(vertices, triangles, curvature, centerPoint, meanRadius,minRadius, maxRadius):
+	maxCurvature = np.mean(curvature[triangles], axis=1)
+	maxCurvature = maxCurvature# / np.max(maxCurvature)
 	colorHelper = MplColorHelper('coolwarm', np.min(maxCurvature), np.max(maxCurvature), maxCurvature)
 	polyColors = [colorHelper.get_rgb(c) for c in maxCurvature]
 
-	poly3dCollection = Poly3DCollection(vertices.T[mesh.faces], facecolors=polyColors, edgecolors='black')
+	poly3dCollection = Poly3DCollection(vertices.T[triangles], facecolors=polyColors, edgecolors='black')
 
 
 	fig = plt.figure()
@@ -210,7 +91,7 @@ def plot3D(vertices, triangles, curvature, centerPoint, minRadius, maxRadius):
 
 	for axisI,axisS,ax in zip(range(3),['x','y','z'], [axX, axY, axZ]):
 		otherAxis = [j for j in range(3) if j != axisI]
-		circle = Circle((centerPoint[otherAxis[0]], centerPoint[otherAxis[1]]), centerPoint[3], fill=False, zorder=-1)
+		circle = Circle((centerPoint[otherAxis[0]], centerPoint[otherAxis[1]]), meanRadius, fill=False, zorder=-1)
 		ax.add_patch(circle)
 
 		maxCircle = Circle((centerPoint[otherAxis[0]], centerPoint[otherAxis[1]]), maxRadius, fill=False, color='r', zorder=-1)
@@ -228,53 +109,100 @@ def plot3D(vertices, triangles, curvature, centerPoint, minRadius, maxRadius):
 	ax3d.set_ylim(limitsMin[1], limitsMax[1])
 	ax3d.set_zlim(limitsMin[2], limitsMax[2])
 
-
-
 	ax3d.set_xlabel('x')
 	ax3d.set_ylabel('y')
 	ax3d.set_zlabel('z')
 	plt.show()
 
-def fitfunc(center, coords):
-	x0,y0,z0,R = center
-	x,y,z = coords
-	return distance([x0,y0,z0],[x,y,z]) - R
+def rotation_matrix(axis, theta):
+    """
+    Return the rotation matrix associated with counterclockwise rotation about
+    the given axis by theta radians.
+    """
+    axis = np.asarray(axis)
+    theta = np.asarray(theta)
+    axis = axis/math.sqrt(np.dot(axis, axis))
+    a = math.cos(theta/2.0)
+    b, c, d = -axis*math.sin(theta/2.0)
+    aa, bb, cc, dd = a*a, b*b, c*c, d*d
+    bc, ad, ac, ab, bd, cd = b*c, a*d, a*c, a*b, b*d, c*d
+    return np.array([[aa+bb-cc-dd, 2*(bc+ad), 2*(bd-ac)],
+                     [2*(bc-ad), aa+cc-bb-dd, 2*(cd+ab)],
+                     [2*(bd+ac), 2*(cd-ab), aa+dd-bb-cc]])
+
+def unit_vector(vector):
+    return vector / np.linalg.norm(vector)
+
+def angle_between(v1, v2):
+    v1_u = unit_vector(v1)
+    v2_u = unit_vector(v2)
+    return np.arccos(np.clip(np.dot(v1_u, v2_u), -1.0, 1.0))
+
+def projectByAngleToPlane(vertices, maxAngle, centerPoint, dimensionNo):
+	maxAngle = maxAngle * (np.pi/180)
+	verticesOnPlane = vertices.copy()
+	verticesOnPlane[dimensionNo] = 0
+
+
+	directionVectors = vertices.T - centerPoint[0:3]
+	planeVectors = verticesOnPlane.T - centerPoint[0:3]
+	angles = [angle_between(v1, v2) for v1,v2 in zip(directionVectors, planeVectors)]
+	print np.degrees(angles)
+
+	indicesBelowMaxAngle = [i for i,a in enumerate(angles) if abs(a) < maxAngle]
+	for i in indicesBelowMaxAngle:
+		axis = np.cross(directionVectors[i], planeVectors[i])
+		if axis[0] == 0 and axis[1] == 0 and axis[2] == 0: continue
+		newPoint = np.dot(rotation_matrix(axis,angles[i]),directionVectors[i])
+		vertices.T[i] = newPoint + centerPoint[0:3]
 
 if __name__ == '__main__':
 	if len(sys.argv) < 2:
-		print "Please specify a file to open"
-		sys.exit(1)
+		vertices,faces = generateSphere(600, 10, False)
+	else:
+		mesh = load_mesh(sys.argv[1])
+		vertices = mesh.v.T
+		faces = mesh.f
 
-	mesh = pymesh.load_mesh(sys.argv[1])
-	vertices = mesh.vertices.T
-
-	#vertices = generateSphere(300, 35)
-
-	#cvx = ConvexHull(vertices.T)
-	#x,y,z = vertices
-
-	#tri = Triangulation(x,y, triangles=cvx.simplices)
-	#tri = Delaunay(vertices.T)
-	#mesh = pymesh.form_mesh(vertices, tri.triangles)
-	#print tri.simplices[1,:]
-
-
-	mesh.add_attribute("vertex_gaussian_curvature")
-	curvature = mesh.get_attribute("vertex_gaussian_curvature")
+	curvature = np.asarray(GaussianCurvature(vertices.T, faces))
+	#curvature = curvature / len(vertices.T)
 	print 'Curvature min/max: ' + str(np.min(curvature)) + '/' + str(np.max(curvature))
-	#print curvature
-	print 'Total curvature: ' + str(np.sum(curvature))
+	averageCurvature = np.mean(curvature)
+	print 'Average curvature: ' + str(averageCurvature)
 
-	eigval, eigvec = PCA(vertices)
+	#eigval, eigvec = PCA(vertices)
 
 
-	centerPoint = measureDiameter(vertices)
-	meanRadius = centerPoint[3]
-	[minRadiusDev,maxRadiusDev] = measureRadialDeviation(vertices, centerPoint, meanRadius)
-	print 'Expected curvature: ' + str(1/(meanRadius**2))
+
+	meanRadius, centerPoint = fitSphere(vertices)
+	print 'Centerpoint: ' + str(centerPoint)
+	vertices = vertices.T - centerPoint
+	vertices = vertices.T
+
+	centerPoint = [0, 0, 0]
+
+	sphericalCoordinates = toSphericalCoordinates(vertices.T)
+	sortedIndices = np.lexsort((sphericalCoordinates.T[2], sphericalCoordinates.T[1]))
+	sphericalCoordinates = [[sphericalCoordinates.T[0][i], sphericalCoordinates.T[1][i], sphericalCoordinates.T[2][i]] for i in sortedIndices]
+	sphericalMap = np.asarray(sphericalCoordinates)[:,1:3].T
+	thetavals,phivals = sphericalMap
+	X,Y = np.meshgrid(thetavals,phivals)
+	rbf = scipy.interpolate.Rbf(thetavals, phivals, curvature[sortedIndices], function='gaussian')
+	Z = rbf(X,Y)
+
+	fig = plt.figure()
+	plt.imshow(Z, vmin=Z.min(), vmax=Z.max(), origin='lower', extent=[thetavals.min(), thetavals.max(), phivals.min(), phivals.max()])
+	plt.show()
+
+	[minRadiusDev,maxRadiusDev, totalDev] = measureRadialDeviation(vertices, centerPoint, meanRadius)
+	expectedCurvature = (1/(meanRadius*meanRadius)) / len(vertices.T)
+	print 'Expected curvature: ' + str(expectedCurvature)
+	print 'Diff to expected curvature: ' + str(abs(expectedCurvature - averageCurvature))
+	print 'Total curvature: ' + str(expectedCurvature*len(vertices.T))
 
 	print 'Expected radius: ' + str(35)
 	print 'Fitted radius: ' + str(meanRadius)
-	print 'Radial deviation: (+ ' + str(maxRadiusDev) + ',- ' + str(minRadiusDev) + ')'
+	print 'Radial deviation: ' + str(maxRadiusDev+minRadiusDev) + ' (+' + str(maxRadiusDev) + ', -' + str(minRadiusDev) + ')'
+	#projectByAngleToPlane(vertices, 45, centerPoint, 2)
 
-	plot3D(vertices, mesh.faces, curvature, centerPoint, centerPoint[3] - minRadiusDev, centerPoint[3] + maxRadiusDev)
+	plot3D(vertices, faces, curvature, centerPoint, meanRadius, meanRadius - minRadiusDev, meanRadius + maxRadiusDev)
