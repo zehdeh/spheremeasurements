@@ -68,6 +68,8 @@ def getMeasures(shape):
 			lambda x: x.measureCurvature(), True)
 		measures.append(curvature)
 	if shape is Plane:
-		pass
+		fittingError = Measure('Fitting error', 
+			lambda x: x.totalFittingError())
+		measures.append(fittingError)
 
 	return measures

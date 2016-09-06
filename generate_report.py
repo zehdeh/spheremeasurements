@@ -52,12 +52,13 @@ if __name__ == '__main__':
 		measurements = dict()
 		
 		filePath = sys.argv[1] + '/' + fileName
-		#shape = Sphere(filePath, 39.5)
-		shape = Plane(filePath)
+
+		#shapeObj = Sphere(filePath, 39.5)
+		shapeObj = Plane(filePath)
 
 		j = 1
 		for index, measurement in enumerate(measures):
-			res = measurement.execute(shape)
+			res = measurement.execute(shapeObj)
 			if type(res) is list:
 				for r in res:
 					c = ws.cell(row = i + 2, column = j)
