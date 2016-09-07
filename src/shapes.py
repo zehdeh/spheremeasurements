@@ -1,3 +1,4 @@
+import abc
 import numpy as np
 from scipy.optimize import leastsq, least_squares
 from opendr.serialization import load_mesh
@@ -49,6 +50,7 @@ def ransac(data,fitfun,errorfun,n,k,t,d):
 		return bestfit
 
 class Shape(object):
+	__metaclass__ = abc.ABCMeta
 	def __init__(self,filePath):
 		self._mesh = load_mesh(filePath)
 		self._vertices = self.mesh.v.T
@@ -77,6 +79,9 @@ class Shape(object):
 	@filePath.setter
 	def filePath(self,value):
 		self_filePath = value
+	@abc.abstractmethod
+	def totalFittingError(self):
+		return
 	def render(self,fig):
 		from mayavi import mlab
 
@@ -133,6 +138,16 @@ class Plane(Shape):
 		else:
 			res = fitfun(self._vertices)
 		return res
+	def totalFittingError(self):
+		return self.pointDistance(self.model, self._vertices).sum()
+	def planeDeviation(self):
+		maxDeviation = np.max(self.pointDistance(self.model, self._vertices))
+		minDeviation = np.min(self.pointDistance(self.model, self._vertices))
+		return abs(maxDeviation-minDeviation)
+	def measureCurvature(self):
+		return [
+			np.mean(self.curvature),
+			np.std(self.curvature)]
 	def render(self,fig):
 		super(Plane,self).render(fig)
 		"""
@@ -188,10 +203,6 @@ class Sphere(Shape):
 		ybounds = [np.min(self._vertices[1]),np.max(self._vertices[1])]
 		zbounds = [np.min(self._vertices[2]),np.max(self._vertices[2])]
 		return [xbounds,ybounds,zbounds]
-	def measureCurvature(self):
-		return [
-			np.mean(self.curvature),
-			np.std(self.curvature)]
 	def fittingError(self,center, vertices):
 		x0,y0,z0,R = center
 		x,y,z = vertices.T

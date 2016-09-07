@@ -69,7 +69,19 @@ def getMeasures(shape):
 		measures.append(curvature)
 	if shape is Plane:
 		fittingError = Measure('Fitting error', 
-			lambda x: x.totalFittingError())
+			lambda x: x.totalFittingError(), True)
 		measures.append(fittingError)
+
+		fittingError = Measure('Plane std deviation', 
+			lambda x: x.planeDeviation(), True)
+		measures.append(fittingError)
+
+		fittingError = Measure('Relative fitting error', 
+			lambda x: x.totalFittingError() / len(x.vertices), True)
+		measures.append(fittingError)
+
+		curvature = Measure(['Average curvature', 'Standard deviation'], 
+			lambda x: x.measureCurvature(), True)
+		measures.append(curvature)
 
 	return measures
