@@ -35,6 +35,9 @@ def getMeasures(shape):
 	numVertices = Measure('Number of vertices', lambda x: len(x.vertices.T))
 	measures.append(numVertices)
 
+	relativeFittingError = Measure('Relative fitting error', 
+		lambda x: x.totalFittingError() / x.vertices.shape[1], True)
+
 	if shape is Sphere:
 		focusDistance = Measure('Focus plane distance', lambda x: int(x.filePath.split('_')[-1][:3]))
 		measures.append(focusDistance)
@@ -55,9 +58,7 @@ def getMeasures(shape):
 			lambda x: x.totalFittingError())
 		measures.append(fittingError)
 
-		fittingError = Measure('Relative fitting error', 
-			lambda x: x.totalFittingError() / len(x.vertices), True)
-		measures.append(fittingError)
+		measures.append(relativeFittingError)
 
 		radialDeviation = Measure('Radial deviation (total)', 
 			lambda x: measureRadialDeviation(x.vertices, x.centerPoint, x.fittedRadius)[2], True)
@@ -76,9 +77,7 @@ def getMeasures(shape):
 			lambda x: x.planeDeviation(), True)
 		measures.append(fittingError)
 
-		fittingError = Measure('Relative fitting error', 
-			lambda x: x.totalFittingError() / len(x.vertices), True)
-		measures.append(fittingError)
+		measures.append(relativeFittingError)
 
 		curvature = Measure(['Average curvature', 'Standard deviation'], 
 			lambda x: x.measureCurvature(), True)

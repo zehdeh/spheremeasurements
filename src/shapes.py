@@ -82,6 +82,10 @@ class Shape(object):
 	@abc.abstractmethod
 	def totalFittingError(self):
 		return
+	def measureCurvature(self):
+		return [
+			np.mean(self.curvature),
+			np.std(self.curvature)]
 	def render(self,fig):
 		from mayavi import mlab
 
@@ -144,10 +148,6 @@ class Plane(Shape):
 		maxDeviation = np.max(self.pointDistance(self.model, self._vertices))
 		minDeviation = np.min(self.pointDistance(self.model, self._vertices))
 		return abs(maxDeviation-minDeviation)
-	def measureCurvature(self):
-		return [
-			np.mean(self.curvature),
-			np.std(self.curvature)]
 	def render(self,fig):
 		super(Plane,self).render(fig)
 		"""
@@ -166,15 +166,10 @@ class Sphere(Shape):
 	def __init__(self, filePath, nominalRadius):
 		Shape.__init__(self,filePath)
 
-		fittedRadius, centerPoint = self.fitSphere(True)
-		self._fittedRadius = fittedRadius
-		self._centerPoint = centerPoint
-		self._nominalRadius = nominalRadius
-		print self.totalFittingError()
 		fittedRadius, centerPoint = self.fitSphere(False)
 		self._fittedRadius = fittedRadius
 		self._centerPoint = centerPoint
-		self._nominalRadius = nominalRadius
+		self._nominalRadius = float(nominalRadius)
 		print self.totalFittingError()
 
 	@property

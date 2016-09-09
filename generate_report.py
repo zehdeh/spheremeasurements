@@ -3,18 +3,18 @@
 import os
 import sys
 import time
+import importlib
 import opendr
 import numpy as np
 from openpyxl import Workbook
 from openpyxl.formatting.rule import ColorScaleRule
 from openpyxl.utils import (_get_column_letter)
-from src.shapes import Sphere,Plane
 from src.measure import Measure, getMeasures
 
 if __name__ == '__main__':
 	
-	if len(sys.argv) < 2:
-		print 'Please provide as an argument the directory where the OBJ-files are located'
+	if len(sys.argv) < 3:
+		print 'Please provide as an argument the directory where the OBJ-files are located and the shape to be used'
 		sys.exit(1)
 	
 	objModels = []
@@ -27,8 +27,11 @@ if __name__ == '__main__':
 
 	ws.column_dimensions['A'].width = 25
 
+	module = importlib.import_module('src.shapes')
+	class_ = getattr(module, sys.argv[2])
+
 	#measures = getMeasures(Sphere)
-	measures = getMeasures(Plane)
+	measures = getMeasures(class_)
 	rule = ColorScaleRule(start_type='percentile', start_value=10, start_color='00FF00', mid_type='percentile', mid_value=50, mid_color='FFFF00', end_type='percentile', end_value=90, end_color='FF0000')
 
 	j = 1
@@ -50,11 +53,12 @@ if __name__ == '__main__':
 	for i,fileName in enumerate(objModels):
 		print 'Processing file ' + str(i+1) + ' of ' + str(len(objModels)) + '..'
 		measurements = dict()
+		print fileName
 		
 		filePath = sys.argv[1] + '/' + fileName
 
 		#shapeObj = Sphere(filePath, 39.5)
-		shapeObj = Plane(filePath)
+		shapeObj = class_(filePath, *sys.argv[3:])
 
 		j = 1
 		for index, measurement in enumerate(measures):
