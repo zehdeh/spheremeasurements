@@ -1,3 +1,6 @@
+# User defined:
+res/archive/
+report.xlsx
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
