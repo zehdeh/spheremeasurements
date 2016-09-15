@@ -57,7 +57,7 @@ class Shape(object):
 		self._faces = self.mesh.f
 		self._filePath = filePath
 
-		self.curvature = np.asarray(GaussianCurvature(self._vertices.T, self._faces))
+		#self.curvature = np.asarray(GaussianCurvature(self._vertices.T, self._faces))
 	@property
 	def mesh(self):
 		return self._mesh
@@ -166,11 +166,11 @@ class Sphere(Shape):
 	def __init__(self, filePath, nominalRadius):
 		Shape.__init__(self,filePath)
 
-		fittedRadius, centerPoint = self.fitSphere(False)
-		self._fittedRadius = fittedRadius
-		self._centerPoint = centerPoint
-		self._nominalRadius = float(nominalRadius)
-		print self.totalFittingError()
+		#fittedRadius, centerPoint = self.fitSphere(False)
+		#self._fittedRadius = fittedRadius
+		#self._centerPoint = centerPoint
+		#self._nominalRadius = float(nominalRadius)
+		#print self.totalFittingError()
 
 	@property
 	def vertices(self):
