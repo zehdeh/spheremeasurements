@@ -39,11 +39,11 @@ def getMeasures(shape):
 		lambda x: x.totalFittingError() / x.vertices.shape[1], True)
 
 	if shape is Sphere:
-		focusDistance = Measure('Focus plane distance', lambda x: int(x.filePath.split('_')[-1][:3]))
-		measures.append(focusDistance)
+		#focusDistance = Measure('Focus plane distance', lambda x: int(x.filePath.split('_')[-1][:3]))
+		#measures.append(focusDistance)
 
-		focusDeviation = Measure('Focus plane deviation', lambda x: convertFocusDeviationLabel(x.filePath.split('_')[-3]))
-		measures.append(focusDeviation)
+		#focusDeviation = Measure('Focus plane deviation', lambda x: convertFocusDeviationLabel(x.filePath.split('_')[-3]))
+		#measures.append(focusDeviation)
 
 		fittedRadius = Measure('Fitted radius', lambda x: x.fittedRadius)
 		measures.append(fittedRadius)

@@ -86,7 +86,7 @@ class Shape(object):
 		return [
 			np.mean(self.curvature),
 			np.std(self.curvature)]
-	def render(self,fig):
+	def render(self):
 		from mayavi import mlab
 
 		mesh = triangular_mesh(self._vertices[0], self._vertices[1], self._vertices[2], self._faces, scalars=self.curvature)
@@ -226,3 +226,12 @@ class Sphere(Shape):
 		centerPoint = centerPoint[0:3]
 
 		return fittedRadius,centerPoint
+	def render(self):
+		from mayavi import mlab
+
+		error = np.abs(self._fittedRadius - distance(self._vertices,self._centerPoint))
+		mesh = triangular_mesh(self._vertices[0], self._vertices[1], self._vertices[2], self._faces, scalars=error)
+		mlab.scalarbar(mesh)
+		mlab.outline()
+
+		mlab.show()

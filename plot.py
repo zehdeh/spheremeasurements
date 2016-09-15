@@ -1,3 +1,5 @@
+#! /usr/bin/python
+
 import sys
 import numpy as np
 import math
@@ -6,19 +8,9 @@ import mpl_toolkits.mplot3d.art3d as art3d
 from src.mplcolorhelper import MplColorHelper
 from src.shapes import Sphere,Plane
 
-def getCurvatureColor(shape, normalize=False):
-	maxCurvature = np.mean(shape.curvature[shape.faces], axis=1)
-	if normalize:
-		maxCurvature = maxCurvature / np.max(maxCurvature)
-	colorHelper = MplColorHelper('coolwarm', np.min(maxCurvature), np.max(maxCurvature), maxCurvature)
-	polyColors = [colorHelper.get_rgb(c) for c in maxCurvature]
-	return polyColors
-
 def plotPolygons(shape):
 	#fig = plt.figure()
-	print np.mean(shape.curvature)
-	print np.std(shape.curvature)
-	shape.render(1)
+	shape.render()
 
 	"""
 	curv = shape.curvature
@@ -41,5 +33,5 @@ if __name__ == '__main__':
 	if len(sys.argv) < 2:
 		print 'Please provide as an argument the file you want to plot'
 		sys.exit(1)
-	shapeObj = Plane(sys.argv[1])
+	shapeObj = Sphere(sys.argv[1],300)
 	plotPolygons(shapeObj)
