@@ -65,9 +65,9 @@ def getMeasures(shape):
 		measures.append(radialDeviation)
 		data = []
 
-		curvature = Measure(['Average curvature', 'Standard deviation'], 
-			lambda x: x.measureCurvature(), True)
-		measures.append(curvature)
+		#curvature = Measure(['Average curvature', 'Standard deviation'], 
+		#	lambda x: x.measureCurvature(), True)
+		#measures.append(curvature)
 	if shape is Plane:
 		fittingError = Measure('Fitting error', 
 			lambda x: x.totalFittingError(), True)
@@ -79,8 +79,8 @@ def getMeasures(shape):
 
 		measures.append(relativeFittingError)
 
-		curvature = Measure(['Average curvature', 'Standard deviation'], 
-			lambda x: x.measureCurvature(), True)
-		measures.append(curvature)
+		#curvature = Measure(['Average curvature', 'Standard deviation'], 
+		#	lambda x: x.measureCurvature(), True)
+		#measures.append(curvature)
 
 	return measures

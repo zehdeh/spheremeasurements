@@ -24,13 +24,18 @@ if __name__ == '__main__':
 			filePath = sys.argv[1] + '/' + fileName
 			print 'Loading mesh ' + fileName
 			shapes.append(class_(filePath, *sys.argv[3:]))
+
+	for s in shapes:
+		print s._centerPoint
 	
 	#measures = getMeasures(Sphere)
 	measures = getMeasures(class_)
-	results = np.zeros((len(shapes),len(measures)))
 
-	for i,measurement in enumerate(measures):
-		for j, shape in enumerate(shapes):
-			results[i,j] = measurement.execute(shape)
+	results = []
+	for i, shape in enumerate(shapes):
+		result = []
+		for j,measurement in enumerate(measures):
+			result.append(measurement.execute(shape))
+		results.append(result)
 	
 	writeReport('reportTest.xlsx', measures, results)

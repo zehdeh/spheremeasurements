@@ -166,12 +166,10 @@ class Sphere(Shape):
 	def __init__(self, filePath, nominalRadius):
 		Shape.__init__(self,filePath)
 
-		#fittedRadius, centerPoint = self.fitSphere(False)
-		#self._fittedRadius = fittedRadius
-		#self._centerPoint = centerPoint
-		#self._nominalRadius = float(nominalRadius)
-		#print self.totalFittingError()
-
+		self._nominalRadius = float(nominalRadius)
+		fittedRadius, centerPoint = self.fitSphere(False)
+		self._fittedRadius = fittedRadius
+		self._centerPoint = centerPoint
 	@property
 	def vertices(self):
 		return self._vertices
@@ -210,7 +208,7 @@ class Sphere(Shape):
 		pointBounds = self.getPointBounds()
 		errorfun = lambda p,vertices: self.fittingError(p,vertices)
 
-		centerPointGuess = [pointBounds[0][0],pointBounds[1][0],pointBounds[2][0],36]
+		centerPointGuess = [pointBounds[0][0],pointBounds[1][0],pointBounds[2][0],self._nominalRadius]
 		#centerPointGuess = [-124.63678821,-283.53124005,-334.92304383, 1]
 		#res = least_squares(errfunc, centerPointGuess, bounds=([pointBounds[0][0],pointBounds[1][0],pointBounds[2][0],1],
 		#[pointBounds[0][1],pointBounds[1][1],pointBounds[2][1],np.inf]), args=(vertices,))

@@ -109,7 +109,7 @@ if __name__ == '__main__':
 			print 'Processing ' + fileName + '...'
 			vertices, faces, normals = loadOBJ(folderPath + '/' + fileName)
 
-			plane = [1, 0, 0, -250]
+			plane = [0.93, -0.34, 0, -450]
 			condition = lambda x: pointPlaneDistance(plane, x.T) < 0
 			vertices, faces = removeVerticesByCondition(condition, vertices, faces)
 			vertices, faces = removeIsolatedVertices(vertices, faces)
