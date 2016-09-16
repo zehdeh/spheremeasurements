@@ -1,0 +1,4 @@
+#!/bin/bash
+#$ -S /bin/sh
+source /etc/environment
+$DVRD_SHARE/app/bin/mstereo.sh Plane_01 /dvrd/data/LargeSphere_SN/Plane_01 . /dvrd/calibrations/20160913152435396 /dvrd/app/cfg/mstereo_default.ini 1 $SGE_TASK_ID

@@ -1,5 +1,6 @@
 from shapes import Sphere, Plane
 from utils import measureRadialDeviation
+import numpy as np
 
 class Measure:
 	def __init__(self, name, fun, color=False):
@@ -54,7 +55,7 @@ def getMeasures(shape):
 		priorRadius = Measure('Radius difference', lambda x: x.fittedRadius - x.nominalRadius, True)
 		measures.append(priorRadius)
 
-		fittingError = Measure('Fitting error', 
+		fittingError = Measure('Fitting error total',
 			lambda x: x.totalFittingError())
 		measures.append(fittingError)
 
@@ -65,22 +66,35 @@ def getMeasures(shape):
 		measures.append(radialDeviation)
 		data = []
 
-		#curvature = Measure(['Average curvature', 'Standard deviation'], 
-		#	lambda x: x.measureCurvature(), True)
-		#measures.append(curvature)
+		avgCurvature = Measure('Curvature avg',
+			lambda x: np.mean(x.getCurvature()), True)
+		measures.append(avgCurvature)
+
+		stdCurvature = Measure('Curvature std',
+			lambda x: np.std(x.getCurvature()), True)
+		measures.append(stdCurvature)
+
+		relAvgCurvature = Measure('Relative curvature avg',
+			lambda x: np.mean(x.getCurvature() / x.vertices.shape[1]), True)
+		measures.append(relAvgCurvature)
 	if shape is Plane:
 		fittingError = Measure('Fitting error', 
 			lambda x: x.totalFittingError(), True)
 		measures.append(fittingError)
 
-		fittingError = Measure('Plane std deviation', 
+		fittingError = Measure('Plane std deviation',
 			lambda x: x.planeDeviation(), True)
 		measures.append(fittingError)
 
 		measures.append(relativeFittingError)
 
-		#curvature = Measure(['Average curvature', 'Standard deviation'], 
-		#	lambda x: x.measureCurvature(), True)
-		#measures.append(curvature)
+		avgCurvature = Measure('Curvature avg',
+			lambda x: np.mean(x.getCurvature()), True)
+		measures.append(avgCurvature)
+
+		stdCurvature = Measure('Curvature std',
+			lambda x: np.std(x.getCurvature()), True)
+		measures.append(stdCurvature)
+
 
 	return measures

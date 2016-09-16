@@ -1,5 +1,16 @@
 from matplotlib.patches import FancyArrowPatch
 import numpy as np
+
+def scanCurveFit(centerPoints):
+	centerPoints = np.asarray(centerPoints).T
+	mean = centerPoints.mean(axis=1)
+	uu,dd,vv = np.linalg.svd(centerPoints.T - mean)
+	AP = centerPoints.T - mean
+	pointDistances = AP.dot(vv[0])[..., None]
+	projectedPoints = ((pointDistances * vv[0][None,...]) + mean).T
+
+	return mean, vv[0], projectedPoints, pointDistances
+
 def toSphericalCoordinates(xyz):
 	ptsnew = np.zeros(xyz.shape)
 	xy = xyz[:,0]**2 + xyz[:,1]**2

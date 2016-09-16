@@ -82,43 +82,16 @@ class Shape(object):
 	@abc.abstractmethod
 	def totalFittingError(self):
 		return
-	def measureCurvature(self):
-		return [
-			np.mean(self.curvature),
-			np.std(self.curvature)]
-	def render(self):
+	def getCurvature(self):
+		return self.curvature
+	def render(self,color):
 		from mayavi import mlab
 
-		mesh = triangular_mesh(self._vertices[0], self._vertices[1], self._vertices[2], self._faces, scalars=self.curvature)
+		mesh = triangular_mesh(self._vertices[0], self._vertices[1], self._vertices[2], self._faces, scalars=color)
 		mlab.scalarbar(mesh)
 		mlab.outline()
 
 		mlab.show()
-		"""
-		means = [np.mean(v) for v in self.vertices]
-		relativeMins = [np.min(v - m) for v,m in zip(self.vertices,means)]
-		relativeMaxs = [np.max(v - m) for v,m in zip(self.vertices,means)]
-		limitsMin = np.add(means,relativeMins)
-		limitsMax = np.add(means,relativeMaxs)
-		valMin = np.min(np.add(means,relativeMins))
-		valMax = np.max(np.add(means,relativeMaxs))
-
-		poly3dCollection = Poly3DCollection(self._vertices.T[self._faces], edgecolors='black')
-		ax3d = fig.add_subplot(111, projection='3d')
-		
-		ax3d.add_collection(poly3dCollection)
-
-		ax3d.set_xlim(limitsMin[0], limitsMax[0])
-		ax3d.set_ylim(limitsMin[1], limitsMax[1])
-		ax3d.set_zlim(limitsMin[2], limitsMax[2])
-		
-
-		ax3d.set_xlabel('x')
-		ax3d.set_ylabel('y')
-		ax3d.set_zlabel('z')
-
-		return ax3d
-		"""
 
 class Plane(Shape):
 	def __init__(self,filePath):
@@ -148,19 +121,8 @@ class Plane(Shape):
 		maxDeviation = np.max(self.pointDistance(self.model, self._vertices))
 		minDeviation = np.min(self.pointDistance(self.model, self._vertices))
 		return abs(maxDeviation-minDeviation)
-	def render(self,fig):
-		super(Plane,self).render(fig)
-		"""
-		normal = self.model[:3]
-		d = -np.array([0,0,0]).dot(normal)#d = self.model[3]
-		x = np.linspace(-1,1,5)
-		y = np.linspace(-1,1,5)
-		xx,yy = np.meshgrid(x,y)
-		z = ((-normal[0]*xx - normal[1]*yy - d)*1./normal[2])
-		yy = yy
-
-		ax3d.plot_wireframe(xx,yy,z)
-		"""
+	def render(self,error):
+		super(Plane,self).render(error)
 
 class Sphere(Shape):
 	def __init__(self, filePath, nominalRadius):
@@ -224,12 +186,5 @@ class Sphere(Shape):
 		centerPoint = centerPoint[0:3]
 
 		return fittedRadius,centerPoint
-	def render(self):
-		from mayavi import mlab
-
-		error = np.abs(self._fittedRadius - distance(self._vertices,self._centerPoint))
-		mesh = triangular_mesh(self._vertices[0], self._vertices[1], self._vertices[2], self._faces, scalars=error)
-		mlab.scalarbar(mesh)
-		mlab.outline()
-
-		mlab.show()
+	def render(self,error):
+		super(Sphere,self).render(error)

@@ -13,5 +13,10 @@ def writeReport(filePath, measures, results):
 		c.value = measure.name
 		if measure.color:
 			ws.conditional_formatting.add(_get_column_letter(i) + '2:' + _get_column_letter(i) + str(len(results)+1), rule)
+	
+	for i, result in enumerate(results):
+		for j, val in enumerate(result):
+			c = ws.cell(row = 2+i, column = j+1)
+			c.value = val
 
 	wb.save(filePath)
