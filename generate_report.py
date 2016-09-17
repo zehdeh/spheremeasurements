@@ -8,7 +8,7 @@ import opendr
 import numpy as np
 from src.reporting import writeReport
 from src.measure import Measure, getMeasures
-from src.utils import scanCurveFit
+from src.utils import scanLineFit
 
 if __name__ == '__main__':
 	
@@ -32,7 +32,7 @@ if __name__ == '__main__':
 	measures = getMeasures(class_)
 
 	centerPoints = [s.centerPoint for s in shapes]
-	mean, unit_v, projectedPoints, pointDistances = scanCurveFit(centerPoints)
+	mean, unit_v, projectedPoints, pointDistances = scanLineFit(centerPoints)
 
 	measures.append(Measure('Distance from cam', lambda x: (x.centerPoint - mean).dot(unit_v)))
 

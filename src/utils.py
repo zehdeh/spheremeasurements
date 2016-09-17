@@ -1,7 +1,7 @@
 from matplotlib.patches import FancyArrowPatch
 import numpy as np
 
-def scanCurveFit(centerPoints):
+def scanLineFit(centerPoints):
 	centerPoints = np.asarray(centerPoints).T
 	mean = centerPoints.mean(axis=1)
 	uu,dd,vv = np.linalg.svd(centerPoints.T - mean)

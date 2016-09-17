@@ -36,7 +36,7 @@ if __name__ == '__main__':
 		print str(f) + ' ' + str(e)
 
 
-	mean, unit_v, projectedPoints, pointDistances = scanCurveFit(centerPoints)
+	mean, unit_v, projectedPoints, pointDistances = scanLineFit(centerPoints)
 
 	linePoints = unit_v * np.mgrid[-800:800:2j][:,np.newaxis]
 	linePoints += mean
