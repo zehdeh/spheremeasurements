@@ -1,5 +1,18 @@
 from matplotlib.patches import FancyArrowPatch
 import numpy as np
+from scipy.optimize import leastsq
+
+def scanCircleFit(centerPoints):
+	def fitfunc(p, coords):
+		x0, y0, z0, R = p
+		x, y, z = coords.T
+		return np.sqrt((x-x0)**2 + (y-y0)**2 + (z-z0)**2)
+	
+	p0 = np.mean(centerPoints, axis=0).tolist() + [1]
+
+	errfunc = lambda p,x: fitfunc(p, x) - p[3]
+	p1, flag = leastsq(errfunc, p0, args=(centerPoints,))
+	return p1
 
 def scanLineFit(centerPoints):
 	centerPoints = np.asarray(centerPoints).T

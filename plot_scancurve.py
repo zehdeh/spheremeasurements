@@ -6,7 +6,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from src.shapes import Sphere
-from src.utils import scanCurveFit
+from src.utils import scanLineFit, scanCircleFit
 
 
 if __name__ == '__main__':
@@ -36,17 +36,19 @@ if __name__ == '__main__':
 		print str(f) + ' ' + str(e)
 
 
-	mean, unit_v, projectedPoints, pointDistances = scanLineFit(centerPoints)
+	#mean, unit_v, projectedPoints, pointDistances = scanLineFit(centerPoints)
+	p1 = scanCircleFit(centerPoints)
 
-	linePoints = unit_v * np.mgrid[-800:800:2j][:,np.newaxis]
-	linePoints += mean
+	#linePoints = unit_v * np.mgrid[-800:800:2j][:,np.newaxis]
+	#linePoints += mean
 
 	fig = plt.figure()
 	ax = fig.add_subplot(111, projection='3d')
 	centerPoints = centerPoints.T
 	ax.scatter(centerPoints[0], centerPoints[1], centerPoints[2])
-	ax.scatter(projectedPoints[0], projectedPoints[1], projectedPoints[2], c='r', marker='x', s=100)
-	ax.plot3D(*linePoints.T)
+	#ax.scatter(projectedPoints[0], projectedPoints[1], projectedPoints[2], c='r', marker='x', s=100)
+	ax.scatter(p1[0], p1[1], p1[2], c='r', marker='x', s=100)
+	#ax.plot3D(*linePoints.T)
 	ax.set_xlabel('X Label')
 	ax.set_ylabel('Y Label')
 	ax.set_zlabel('Z Label')
