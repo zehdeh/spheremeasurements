@@ -109,10 +109,13 @@ if __name__ == '__main__':
 			print 'Processing ' + fileName + '...'
 			vertices, faces, normals = loadOBJ(folderPath + '/' + fileName)
 
-			uv = np.asarray([1,0,-1])
-			uv = uv.T / np.linalg.norm(uv)
-			plane = uv.tolist() + [-300]
-			condition = lambda x: pointPlaneDistance(plane, x.T) < 0
+			#uv = np.asarray([0,1,0])
+			#uv = uv.T / np.linalg.norm(uv)
+			#plane = uv.tolist() + [-200]
+			#condition = lambda x: pointPlaneDistance(plane, x.T) < 0
+			centerPoint = np.asarray([270,1460,-200])
+			#centerPoint = np.asarray([0,0,0])
+			condition = lambda x: np.linalg.norm(centerPoint - x, axis=1) > 1340
 			vertices, faces = removeVerticesByCondition(condition, vertices, faces)
 			vertices, faces = removeIsolatedVertices(vertices, faces)
 			#offset = centerModel(vertices)
