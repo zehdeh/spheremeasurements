@@ -2,6 +2,7 @@
 
 import sys
 import os
+from math import cos,sin
 import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
@@ -47,6 +48,7 @@ if __name__ == '__main__':
 	centerPoints = centerPoints.T
 	ax.scatter(centerPoints[0], centerPoints[1], centerPoints[2])
 	#ax.scatter(projectedPoints[0], projectedPoints[1], projectedPoints[2], c='r', marker='x', s=100)
+	#ax.scatter(cxTupel,cyTupel,czTupel,c='r', marker='o')
 	ax.scatter(p1[0], p1[1], p1[2], c='r', marker='x', s=100)
 	#ax.plot3D(*linePoints.T)
 	ax.set_xlabel('X Label')
