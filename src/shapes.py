@@ -57,7 +57,7 @@ class Shape(object):
 		self._faces = self.mesh.f
 		self._filePath = filePath
 
-		#self.curvature = np.asarray(GaussianCurvature(self._vertices.T, self._faces))
+		self.curvature = np.asarray(GaussianCurvature(self._vertices.T, self._faces))
 	@property
 	def mesh(self):
 		return self._mesh
@@ -125,11 +125,11 @@ class Plane(Shape):
 		super(Plane,self).render(error)
 
 class Sphere(Shape):
-	def __init__(self, filePath, nominalRadius):
+	def __init__(self, filePath, nominalRadius, fitRadius = True):
 		Shape.__init__(self,filePath)
 
 		self._nominalRadius = float(nominalRadius)
-		fittedRadius, centerPoint = self.fitSphere(False)
+		fittedRadius, centerPoint = self.fitSphere(False, fitRadius)
 		self._fittedRadius = fittedRadius
 		self._centerPoint = centerPoint
 	@property
@@ -161,14 +161,17 @@ class Sphere(Shape):
 	def fittingError(self,center, vertices):
 		x0,y0,z0,R = center
 		x,y,z = vertices.T
-		return distance([x0,y0,z0],[x,y,z]) - R
+		return distance([x0,y0,z0],[x,y,z])
 	def totalFittingError(self):
 		return np.sum(np.abs(self._fittedRadius - distance(self._vertices,self._centerPoint)))
 		#return np.sum(np.abs(radiusErrorFunction(self.centerPoint.tolist() + [self.fittedRadius], self._vertices)))/len(self._vertices.T)
-	def fitSphere(self, doRansac = False):
+	def fitSphere(self, doRansac = False, fitRadius = True):
 		#vertices = generateSphere(300, 35)
 		pointBounds = self.getPointBounds()
-		errorfun = lambda p,vertices: self.fittingError(p,vertices)
+		if fitRadius:
+			errorfun = lambda p,vertices: self.fittingError(p,vertices) - p[3]
+		else:
+			errorfun = lambda p,vertices: self.fittingError(p,vertices) - self._nominalRadius
 
 		centerPointGuess = [pointBounds[0][0],pointBounds[1][0],pointBounds[2][0],self._nominalRadius]
 		#centerPointGuess = [-124.63678821,-283.53124005,-334.92304383, 1]
@@ -182,7 +185,11 @@ class Sphere(Shape):
 
 		centerPoint = res
 
-		fittedRadius = centerPoint[3]
+		if fitRadius:
+			fittedRadius = centerPoint[3]
+		else:
+			fittedRadius = self._nominalRadius
+
 		centerPoint = centerPoint[0:3]
 
 		return fittedRadius,centerPoint
