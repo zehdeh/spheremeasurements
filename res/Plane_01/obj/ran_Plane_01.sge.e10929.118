@@ -1,1 +1,0 @@
-/dvrd/app/bin/mstereo.sh: line 107: 48373 Segmentation fault      (core dumped) $DVRD_SHARE/app/bin/MStereo -l $DST/$LABEL.$NFRAME.log -f $DST/$LABEL.$NFRAME.geo.ini -f $CONFIG -f $DST/$LABEL.$NFRAME.tex.ini -o $DST/$LABEL.$NFRAME.$FORMAT

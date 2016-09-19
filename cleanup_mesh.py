@@ -116,7 +116,7 @@ if __name__ == '__main__':
 			centerPoint = np.asarray([270,1460,-200])
 			#centerPoint = np.asarray([0,0,0])
 			condition = lambda x: np.linalg.norm(centerPoint - x, axis=1) > 1340
-			vertices, faces = removeVerticesByCondition(condition, vertices, faces)
+			#vertices, faces = removeVerticesByCondition(condition, vertices, faces)
 			vertices, faces = removeIsolatedVertices(vertices, faces)
 			#offset = centerModel(vertices)
 
