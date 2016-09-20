@@ -27,7 +27,6 @@ if __name__ == '__main__':
 	elif sys.argv[2] == 'gradient':
 		curvature = shape.getCurvature()
 		grad = np.gradient(curvature)
-		shape.render(curvature)
 		shape.render(grad)
 	else:
 		error = np.abs(shape.fittedRadius - distance(shape.vertices,shape.centerPoint))
