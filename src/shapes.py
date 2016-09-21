@@ -57,7 +57,7 @@ class Shape(object):
 		self._faces = self.mesh.f
 		self._filePath = filePath
 
-		#self.curvature = np.asarray(GaussianCurvature(self._vertices.T, self._faces))
+		self.curvature = np.asarray(GaussianCurvature(self._vertices.T, self._faces))
 	@property
 	def mesh(self):
 		return self._mesh

@@ -26,7 +26,7 @@ if __name__ == '__main__':
 	L = D - A
 	L_csc = bsr_matrix(L)
 
-	k = 500#shape.vertices.shape[1]-20
+	k = 3#shape.vertices.shape[1]-20
 	#eigenvals, eigenvectors = scipy.sparse.linalg.eigs(L_csc)
 	eigenvals, eigenvectors = scipy.sparse.linalg.eigsh(L,k, which='SA')
 	#eigenvals, eigenvectors = np.linalg.eig(L)
