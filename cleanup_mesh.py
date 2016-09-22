@@ -3,6 +3,7 @@
 import sys
 import os
 import numpy as np
+from math import floor, ceil
 import matplotlib.pyplot as plt
 
 def centerModel(vertices):
@@ -58,51 +59,84 @@ def writeOBJ(fileName, vertices, faces, normals):
 		for v in vertices:
 			f.write('v ' +' '.join([format(x,'.4f') for x in v]))
 			f.write("\n")
+		for vn in normals:
+			f.write('vn ' +' '.join([format(x,'.4f') for x in vn]))
+			f.write("\n")
 		for p in faces:
 			f.write("f")
 			for i in p:
 				f.write(" %d" % (i + 1))
 			f.write("\n")
 
-def removeVerticesByCondition(condition, vertices, faces):
+def removeVerticesByCondition(condition, vertices, faces, normals):
 	mask = condition(vertices)
 	indices = [i for i,x in enumerate(zip(vertices,mask)) if x[1]]
 	indicesExclude = np.asarray([i for i,j in enumerate(vertices) if i not in indices])
 
 	vertices = vertices[indices]
+	normals = normals[indices]
 	faces = [f for f in faces if not bool(set(indicesExclude) & set(f))]
 
 	for i,f in enumerate(faces):
 		faces[i] = [x - len(indicesExclude[x > indicesExclude]) for x in f]
 
-	return vertices, np.asarray(faces)
+	return vertices, np.asarray(faces), normals
 
-def removeIsolatedVertices(vertices, faces):
+def removeIsolatedVertices(vertices, faces, normals):
 	referencedVertices = [i for f in faces for i in f]
 	indices = set([i for i,v in enumerate(vertices)])
 	isolatedIndices = np.asarray(list(indices - set(referencedVertices)))
 	vertices = vertices[list(set(referencedVertices))]
+	normals = normals[list(set(referencedVertices))]
 
 	for i,f in enumerate(faces):
 		faces[i] = [x - len(isolatedIndices[x > isolatedIndices]) for x in f]
 	
-	return vertices, faces
+	return vertices, faces, normals
 
-def houghTransformation(vertices, faces):
-	verticesZ = vertices
-	verticesZ.T[2] = 0
-	print verticesZ[0]
+def houghTransformation(vertices, faces, normals, radius):
+	winners = np.zeros((2,3))
+	for i,dim in enumerate([1,2]):
+		otherDims = [0,1,2]
+		otherDims.remove(dim)
 
-	minX = np.min(verticesZ.T[0])
-	maxX = np.max(verticesZ.T[0])
-	sizeX = maxX - minX
-	minY = np.min(verticesZ.T[1])
-	maxY = np.max(verticesZ.T[1])
-	sizeY = maxY - minY
+		lowerBounds = [np.min(v) for v in vertices.T[otherDims]]
+		upperBounds = [np.max(v) for v in vertices.T[otherDims]]
+		sizes = [upperBounds[0] - lowerBounds[0], upperBounds[1] - lowerBounds[1]]
 
-	grid = np.zeros((sizeX,sizeY))
-	plt.scatter(verticesZ.T[0], vertices.T[1])
-	plt.show()
+		minX = np.min(vertices.T[0])
+		maxX = np.max(vertices.T[0])
+		minY = np.min(vertices.T[1])
+		maxY = np.max(vertices.T[1])
+
+		centers = []
+		for v,n in zip(vertices, normals):
+			if np.count_nonzero(n) > 0:
+				n = n/np.linalg.norm(n)
+			n[dim] = 0
+			n = -n
+			c = v+n*radius
+			if c[otherDims[0]] > lowerBounds[0] and c[otherDims[0]] < upperBounds[0] and c[otherDims[1]] > lowerBounds[1] and c[otherDims[1]] < upperBounds[1]:
+				centers.append(c)
+		centers = np.asarray(centers)
+
+		grid = np.zeros((int(ceil(sizes[0])),int(ceil(sizes[1]))))
+		for c in centers:
+			a = c[otherDims[0]] - lowerBounds[0]
+			b = c[otherDims[1]] - lowerBounds[1]
+			j = int(floor(a))
+			k = int(floor(b))
+			grid[j,k] += 1
+		
+		winnerIndex = np.unravel_index(np.argmax(grid), grid.shape)
+		winners[i,otherDims[0]] = lowerBounds[0] + winnerIndex[0]
+		winners[i,otherDims[1]] = lowerBounds[1] + winnerIndex[1]
+
+		#plt.scatter(vertices.T[otherDims[0]], vertices.T[otherDims[1]])
+		#plt.scatter(centers.T[0], centers.T[1], color='r')
+		#plt.scatter(winners[i,otherDims[0]], winners[i,otherDims[1]], color='r')
+		#plt.show()
+	return np.array([np.mean(winners.T[0]), winners[1,1], winners[0,2]])
 
 def pointPlaneDistance(point, vertices):
 	plane_xyz = point[0:3]
@@ -125,6 +159,7 @@ if __name__ == '__main__':
 			print 'Processing ' + fileName + '...'
 			vertices, faces, normals = loadOBJ(folderPath + '/' + fileName)
 
+			vertices, faces, normals = removeIsolatedVertices(vertices, faces, normals)
 			#uv = np.asarray([0,1,0])
 			#uv = uv.T / np.linalg.norm(uv)
 			#plane = uv.tolist() + [-200]
@@ -133,9 +168,10 @@ if __name__ == '__main__':
 			#centerPoint = np.asarray([0,0,0])
 			#condition = lambda x: np.linalg.norm(centerPoint - x, axis=1) > 1340
 			#vertices, faces = removeVerticesByCondition(condition, vertices, faces)
-			#vertices, faces = removeIsolatedVertices(vertices, faces)
 			#offset = centerModel(vertices)
-			houghTransformation(vertices, faces)
+			sphereCenter = houghTransformation(vertices, faces, normals, 150)
+			condition = lambda x: np.linalg.norm(sphereCenter - x, axis=1) < 160
+			vertices, faces, normals = removeVerticesByCondition(condition, vertices, faces, normals)
 
 			if sys.argv[2].endswith('.obj'):
 				writeOBJ(sys.argv[2], vertices, faces, normals)
