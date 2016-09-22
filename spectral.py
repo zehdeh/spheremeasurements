@@ -26,7 +26,7 @@ if __name__ == '__main__':
 	L = D - A
 	L_csc = bsr_matrix(L)
 
-	k = 3#shape.vertices.shape[1]-20
+	k = 50#shape.vertices.shape[1]-20
 	#eigenvals, eigenvectors = scipy.sparse.linalg.eigs(L_csc)
 	eigenvals, eigenvectors = scipy.sparse.linalg.eigsh(L,k, which='SA')
 	#eigenvals, eigenvectors = np.linalg.eig(L)
@@ -41,13 +41,11 @@ if __name__ == '__main__':
 	#print eigenvals
 
 	Xhat = eigenvectors.T.dot(shape.vertices.T)
-	print Xhat.shape
 
 	indices = [i for i, f in enumerate(Xhat)]
 	plt.plot(indices[:k], np.linalg.norm(Xhat,axis=1)[:k])
 	plt.show()
 
-	print eigenvectors[:,:k].shape
 	vertices2 = np.real(eigenvectors[:,:k].dot(Xhat[:k]))
 	from mayavi import mlab
 

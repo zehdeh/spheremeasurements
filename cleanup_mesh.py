@@ -3,6 +3,7 @@
 import sys
 import os
 import numpy as np
+import matplotlib.pyplot as plt
 
 def centerModel(vertices):
 	avgs = [np.mean(x) for x in vertices.T]
@@ -87,6 +88,21 @@ def removeIsolatedVertices(vertices, faces):
 	
 	return vertices, faces
 
+def houghTransformation(vertices, faces):
+	verticesZ = vertices
+	verticesZ.T[2] = 0
+	print verticesZ[0]
+
+	minX = np.min(verticesZ.T[0])
+	maxX = np.max(verticesZ.T[0])
+	sizeX = maxX - minX
+	minY = np.min(verticesZ.T[1])
+	maxY = np.max(verticesZ.T[1])
+	sizeY = maxY - minY
+
+	grid = np.zeros((sizeX,sizeY))
+	plt.scatter(verticesZ.T[0], vertices.T[1])
+	plt.show()
 
 def pointPlaneDistance(point, vertices):
 	plane_xyz = point[0:3]
@@ -113,12 +129,13 @@ if __name__ == '__main__':
 			#uv = uv.T / np.linalg.norm(uv)
 			#plane = uv.tolist() + [-200]
 			#condition = lambda x: pointPlaneDistance(plane, x.T) < 0
-			centerPoint = np.asarray([270,1460,-200])
+			#centerPoint = np.asarray([270,1460,-200])
 			#centerPoint = np.asarray([0,0,0])
-			condition = lambda x: np.linalg.norm(centerPoint - x, axis=1) > 1340
+			#condition = lambda x: np.linalg.norm(centerPoint - x, axis=1) > 1340
 			#vertices, faces = removeVerticesByCondition(condition, vertices, faces)
-			vertices, faces = removeIsolatedVertices(vertices, faces)
+			#vertices, faces = removeIsolatedVertices(vertices, faces)
 			#offset = centerModel(vertices)
+			houghTransformation(vertices, faces)
 
 			if sys.argv[2].endswith('.obj'):
 				writeOBJ(sys.argv[2], vertices, faces, normals)
