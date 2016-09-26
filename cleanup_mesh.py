@@ -5,68 +5,13 @@ import os
 import numpy as np
 from math import floor, ceil
 import matplotlib.pyplot as plt
+from src.OBJIO import loadOBJ, writeOBJ
 
 def centerModel(vertices):
 	avgs = [np.mean(x) for x in vertices.T]
 	vertices -= avgs
 	return avgs
 
-def loadOBJ(fileName):
-	"""Loads a Wavefront OBJ file. """
-	vertices = []
-	normals = []
-	texcoords = []
-	faces = []
-
-	material = None
-	for line in open(fileName, "r"):
-		if line.startswith('#'): continue
-		values = line.split()
-		if not values: continue
-		if values[0] == 'v':
-			 v = map(float, values[1:4])
-			 vertices.append(v)
-		elif values[0] == 'vn':
-			 v = map(float, values[1:4])
-			 normals.append(v)
-		elif values[0] == 'vt':
-			 texcoords.append(map(float, values[1:3]))
-		elif values[0] == 'f':
-			 face = []
-			 texcoords = []
-			 norms = []
-			 for v in values[1:]:
-				if '//' in v:
-					glue = '//'
-				else:
-					glue = '/'
-				w = v.split(glue)
-				face.append(int(w[0]) - 1)
-				if len(w) >= 2 and len(w[1]) > 0:
-					texcoords.append(int(w[1]))
-				else:
-					texcoords.append(0)
-					if len(w) >= 3 and len(w[2]) > 0:
-						norms.append(int(w[2]))
-					else:
-						norms.append(0)
-			 faces.append(face)
-	return np.asarray(vertices), np.asarray(faces), np.asarray(normals)
-
-def writeOBJ(fileName, vertices, faces, normals):
-	with open(fileName, 'w') as f:
-		f.write("# OBJ file\n")
-		for v in vertices:
-			f.write('v ' +' '.join([format(x,'.4f') for x in v]))
-			f.write("\n")
-		for vn in normals:
-			f.write('vn ' +' '.join([format(x,'.4f') for x in vn]))
-			f.write("\n")
-		for p in faces:
-			f.write("f")
-			for i in p:
-				f.write(" %d" % (i + 1))
-			f.write("\n")
 
 def removeVerticesByCondition(condition, vertices, faces, normals):
 	mask = condition(vertices)
