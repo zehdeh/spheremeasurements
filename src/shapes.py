@@ -2,10 +2,10 @@ import abc
 import numpy as np
 from scipy.optimize import leastsq, least_squares
 from opendr.serialization import load_mesh
-from utils import distance
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 from opendr.geometry import GaussianCurvature
 from mayavi.mlab import *
+
 
 def randomPartition(n, nData):
 	allIdxs = np.arange(nData)

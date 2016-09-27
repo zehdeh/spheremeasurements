@@ -13,13 +13,13 @@ def loadOBJ(fileName):
 		values = line.split()
 		if not values: continue
 		if values[0] == 'v':
-			v = map(float, values[1:4])
+			v = list(map(float, values[1:4]))
 			vertices.append(v)
 		elif values[0] == 'vn':
-			v = map(float, values[1:4])
+			v = list(map(float, values[1:4]))
 			normals.append(v)
 		elif values[0] == 'vt':
-			texcoords.append(map(float, values[1:3]))
+			texcoords.append((map(float, values[1:3])))
 		elif values[0] == 'f':
 			face = []
 			texcoords = []
