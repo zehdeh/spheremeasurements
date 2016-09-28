@@ -108,8 +108,8 @@ class Pod(object):
             T_pod /= 1000.
 
         from os.path import splitext, basename
-        from ..calib.camera import Camera
-        from ..matlab.matlab import col
+        from src.thirdparty.body.calib.camera import Camera
+        from src.thirdparty.body.matlab.matlab import col
         name = splitext(basename(self.calib_fname))[0]
         return Camera(size=np.asarray(c['is'], np.int32), camera_matrix=camM, k=dist, R=R_pod, t=col(T_pod), name=name)
 
@@ -179,6 +179,7 @@ class ScannerFrame(object):
         self._cached_properties.clear()    
  
 
+    #@cached_property
     def mesh(self):
         from body.mesh import Mesh
         m = Mesh(filename = self.scan_fname)
@@ -200,7 +201,7 @@ class ScannerFrame(object):
             pod_indices = np.arange(len(self.pods))
         for idx in pod_indices:
             pod = self.pods[idx]
-            print(pod.camera.fov)
+            print pod.camera.fov
 
             if True:
                 import matplotlib.pyplot as plt
@@ -256,7 +257,7 @@ def main():
     from body.images.offscreen_renderer import OffScreenRenderer as OSR
     from cv2 import imwrite, imshow
     for scale in [0.2, 0.4, 0.8, 1.0, 1.2, 2.0]:
-        print("scale: %s" % scale)
+        print "scale:", scale
         frame = ScannerFrame('/is/ps/shared/data/body/trials/models/50001_120921/50001_scans/CAESAR/', image_scale=scale)
         mesh = frame.mesh
         for i, pod in enumerate(frame.pods):
@@ -269,7 +270,7 @@ def main():
 
 
     frame.show(pod_indices=[8])
-    print(frame.pods[0].camera)
+    print frame.pods[0].camera
     imshow('abc', frame.pods[0].load_image())
     import pdb; pdb.set_trace()
 

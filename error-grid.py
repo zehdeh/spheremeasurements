@@ -1,6 +1,7 @@
-#! /usr/bin/python3
+#! /usr/bin/python
 
 import sys
+from math import atan2,sqrt
 import os
 import cv2
 
@@ -54,24 +55,30 @@ class MainWindow(QtWidgets.QMainWindow):
 			camPosition = -np.linalg.inv(camera.R).dot(camera.position)
 
 			actor.SetPosition(camPosition[0], camPosition[1], camPosition[2])
-			realR, J = cv2.Rodrigues(camera.R)
-			realR = realR*180/np.pi
-			actor.SetOrientation(realR[0], realR[1], realR[2])
+			camera.lookat(np.array([0,0,0]))
+			#rx = atan2(camera.R[2,1],camera.R[2,2])
+			#ry = atan2(-camera.R[2,0],sqrt(camera.R[2,1]**2 + camera.R[2,2]**2))
+			#rz = atan2(camera.R[1,0], camera.R[0,0])
+			#print(rx)
+			#realR = realR*180/np.pi
+			#actor.SetOrientation(rx, ry, rz)
 
 			renderer.AddActor(actor)
 
-		gridSize = 20
-		gridScale = 30
+		gridSize = [50,50,50]
+		gridScale = 60
 
-		errorGrid = np.zeros([gridSize, gridSize, gridSize], dtype=np.uint8)
-		for i in range(gridSize):
-			errorGrid[0:(gridSize-1), gridSize-1-i,0:(gridSize-1)] = i
-		#for cp in centerPoints:
-		#	cp += cp[0] + gridSize*gridScale/2
-		#	i = cp[0] / gridScale
-		#	j = cp[1] / gridScale
-		#	k = cp[2] / gridScale
-		#	errorGrid[i,j,k] = 200
+		errorGrid = np.zeros((gridSize[0], gridSize[1], gridSize[2]), dtype=np.uint8)
+		#for i in range(gridSize[1]):
+		#	errorGrid[0:(gridSize[0]-1), gridSize[1]-1-i,0:(gridSize[2]-1)] = i
+		for cp in centerPoints:
+			cp[0] += gridSize[0]*gridScale/2
+			cp[1] += gridSize[1]*gridScale/2
+			cp[2] += gridSize[2]*gridScale/2
+			i = int(cp[0] / gridScale)
+			j = int(cp[1] / gridScale)
+			k = int(cp[2] / gridScale)
+			errorGrid[i,j,k] += 150
 
 		dataImporter = vtk.vtkImageImport()
 		dataString = errorGrid.tostring()
@@ -79,12 +86,12 @@ class MainWindow(QtWidgets.QMainWindow):
 		dataImporter.SetDataScalarTypeToUnsignedChar()
 		dataImporter.SetNumberOfScalarComponents(1)
 
-		dataImporter.SetDataExtent(0, (gridSize - 1), 0, (gridSize - 1), 0, (gridSize - 1))
-		dataImporter.SetWholeExtent(0, (gridSize - 1), 0, (gridSize - 1), 0, (gridSize - 1))
+		dataImporter.SetWholeExtent(0, (gridSize[0] - 1), 0, (gridSize[1] - 1), 0, (gridSize[2] - 1))
+		dataImporter.SetDataExtentToWholeExtent()
 
 		alphaChannelFunc = vtk.vtkPiecewiseFunction()
 		alphaChannelFunc.AddPoint(0, 0)
-		alphaChannelFunc.AddPoint(gridSize - 1, 0.1)
+		alphaChannelFunc.AddPoint(gridSize[1] - 1, 0.5)
 
 		colorFunc = vtk.vtkColorTransferFunction()
 		colorFunc.AddRGBPoint(0, 0,0,1.0)
@@ -99,13 +106,15 @@ class MainWindow(QtWidgets.QMainWindow):
 		volumeMapper.SetInputConnection(dataImporter.GetOutputPort())
 
 		volume = vtk.vtkVolume()
-		volume.SetOrigin(gridSize/2, gridSize/2,gridSize/2)
+		volume.SetOrigin(gridSize[0]/2, gridSize[1]/2,gridSize[2]/2)
 		volume.SetScale(gridScale)
-		volume.SetPosition(0,-200,0)
-		print(volume.GetBounds())
+		#volume.SetPosition(0,-gridSize[1]*gridScale/2,0)
+		volume.SetPosition(0,0,0)
 		volume.SetMapper(volumeMapper)
 		volume.SetProperty(volumeProperty)
 
+		#interactorStyle = vtk.vtkInteractorStyleTerrain()
+		#iren.SetInteractorStyle(interactorStyle)
 		renderer.AddVolume(volume)
 		iren.Initialize()
 

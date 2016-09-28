@@ -178,7 +178,7 @@ class Camera(object):
         
         #xy_rect = cv.CreateMat(xy.shape[0], 1, cv.CV_64FC2)
         # Annoyingly, UndistortPoints hasn't been ported to cv2
-        #cv.UndistortPoints(cv.fromarray(xy), xy_rect, cv.fromarray(self.camera_matrix.copy()), cv.fromarray(self.k.copy()))
+        xy_rect = cv2.undistortPoints(xy, self.camera_matrix.copy(), self.k.copy())
         
         xy_rect = np.asarray(xy_rect, dtype=float)
         # An annoying special case for when xy is just a single point
