@@ -3,7 +3,6 @@
 import sys
 from math import atan2,sqrt
 import os
-import cv2
 
 import numpy as np
 
@@ -35,35 +34,38 @@ class MainWindow(QtWidgets.QMainWindow):
 
 		self.setCentralWidget(tabWidget)
 		self.show()
+	
+	def addCamera(self, renderer, camera):
+		cube = vtk.vtkCubeSource()
+		cube.SetXLength(100)
+		cube.SetYLength(100)
+		cube.SetZLength(100)
+
+		mapper = vtk.vtkPolyDataMapper()
+		mapper.SetInputConnection(cube.GetOutputPort())
+
+		actor = vtk.vtkActor()
+		actor.SetMapper(mapper)
+		
+		camPosition = -np.linalg.inv(camera.R).dot(camera.position)
+
+		actor.SetPosition(camPosition[0], camPosition[1], camPosition[2])
+		camera.lookat(np.array([0,0,0]))
+		#rx = atan2(camera.R[2,1],camera.R[2,2])
+		#ry = atan2(-camera.R[2,0],sqrt(camera.R[2,1]**2 + camera.R[2,2]**2))
+		#rz = atan2(camera.R[1,0], camera.R[0,0])
+		#print(rx)
+		#realR = realR*180/np.pi
+		#actor.SetOrientation(rx, ry, rz)
+
+		renderer.AddActor(actor)
 	def setupGrid(self,errorGridViewer,cameras, centerPoints):
 		renderer = vtk.vtkRenderer()
 		errorGridViewer.GetRenderWindow().AddRenderer(renderer)
 		iren = errorGridViewer.GetRenderWindow().GetInteractor()
 
 		for camera in cameras:
-			cube = vtk.vtkCubeSource()
-			cube.SetXLength(100)
-			cube.SetYLength(100)
-			cube.SetZLength(100)
-
-			mapper = vtk.vtkPolyDataMapper()
-			mapper.SetInputConnection(cube.GetOutputPort())
-
-			actor = vtk.vtkActor()
-			actor.SetMapper(mapper)
-			
-			camPosition = -np.linalg.inv(camera.R).dot(camera.position)
-
-			actor.SetPosition(camPosition[0], camPosition[1], camPosition[2])
-			camera.lookat(np.array([0,0,0]))
-			#rx = atan2(camera.R[2,1],camera.R[2,2])
-			#ry = atan2(-camera.R[2,0],sqrt(camera.R[2,1]**2 + camera.R[2,2]**2))
-			#rz = atan2(camera.R[1,0], camera.R[0,0])
-			#print(rx)
-			#realR = realR*180/np.pi
-			#actor.SetOrientation(rx, ry, rz)
-
-			renderer.AddActor(actor)
+			self.addCamera(renderer,camera)
 
 		gridSize = [50,50,50]
 		gridScale = 60
