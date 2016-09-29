@@ -37,7 +37,8 @@ class MainWindow(QtWidgets.QMainWindow):
 		iren = errorTracerViewer.GetRenderWindow().GetInteractor()
 
 		for camera in cameras:
-			self.addCamera(renderer,camera)
+			print camera[0]
+			self.addCamera(renderer,camera[1])
 
 		points = vtk.vtkPoints()
 		for v in vertices:
@@ -56,10 +57,13 @@ class MainWindow(QtWidgets.QMainWindow):
 		colors = vtk.vtkUnsignedCharArray()
 		colors.SetNumberOfComponents(3)
 		for v in vertices:
-			ppoints = ProjectPoints(f=cameras[0].f.ravel(), rt=cameras[0].r.ravel(), t=cameras[0].t.ravel(), k=cameras[0].k.ravel(), c=cameras[0].c.ravel())
+			camera = cameras[7][1]
+			ppoints = ProjectPoints(f=camera.f.ravel(), rt=camera.r.ravel(), t=camera.t.ravel(), k=camera.k.ravel(), c=camera.c.ravel())
 			ppoints.v = v
-			print ppoints.r
-			c = [255,0,0]
+			if ppoints.r[0] < 1600 and ppoints.r[0] >= 0 and ppoints.r[1] < 1200 and ppoints.r[1] >= 0:
+				c = [255,0,0]
+			else:
+				c = [255,255,255]
 			colors.InsertNextTupleValue(c)
 
 		polydata = vtk.vtkPolyData()
@@ -92,7 +96,7 @@ class MainWindow(QtWidgets.QMainWindow):
 		camPosition = np.linalg.inv(camera.R).dot(camera.position)
 
 		actor.SetPosition(camPosition[0], camPosition[1], camPosition[2])
-		camera.lookat(np.array([0,0,0]))
+		#camera.lookat(np.array([0,0,0]))
 		#rx = atan2(camera.R[2,1],camera.R[2,2])
 		#ry = atan2(-camera.R[2,0],sqrt(camera.R[2,1]**2 + camera.R[2,2]**2))
 		#rz = atan2(camera.R[1,0], camera.R[0,0])
@@ -114,8 +118,9 @@ if __name__ == '__main__':
 	cameras = []
 	for fileName in files:
 		if fileName.endswith('.tka'):
-			pod = Pod(folderPath + fileName,'',image_scale=1.0,to_meters=False,bg_image_filename='')
-			cameras.append(pod.camera())
+			imagePath = folderPath + fileName[0:-4] + '.bmp'
+			pod = Pod(folderPath + fileName, imagePath,image_scale=1.0,to_meters=False,bg_image_filename=imagePath)
+			cameras.append((fileName[0:-4],pod.camera()))
 
 	window = MainWindow(cameras, vertices, faces)
 	sys.exit(app.exec_())

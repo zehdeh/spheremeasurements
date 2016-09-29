@@ -6,6 +6,7 @@ import os
 
 import numpy as np
 
+import cv2
 import vtk
 from PyQt5 import QtGui, QtCore, QtWidgets
 from vtk.qt.QVTKRenderWindowInteractor import QVTKRenderWindowInteractor
@@ -14,6 +15,8 @@ from src.OBJIO import loadOBJ, writeOBJ
 from src.fitting import fitSphere
 from src.thirdparty.body.loaders.scanner_frame import Pod
 from src.mesh import Mesh
+from src.ui import VTKMainWindow
+from opendr.camera import ProjectPoints
 
 class QVTKRenderWindowInteractorWheelfix(QVTKRenderWindowInteractor):
 	def wheelEvent(self, ev):
@@ -22,65 +25,74 @@ class QVTKRenderWindowInteractorWheelfix(QVTKRenderWindowInteractor):
 		else:
 			self._Iren.MouseWheelBackwardEvent()
 
-class MainWindow(QtWidgets.QMainWindow):
+class MainWindow(VTKMainWindow):
 	def __init__(self, cameras, centerPoints, parent = None):
-		QtWidgets.QMainWindow.__init__(self,parent)
+		VTKMainWindow.__init__(self, parent)
 
 		tabWidget = QtWidgets.QTabWidget();
 		errorGridViewer = QVTKRenderWindowInteractorWheelfix(tabWidget)
 		
-		self.setupGrid(errorGridViewer,cameras, centerPoints)
+		self.setupErrorGrid(errorGridViewer,cameras, centerPoints)
 		tabWidget.addTab(errorGridViewer, 'Camera Visibility')
 
 		self.setCentralWidget(tabWidget)
 		self.show()
 	
-	def addCamera(self, renderer, camera):
-		cube = vtk.vtkCubeSource()
-		cube.SetXLength(100)
-		cube.SetYLength(100)
-		cube.SetZLength(100)
-
-		mapper = vtk.vtkPolyDataMapper()
-		mapper.SetInputConnection(cube.GetOutputPort())
-
-		actor = vtk.vtkActor()
-		actor.SetMapper(mapper)
-		
-		camPosition = -np.linalg.inv(camera.R).dot(camera.position)
-
-		actor.SetPosition(camPosition[0], camPosition[1], camPosition[2])
-		camera.lookat(np.array([0,0,0]))
-		#rx = atan2(camera.R[2,1],camera.R[2,2])
-		#ry = atan2(-camera.R[2,0],sqrt(camera.R[2,1]**2 + camera.R[2,2]**2))
-		#rz = atan2(camera.R[1,0], camera.R[0,0])
-		#print(rx)
-		#realR = realR*180/np.pi
-		#actor.SetOrientation(rx, ry, rz)
-
-		renderer.AddActor(actor)
-	def setupGrid(self,errorGridViewer,cameras, centerPoints):
+	def setupErrorGrid(self,errorGridViewer,cameras, centerPoints):
 		renderer = vtk.vtkRenderer()
 		errorGridViewer.GetRenderWindow().AddRenderer(renderer)
 		iren = errorGridViewer.GetRenderWindow().GetInteractor()
 
 		for camera in cameras:
-			self.addCamera(renderer,camera)
+			self.addCamera(renderer,camera[1])
 
 		gridSize = [50,50,50]
 		gridScale = 60
 
+		self.setupFloorGrid(renderer, gridSize[0], gridScale)
+		bwCameras = [(int(cam[0][0:2]),cam[1]) for cam in cameras if cam[0][-1] in ['A', 'B']]
+
+		headIndices = set([cam[0] for cam in bwCameras])
+
+		stereoCameras = dict.fromkeys(list(headIndices))
+		#stereoCameras[list(headIndices)] = []
+		
+		for cam in bwCameras:
+			ppoints = ProjectPoints(f=cam[1].f.ravel(), rt=cam[1].r.ravel(), t=cam[1].t.ravel(), k=cam[1].k.ravel(), c=cam[1].c.ravel())
+			if stereoCameras[cam[0]] is None:
+				stereoCameras[cam[0]] = [(cam[1],ppoints)]
+			else:
+				stereoCameras[cam[0]].append((cam[1],ppoints))
+
 		errorGrid = np.zeros((gridSize[0], gridSize[1], gridSize[2]), dtype=np.uint8)
-		#for i in range(gridSize[1]):
-		#	errorGrid[0:(gridSize[0]-1), gridSize[1]-1-i,0:(gridSize[2]-1)] = i
-		for cp in centerPoints:
-			cp[0] += gridSize[0]*gridScale/2
-			cp[1] += gridSize[1]*gridScale/2
-			cp[2] += gridSize[2]*gridScale/2
-			i = int(cp[0] / gridScale)
-			j = int(cp[1] / gridScale)
-			k = int(cp[2] / gridScale)
-			errorGrid[i,j,k] += 150
+		for i in range(gridSize[0]):
+			print i
+			for j in range(gridSize[1]):
+				for k in range(gridSize[2]):
+					x = (i*gridScale) - (gridSize[0]*gridScale/2)
+					y = (j*gridScale) - (gridSize[0]*gridScale/2)
+					z = (k*gridScale) - (gridSize[0]*gridScale/2)
+
+					for l,stereoCamera in stereoCameras.iteritems():
+						stereoCamera[0][1].v = [x,y,z]
+						stereoCamera[1][1].v = [x,y,z]
+
+						x1 = stereoCamera[0][1].r[0]
+						y1 = stereoCamera[0][1].r[1]
+						x2 = stereoCamera[1][1].r[0]
+						y2 = stereoCamera[1][1].r[1]
+
+						if x1 < 1600 and x1 >= 0 and x2 < 1600 and x2 > 0 and y1 < 1200 and y1 >= 0 and y2 < 1200 and y2 >= 0:
+							errorGrid[i,j,k] += 10
+			#errorGrid[0:(gridSize[0]-1), gridSize[1]-1-i,0:(gridSize[2]-1)] = i
+		#for cp in centerPoints:
+		#	cp[0] += gridSize[0]*gridScale/2
+		#	cp[1] += gridSize[1]*gridScale/2
+		#	cp[2] += gridSize[2]*gridScale/2
+		#	i = int(cp[0] / gridScale)
+		#	j = int(cp[1] / gridScale)
+		#	k = int(cp[2] / gridScale)
+		#	errorGrid[i,j,k] += 150
 
 		dataImporter = vtk.vtkImageImport()
 		dataString = errorGrid.tostring()
@@ -93,7 +105,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
 		alphaChannelFunc = vtk.vtkPiecewiseFunction()
 		alphaChannelFunc.AddPoint(0, 0)
-		alphaChannelFunc.AddPoint(gridSize[1] - 1, 0.5)
+		alphaChannelFunc.AddPoint(255, 0.5)
 
 		colorFunc = vtk.vtkColorTransferFunction()
 		colorFunc.AddRGBPoint(0, 0,0,1.0)
@@ -106,6 +118,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
 		volumeMapper = vtk.vtkSmartVolumeMapper()
 		volumeMapper.SetInputConnection(dataImporter.GetOutputPort())
+		#volumeMapper.SetInputDataObject(structuredGrid)
 
 		volume = vtk.vtkVolume()
 		volume.SetOrigin(gridSize[0]/2, gridSize[1]/2,gridSize[2]/2)
@@ -144,7 +157,7 @@ if __name__ == '__main__':
 	for fileName in files:
 		if fileName.endswith('.tka'):
 			pod = Pod(folderPath + fileName,'',image_scale=1.0,to_meters=False,bg_image_filename='')
-			cameras.append(pod.camera())
+			cameras.append((fileName[0:-4],pod.camera()))
 			i += 1
 
 	window = MainWindow(cameras, centerPoints)
