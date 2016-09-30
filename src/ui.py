@@ -21,6 +21,7 @@ class VTKMainWindow(QtWidgets.QMainWindow):
 		camPosition = np.linalg.inv(camera.R).dot(camera.position)
 		vtkCamera.SetPosition(camPosition[0], camPosition[1], camPosition[2])
 		vtkCamera.SetFocalPoint(0,0,0)
+		vtkCamera.SetThickness(500)
 		planesArray = [0 for i in range(24)]
 
 		vtkCamera.GetFrustumPlanes(camera.w/camera.h, planesArray)
@@ -46,14 +47,14 @@ class VTKMainWindow(QtWidgets.QMainWindow):
 	def setupFloorGrid(self, renderer, noCells, gridScale):
 		grid = vtk.vtkRectilinearGrid()
  
-		grid.SetDimensions(noCells,1,noCells);
+		grid.SetDimensions(noCells[0],1,noCells[1]);
 	 
 		xArray = vtk.vtkDoubleArray()
 		zArray = vtk.vtkDoubleArray()
-		for i in range(noCells):
-			xArray.InsertNextValue(i*gridScale);
-		for i in range(noCells):
-			zArray.InsertNextValue(i*gridScale);
+		for i in range(noCells[0]):
+			xArray.InsertNextValue(i*gridScale[0]);
+		for i in range(noCells[1]):
+			zArray.InsertNextValue(i*gridScale[1]);
 
 		grid.SetXCoordinates(xArray);
 		#grid.SetYCoordinates(yArray);
@@ -69,7 +70,7 @@ class VTKMainWindow(QtWidgets.QMainWindow):
 		ractor = vtk.vtkActor()
 		ractor.GetProperty().SetRepresentationToWireframe()
 		#ractor.SetOrigin(gridScale*gridSize[0], 0, gridScale*gridSize[2])
-		ractor.SetPosition(-gridScale*noCells/2,-2000,-gridScale*noCells/2)
+		ractor.SetPosition(-gridScale[0]*noCells[0]/2,-2000,-gridScale[1]*noCells[1]/2)
 		ractor.GetProperty().SetColor(0.5,0.5,0.5)
 		ractor.SetMapper(rmapper)
 

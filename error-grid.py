@@ -15,75 +15,82 @@ from src.OBJIO import loadOBJ, writeOBJ
 from src.fitting import fitSphere
 from src.thirdparty.body.loaders.scanner_frame import Pod
 from src.mesh import Mesh
-from src.ui import VTKMainWindow
+from src.ui import VTKMainWindow, QVTKRenderWindowInteractorWheelfix
 from opendr.camera import ProjectPoints
 
-class QVTKRenderWindowInteractorWheelfix(QVTKRenderWindowInteractor):
-	def wheelEvent(self, ev):
-		if ev.angleDelta().y() >= 0:
-			self._Iren.MouseWheelForwardEvent()
-		else:
-			self._Iren.MouseWheelBackwardEvent()
+class StereoCamera(object):
+	def __init__(self):
+		self.A = None
+		self.B = None
+		self.C = None
+		self.ppointsA = None
+		self.ppointsB = None
+		self.name = None
+		self.visibilityMatrix = None
+		self.visible = True
 
 class MainWindow(VTKMainWindow):
-	def __init__(self, cameras, centerPoints, parent = None):
+	def __init__(self, stereoCameras, centerPoints, gridSize, gridScale, parent = None):
 		VTKMainWindow.__init__(self, parent)
 
 		tabWidget = QtWidgets.QTabWidget();
-		errorGridViewer = QVTKRenderWindowInteractorWheelfix(tabWidget)
+		self.errorGridViewer = QVTKRenderWindowInteractorWheelfix(tabWidget)
 		
-		self.setupErrorGrid(errorGridViewer,cameras, centerPoints)
-		tabWidget.addTab(errorGridViewer, 'Camera Visibility')
+		cameraDock = QtWidgets.QDockWidget('Cameras', self)
+		cameraDock.setAllowedAreas(QtCore.Qt.LeftDockWidgetArea | QtCore.Qt.RightDockWidgetArea);
+		
+		cameraList = QtWidgets.QListWidget()
+		cameraDock.setWidget(cameraList)
 
+		self.stereoCameras = stereoCameras
+		self.setupErrorGrid(self.errorGridViewer,stereoCameras, centerPoints, gridSize, gridScale, cameraList)
+		tabWidget.addTab(self.errorGridViewer, 'Camera Visibility')
+
+		cameraList.itemChanged.connect(self.onCameraToggle)
+
+		self.addDockWidget(QtCore.Qt.RightDockWidgetArea, cameraDock);
 		self.setCentralWidget(tabWidget)
 		self.show()
 	
-	def setupErrorGrid(self,errorGridViewer,cameras, centerPoints):
-		renderer = vtk.vtkRenderer()
-		errorGridViewer.GetRenderWindow().AddRenderer(renderer)
+	def onCameraToggle(self, item):
+		self.itemCameraMM[item].visible = (item.checkState() == 2)
+		self.rebuildCoverage()
+		self.volumeMapper.Update()
+		self.errorGridViewer.GetRenderWindow().Render()
+	def rebuildCoverage(self):
+		errorGrid = np.zeros((gridSize[0], gridSize[1], gridSize[2]), dtype=np.uint8)
+
+		for i,stereoCamera in self.stereoCameras.iteritems():
+			if stereoCamera.visible:
+				errorGrid += stereoCamera.visibilityMatrix
+			else:
+				print 'not using this one'
+		#errorGrid *= 100
+
+		dataString = errorGrid.tostring()
+		self.gridDataImporter.CopyImportVoidPointer(dataString, len(dataString))
+	def setupErrorGrid(self,errorGridViewer,stereoCameras, centerPoints, gridSize, gridScale, uiCameraList):
+		self.gridRenderer = vtk.vtkRenderer()
+		errorGridViewer.GetRenderWindow().AddRenderer(self.gridRenderer)
 		iren = errorGridViewer.GetRenderWindow().GetInteractor()
 
-		for camera in cameras:
-			self.addCamera(renderer,camera[1])
+		self.setupFloorGrid(self.gridRenderer, [gridSize[0], gridSize[2]], [gridScale[0], gridScale[2]])
 
-		gridSize = [50,50,50]
-		gridScale = 60
 
-		self.setupFloorGrid(renderer, gridSize[0], gridScale)
-		bwCameras = [(int(cam[0][0:2]),cam[1]) for cam in cameras if cam[0][-1] in ['A', 'B']]
+		self.itemCameraMM = dict()
+		for i,stereoCamera in stereoCameras.iteritems():
+			self.addCamera(self.gridRenderer,stereoCamera.A)
+			self.addCamera(self.gridRenderer,stereoCamera.B)
+			self.addCamera(self.gridRenderer,stereoCamera.C)
 
-		headIndices = set([cam[0] for cam in bwCameras])
-
-		stereoCameras = dict.fromkeys(list(headIndices))
-		#stereoCameras[list(headIndices)] = []
-		
-		for cam in bwCameras:
-			ppoints = ProjectPoints(f=cam[1].f.ravel(), rt=cam[1].r.ravel(), t=cam[1].t.ravel(), k=cam[1].k.ravel(), c=cam[1].c.ravel())
-			if stereoCameras[cam[0]] is None:
-				stereoCameras[cam[0]] = [(cam[1],ppoints)]
-			else:
-				stereoCameras[cam[0]].append((cam[1],ppoints))
-
-		errorGrid = np.zeros((gridSize[0], gridSize[1], gridSize[2]), dtype=np.uint8)
-		for i in range(gridSize[0]):
-			print i
-			for j in range(gridSize[1]):
-				for k in range(gridSize[2]):
-					x = (i*gridScale) - (gridSize[0]*gridScale/2)
-					y = (j*gridScale) - (gridSize[0]*gridScale/2)
-					z = (k*gridScale) - (gridSize[0]*gridScale/2)
-
-					for l,stereoCamera in stereoCameras.iteritems():
-						stereoCamera[0][1].v = [x,y,z]
-						stereoCamera[1][1].v = [x,y,z]
-
-						x1 = stereoCamera[0][1].r[0]
-						y1 = stereoCamera[0][1].r[1]
-						x2 = stereoCamera[1][1].r[0]
-						y2 = stereoCamera[1][1].r[1]
-
-						if x1 < 1600 and x1 >= 0 and x2 < 1600 and x2 > 0 and y1 < 1200 and y1 >= 0 and y2 < 1200 and y2 >= 0:
-							errorGrid[i,j,k] += 10
+			listItem = QtWidgets.QListWidgetItem("Camera " + str(stereoCamera.name), uiCameraList)
+			listItem.setFlags(listItem.flags() | QtCore.Qt.ItemIsUserCheckable)
+			listItem.setCheckState(QtCore.Qt.Checked)
+			uiCameraList.addItem(listItem)
+			
+			self.itemCameraMM[listItem] = stereoCamera
+		#print errorGrid
+			
 			#errorGrid[0:(gridSize[0]-1), gridSize[1]-1-i,0:(gridSize[2]-1)] = i
 		#for cp in centerPoints:
 		#	cp[0] += gridSize[0]*gridScale/2
@@ -94,18 +101,20 @@ class MainWindow(VTKMainWindow):
 		#	k = int(cp[2] / gridScale)
 		#	errorGrid[i,j,k] += 150
 
-		dataImporter = vtk.vtkImageImport()
-		dataString = errorGrid.tostring()
-		dataImporter.CopyImportVoidPointer(dataString, len(dataString))
-		dataImporter.SetDataScalarTypeToUnsignedChar()
-		dataImporter.SetNumberOfScalarComponents(1)
+		self.gridDataImporter = vtk.vtkImageImport()
+		self.rebuildCoverage()
 
-		dataImporter.SetWholeExtent(0, (gridSize[0] - 1), 0, (gridSize[1] - 1), 0, (gridSize[2] - 1))
-		dataImporter.SetDataExtentToWholeExtent()
+		self.gridDataImporter.SetDataScalarTypeToUnsignedChar()
+		self.gridDataImporter.SetNumberOfScalarComponents(1)
+
+		self.gridDataImporter.SetDataExtent(0, (gridSize[0] - 1), 0, (gridSize[1] - 1), 0, (gridSize[2] - 1))
+		self.gridDataImporter.SetWholeExtent(0, (gridSize[0] - 1), 0, (gridSize[1] - 1), 0, (gridSize[2] - 1))
+		self.gridDataImporter.SetDataSpacing(1.0,1.0,1.0)
+		self.gridDataImporter.SetDataOrigin(0,0,0)
 
 		alphaChannelFunc = vtk.vtkPiecewiseFunction()
-		alphaChannelFunc.AddPoint(0, 0)
-		alphaChannelFunc.AddPoint(255, 0.5)
+		alphaChannelFunc.AddPoint(0, 0.0)
+		alphaChannelFunc.AddPoint(255, 0.2)
 
 		colorFunc = vtk.vtkColorTransferFunction()
 		colorFunc.AddRGBPoint(0, 0,0,1.0)
@@ -116,21 +125,20 @@ class MainWindow(VTKMainWindow):
 		volumeProperty.SetColor(colorFunc)
 		volumeProperty.SetScalarOpacity(alphaChannelFunc)
 
-		volumeMapper = vtk.vtkSmartVolumeMapper()
-		volumeMapper.SetInputConnection(dataImporter.GetOutputPort())
-		#volumeMapper.SetInputDataObject(structuredGrid)
+		self.volumeMapper = vtk.vtkSmartVolumeMapper()
+		self.volumeMapper.SetInputConnection(self.gridDataImporter.GetOutputPort())
 
 		volume = vtk.vtkVolume()
 		volume.SetOrigin(gridSize[0]/2, gridSize[1]/2,gridSize[2]/2)
-		volume.SetScale(gridScale)
+		volume.SetScale(gridScale[0], gridScale[1], gridScale[2])
 		#volume.SetPosition(0,-gridSize[1]*gridScale/2,0)
-		volume.SetPosition(0,0,0)
-		volume.SetMapper(volumeMapper)
+		#volume.SetPosition(0,0,0)
+		volume.SetMapper(self.volumeMapper)
 		volume.SetProperty(volumeProperty)
 
 		#interactorStyle = vtk.vtkInteractorStyleTerrain()
 		#iren.SetInteractorStyle(interactorStyle)
-		renderer.AddVolume(volume)
+		self.gridRenderer.AddVolume(volume)
 		iren.Initialize()
 
 if __name__ == '__main__':
@@ -150,15 +158,69 @@ if __name__ == '__main__':
 			cp, radius = fitSphere(vertices,p0,150, bounds)
 			centerPoints.append(cp)
 
-	folderPath = sys.argv[2]
-	files = os.listdir(folderPath)
+	calibrationFolderPath = sys.argv[2]
+	files = os.listdir(calibrationFolderPath)
 	cameras = []
 	i = 0
 	for fileName in files:
 		if fileName.endswith('.tka'):
-			pod = Pod(folderPath + fileName,'',image_scale=1.0,to_meters=False,bg_image_filename='')
+			pod = Pod(calibrationFolderPath + fileName,'',image_scale=1.0,to_meters=False,bg_image_filename='')
 			cameras.append((fileName[0:-4],pod.camera()))
 			i += 1
 
-	window = MainWindow(cameras, centerPoints)
+	gridSize = [50,50,50]
+	scannerVolumeSize = [3000,3000,3000]
+	gridScale = [scannerVolumeSize[0] / gridSize[0], scannerVolumeSize[1] / gridSize[1], scannerVolumeSize[2] / gridSize[2]]
+
+	cameras = [(cam[0],cam[1]) for cam in cameras]
+
+	stereoCameras = dict()
+	#stereoCameras[list(headIndices)] = []
+	
+	for cam in cameras:
+		camNo = int(cam[0][0:2])
+		camSign = cam[0][3]
+		if camNo not in stereoCameras:
+			stereoCameras[camNo] = StereoCamera()
+			stereoCameras[camNo].name = camNo
+
+		if camSign == 'A':
+			stereoCameras[camNo].A = cam[1]
+			stereoCameras[camNo].ppointsA = ProjectPoints(f=cam[1].f.ravel(), rt=cam[1].r.ravel(), t=cam[1].t.ravel(), k=cam[1].k.ravel(), c=cam[1].c.ravel())
+		elif camSign == 'B':
+			stereoCameras[camNo].B = cam[1]
+			stereoCameras[camNo].ppointsB = ProjectPoints(f=cam[1].f.ravel(), rt=cam[1].r.ravel(), t=cam[1].t.ravel(), k=cam[1].k.ravel(), c=cam[1].c.ravel())
+		else:
+			stereoCameras[camNo].C = cam[1]
+
+	for l,stereoCamera in stereoCameras.iteritems():
+		fileName = calibrationFolderPath + '/coverageMatrices/' + str(stereoCamera.name) + '_' + str(gridSize[0]) + '_' + str(gridSize[1]) + '_' + str(gridSize[2])
+		if os.path.isfile(fileName + '.npy'):
+			stereoCamera.visibilityMatrix = np.load(fileName + '.npy')
+		else:
+			visibilityMatrix = np.zeros((gridSize[0], gridSize[1], gridSize[2]), dtype=np.uint8)
+			print 'processing camera...'
+			for i in range(gridSize[0]):
+				for j in range(gridSize[1]):
+					for k in range(gridSize[2]):
+						x = (i*gridScale[0]) - (gridSize[0]*gridScale[0]/2)
+						y = (j*gridScale[1]) - (gridSize[1]*gridScale[1]/2)
+						z = (k*gridScale[2]) - (gridSize[2]*gridScale[2]/2)
+
+						stereoCamera.ppointsA.v = [x,y,z]
+						stereoCamera.ppointsB.v = [x,y,z]
+
+						x1 = stereoCamera.ppointsA.r[0]
+						y1 = stereoCamera.ppointsA.r[1]
+						x2 = stereoCamera.ppointsB.r[0]
+						y2 = stereoCamera.ppointsB.r[1]
+
+						if x1 < 1600 and x1 >= 0 and x2 < 1600 and x2 > 0 and y1 < 1200 and y1 >= 0 and y2 < 1200 and y2 >= 0:
+							visibilityMatrix[k,j,i] = 1
+			stereoCamera.visibilityMatrix = visibilityMatrix
+			if not os.path.exists(calibrationFolderPath + '/coverageMatrices/'):
+				os.makedirs(calibrationFolderPath + '/coverageMatrices/')
+			np.save(fileName, visibilityMatrix)
+	
+	window = MainWindow(stereoCameras, centerPoints, gridSize, gridScale)
 	sys.exit(app.exec_())

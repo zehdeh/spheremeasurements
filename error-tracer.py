@@ -9,19 +9,13 @@ from PyQt5 import QtGui, QtCore, QtWidgets
 from vtk.qt.QVTKRenderWindowInteractor import QVTKRenderWindowInteractor
 from src.thirdparty.body.loaders.scanner_frame import Pod
 from opendr.camera import ProjectPoints
+from src.ui import VTKMainWindow, QVTKRenderWindowInteractorWheelfix
 
 from src.OBJIO import loadOBJ, writeOBJ
 
-class QVTKRenderWindowInteractorWheelfix(QVTKRenderWindowInteractor):
-	def wheelEvent(self, ev):
-		if ev.angleDelta().y() >= 0:
-			self._Iren.MouseWheelForwardEvent()
-		else:
-			self._Iren.MouseWheelBackwardEvent()
-
-class MainWindow(QtWidgets.QMainWindow):
+class MainWindow(VTKMainWindow):
 	def __init__(self, cameras, vertices, faces, parent = None):
-		QtWidgets.QMainWindow.__init__(self,parent)
+		VTKMainWindow.__init__(self,parent)
 
 		tabWidget = QtWidgets.QTabWidget();
 		errorTracerViewer = QVTKRenderWindowInteractorWheelfix(tabWidget)
@@ -40,6 +34,7 @@ class MainWindow(QtWidgets.QMainWindow):
 			print camera[0]
 			self.addCamera(renderer,camera[1])
 
+		self.setupFloorGrid(renderer, [50,50], [60,60])
 		points = vtk.vtkPoints()
 		for v in vertices:
 			points.InsertNextPoint(v[0], v[1], v[2])
@@ -80,31 +75,6 @@ class MainWindow(QtWidgets.QMainWindow):
 		renderer.AddActor(actor)
 
 		iren.Initialize()
-
-	def addCamera(self, renderer, camera):
-		cube = vtk.vtkCubeSource()
-		cube.SetXLength(100)
-		cube.SetYLength(100)
-		cube.SetZLength(100)
-
-		mapper = vtk.vtkPolyDataMapper()
-		mapper.SetInputConnection(cube.GetOutputPort())
-
-		actor = vtk.vtkActor()
-		actor.SetMapper(mapper)
-		
-		camPosition = np.linalg.inv(camera.R).dot(camera.position)
-
-		actor.SetPosition(camPosition[0], camPosition[1], camPosition[2])
-		#camera.lookat(np.array([0,0,0]))
-		#rx = atan2(camera.R[2,1],camera.R[2,2])
-		#ry = atan2(-camera.R[2,0],sqrt(camera.R[2,1]**2 + camera.R[2,2]**2))
-		#rz = atan2(camera.R[1,0], camera.R[0,0])
-		#print(rx)
-		#realR = realR*180/np.pi
-		#actor.SetOrientation(rx, ry, rz)
-
-		renderer.AddActor(actor)
 
 if __name__ == '__main__':
 	if len(sys.argv) < 3:
