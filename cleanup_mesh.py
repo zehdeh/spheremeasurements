@@ -115,7 +115,7 @@ if __name__ == '__main__':
 			#vertices, faces = removeVerticesByCondition(condition, vertices, faces)
 			#offset = centerModel(vertices)
 			sphereCenter = houghTransformation(vertices, faces, normals, 150)
-			condition = lambda x: np.linalg.norm(sphereCenter - x, axis=1) < 160
+			condition = lambda x: np.linalg.norm(sphereCenter - x, axis=1) < 155
 			vertices, faces, normals = removeVerticesByCondition(condition, vertices, faces, normals)
 
 			if sys.argv[2].endswith('.obj'):

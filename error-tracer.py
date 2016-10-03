@@ -9,16 +9,22 @@ from PyQt5 import QtGui, QtCore, QtWidgets
 from vtk.qt.QVTKRenderWindowInteractor import QVTKRenderWindowInteractor
 from src.thirdparty.body.loaders.scanner_frame import Pod
 from opendr.camera import ProjectPoints
-from src.ui import VTKMainWindow, QVTKRenderWindowInteractorWheelfix
+from src.ui import VTKMainWindow, QVTKRenderWindowInteractorWheelfix, StereoCamera
 
 from src.OBJIO import loadOBJ, writeOBJ
 
 class MainWindow(VTKMainWindow):
-	def __init__(self, cameras, vertices, faces, parent = None):
+	def __init__(self, stereoCameras, vertices, faces, parent = None):
 		VTKMainWindow.__init__(self,parent)
 
 		tabWidget = QtWidgets.QTabWidget();
 		errorTracerViewer = QVTKRenderWindowInteractorWheelfix(tabWidget)
+
+		cameraDock = QtWidgets.QDockWidget('Cameras', self)
+		cameraDock.setAllowedAreas(QtCore.Qt.LeftDockWidgetArea | QtCore.Qt.RightDockWidgetArea);
+
+		cameraList = QtWidgets.QListWidget()
+		cameraDock.setWidget(cameraList)
 
 		self.setupErrorTracer(errorTracerViewer,cameras, vertices, faces)
 		tabWidget.addTab(errorTracerViewer, 'Camera Visibility')
@@ -31,7 +37,6 @@ class MainWindow(VTKMainWindow):
 		iren = errorTracerViewer.GetRenderWindow().GetInteractor()
 
 		for camera in cameras:
-			print camera[0]
 			self.addCamera(renderer,camera[1])
 
 		self.setupFloorGrid(renderer, [50,50], [60,60])

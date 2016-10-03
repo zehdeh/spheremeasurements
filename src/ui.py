@@ -12,10 +12,35 @@ class QVTKRenderWindowInteractorWheelfix(QVTKRenderWindowInteractor):
 			self._Iren.MouseWheelBackwardEvent()
 
 class VTKMainWindow(QtWidgets.QMainWindow):
-	def __init__(self, parent=None):
+	def __init__(self, stereoCameras, mainVTKRenderer, parent=None):
 		QtWidgets.QMainWindow.__init__(self,parent)
 
+		self.mainVTKRenderer = mainVTKRenderer
+
+		self.cameraDock = QtWidgets.QDockWidget('Cameras', self)
+		self.cameraDock.setAllowedAreas(QtCore.Qt.LeftDockWidgetArea | QtCore.Qt.RightDockWidgetArea);
+		self.cameraList = QtWidgets.QListWidget(self.cameraDock)
+		self.cameraDock.setWidget(self.cameraList)
+
 		self.vtkCameras = []
+		self.itemCameraMM = dict()
+		for i,stereoCamera in stereoCameras.iteritems():
+			self.addCamera(self.mainVTKRenderer,stereoCamera.A)
+			self.addCamera(self.mainVTKRenderer,stereoCamera.B)
+			self.addCamera(self.mainVTKRenderer,stereoCamera.C)
+
+			listItem = QtWidgets.QListWidgetItem("Camera " + str(stereoCamera.name), self.cameraList)
+			listItem.setFlags(listItem.flags() | QtCore.Qt.ItemIsUserCheckable)
+			listItem.setCheckState(QtCore.Qt.Checked)
+			self.cameraList.addItem(listItem)
+			
+			self.itemCameraMM[listItem] = stereoCamera
+
+		self.cameraList.itemChanged.connect(self.onCameraToggle)
+
+		self.stereoCameras = stereoCameras
+		self.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.cameraDock);
+
 	def addCamera(self, renderer, camera):
 		vtkCamera = vtk.vtkCamera()
 		camPosition = np.linalg.inv(camera.R).dot(camera.position)

@@ -3,7 +3,7 @@
 import sys
 import numpy as np
 import math
-from src.utils import distance
+from src.fitting import distance
 import matplotlib.pyplot as plt
 import mpl_toolkits.mplot3d.art3d as art3d
 from src.mplcolorhelper import MplColorHelper

@@ -4,7 +4,8 @@ from scipy.optimize import leastsq, least_squares
 from opendr.serialization import load_mesh
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 from opendr.geometry import GaussianCurvature
-from mayavi.mlab import *
+import vtk
+from src.fitting import distance
 
 
 def randomPartition(n, nData):
@@ -57,7 +58,7 @@ class Shape(object):
 		self._faces = self.mesh.f
 		self._filePath = filePath
 
-		self.curvature = np.asarray(GaussianCurvature(self._vertices.T, self._faces))
+		#self.curvature = np.asarray(GaussianCurvature(self._vertices.T, self._faces))
 	@property
 	def mesh(self):
 		return self._mesh
@@ -85,13 +86,65 @@ class Shape(object):
 	def getCurvature(self):
 		return self.curvature
 	def render(self,color):
-		from mayavi import mlab
+		renderWindow = vtk.vtkRenderWindow()
+		iren = vtk.vtkRenderWindowInteractor()
+		iren.SetRenderWindow(renderWindow)
 
-		mesh = triangular_mesh(self._vertices[0], self._vertices[1], self._vertices[2], self._faces, scalars=color)
-		mlab.scalarbar(mesh)
-		mlab.outline()
+		renderer = vtk.vtkRenderer()
+		points = vtk.vtkPoints()
+		for v in self._vertices.T:
+			points.InsertNextPoint(v[0], v[1], v[2])
 
-		mlab.show()
+		polygons = vtk.vtkCellArray()
+		for f in self._faces:
+			polygon = vtk.vtkPolygon()
+			polygon.GetPointIds().SetNumberOfIds(3)
+			polygon.GetPointIds().SetId(0, f[0])
+			polygon.GetPointIds().SetId(1, f[1])
+			polygon.GetPointIds().SetId(2, f[2])
+
+			polygons.InsertNextCell(polygon)
+
+		color = color/color.max()
+
+		colors = vtk.vtkFloatArray()
+		colors.SetNumberOfComponents(1)
+		for c in color:
+			colors.InsertNextTupleValue([c])
+
+		ctf = vtk.vtkColorTransferFunction()
+		ctf.SetColorSpaceToDiverging()
+		ctf.AddRGBPoint(0, 1.0, 0.0, 0.0)
+		ctf.AddRGBPoint(0.5, 0.0, 0.0, 1.0)
+		ctf.AddRGBPoint(1.0, 0.0, 1.0, 0.0)
+
+		noOfColors = 500
+		lut = vtk.vtkLookupTable()
+		lut.SetNumberOfTableValues(noOfColors)
+		lut.Build()
+		for i in range(0, noOfColors):
+			rgb = list(ctf.GetColor(i))+[1]
+			lut.SetTableValue(i,rgb)
+
+		polydata = vtk.vtkPolyData()
+		polydata.SetPoints(points)
+		polydata.SetPolys(polygons)
+		polydata.GetPointData().SetScalars(colors)
+
+		mapper = vtk.vtkPolyDataMapper()
+		mapper.SetInputData(polydata)
+		mapper.SetColorModeToMapScalars()
+		mapper.SetLookupTable(lut)
+
+		actor = vtk.vtkActor()
+		actor.SetMapper(mapper)
+
+		renderer.AddActor(actor)
+		renderWindow.AddRenderer(renderer)
+
+		iren.Initialize()
+		renderWindow.Render()
+		iren.Start()
 
 class Plane(Shape):
 	def __init__(self,filePath):
