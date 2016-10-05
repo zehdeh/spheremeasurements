@@ -1,5 +1,6 @@
 #! /usr/bin/python
 
+
 import sys
 import numpy as np
 from math import isnan
@@ -66,10 +67,13 @@ if __name__ == '__main__':
 	k = (Lmax + 1)**2
 	Y = np.zeros((n,k))
 	# Represent spherical harmonics on the surface of the sphere
+	
+	kToLM = np.zeros((k,2))
 	for i in range(n):
 		for l in range(Lmax+1):
 			for m in range(-l,l+1):
 				j = l**2 + l + m + 1
+				kToLM[j-1,:] = [l,m]
 				s = sph_harm(l, m, theta[i], phi[i]).real
 				#print 'l ' + str(l)
 				#print 'm ' + str(m)
@@ -79,6 +83,14 @@ if __name__ == '__main__':
 	a0 = np.zeros(k)
 	a1, flag = leastsq(residuals, a0, args=(Y,r))
 
+	ys = np.zeros(Lmax+1)
+	LMMatrix = np.zeros((k,k))
+	for j,a in enumerate(a1):
+		l,m = kToLM[j]
+		LMMatrix[int(l),int(m+l)] = a
+		ys[int(l)]  = np.linalg.norm(LMMatrix[int(l)], ord=2)
+
+
 	r_approx = Y.dot(a1)
 
 	vertices2 = getCartesianCoordinates(theta, phi, r_approx, centerPoint)
@@ -87,14 +99,25 @@ if __name__ == '__main__':
 	xplot = np.arange(0, len(a1), 1)
 	fig = plt.figure()
 	#plt.plot(xplot, a1)
-	a1 = np.fabs(a1)
-	bins = np.arange(a1.min(), a1.max()-1,1)
-	#bins = np.logspace(a1.min(), a1.max()-1,1000)
+	#a1 = np.fabs(a1)
+	#a1 = np.sort(a1)[::-1]
+	#a1 = a1[a1 > 0]
+	#print a1.max()
+
+	xa = np.arange(0, len(ys))
+	plt.plot(xa, ys)
+	plt.grid(True)
+	plt.title(sys.argv[1])
+
+	#bins = np.arange(a1.min(),a1.max(),len(a1))
+	#bins = 10**np.linspace(np.log10(0.00001), np.log10(600),50)
+	#bins = np.logspace(0.00000001, 0.000001, 50)
 	#plt.xticks(bins, ["2^%s" % i for i in bins])
-	plt.hist(a1, bins=bins)
+	#plt.hist(a1, bins=bins)
 	#plt.hist(a1, bins=np.arange(a1.min(), a1.max()-1))
+	
 	#plt.gca().set_xscale('log')
-	#plt.gca().set_yscale('log')
+	plt.gca().set_yscale('log')
 	plt.show()
 
 

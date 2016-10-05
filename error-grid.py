@@ -1,7 +1,7 @@
 #! /usr/bin/python
 
 import sys
-from math import atan2,sqrt
+from math import atan2,sqrt,fabs
 import os
 
 import numpy as np
@@ -10,7 +10,7 @@ import cv2
 import vtk
 from PyQt5 import QtGui, QtCore, QtWidgets
 from vtk.qt.QVTKRenderWindowInteractor import QVTKRenderWindowInteractor
-
+from vtk.util.vtkImageImportFromArray import vtkImageImportFromArray
 from src.OBJIO import loadOBJ, writeOBJ
 from src.fitting import fitSphere, fittingErrorSphere
 from src.thirdparty.body.loaders.scanner_frame import Pod
@@ -21,15 +21,16 @@ from src.calibration import getStereoCamerasFromCalibration, StereoCamera
 
 
 class MainWindow(VTKMainWindow):
-	def __init__(self, stereoCameras, centerPoints, rmses, gridSize, gridScale, parent = None):
+	def __init__(self, stereoCameras, centerPoints, errorMatrices, gridSize, gridScale, parent = None):
 		VTKMainWindow.__init__(self, stereoCameras, vtk.vtkRenderer(), parent)
 
 		tabWidget = QtWidgets.QTabWidget();
 		self.errorGridViewer = QVTKRenderWindowInteractorWheelfix(tabWidget)
 		
-		
+		self.centerPoints = centerPoints
+		self.errorMatrices = errorMatrices
 		self.errorGridViewer.GetRenderWindow().AddRenderer(self.mainVTKRenderer)
-		self.setupErrorGrid(stereoCameras, self.mainVTKRenderer, centerPoints, gridSize, gridScale)
+		self.setupErrorGrid(stereoCameras, self.mainVTKRenderer, gridSize, gridScale)
 		tabWidget.addTab(self.errorGridViewer, 'Camera Visibility')
 
 
@@ -39,24 +40,52 @@ class MainWindow(VTKMainWindow):
 	def onCameraToggle(self, item):
 		self.itemCameraMM[item].visible = (item.checkState() == 2)
 		self.rebuildCoverage()
+		self.volumeMapper.SetInputConnection(self.imageImport.GetOutputPort())
 		self.volumeMapper.Update()
 		self.errorGridViewer.GetRenderWindow().Render()
+		self.mainVTKRenderer.ResetCamera()
 	def rebuildCoverage(self):
-		errorGrid = np.zeros((gridSize[0], gridSize[1], gridSize[2]), dtype=(np.uint8,2))
-		#colorValues = np.zeros((gridSize[0], gridSize[1], gridSize[2]), dtype=np.uint8)
-		for i in range(gridSize[1]):
-			errorGrid[:,i,:,0] = 0
-			errorGrid[:,i,:,1] = 0
+		alphaValues = np.zeros((gridSize[0], gridSize[1], gridSize[2]), dtype=np.float)
+		colorValues = np.zeros((gridSize[0], gridSize[1], gridSize[2]), dtype=np.float)
 
+		noCameras = float(len(self.stereoCameras))
 		for i,stereoCamera in self.stereoCameras.iteritems():
 			if stereoCamera.visible:
 				pass
-				#alphaValues += stereoCamera.visibilityMatrix
-		#alphaValues *= 10
+				#alphaValues += stereoCamera.visibilityMatrix / noCameras
+		#alphaValues[:,:,:] = 1.0
+		
+		#colorValues[:,:,:] = -1.0
+		
+		for errorMatrix in errorMatrices:
+			colorValues += errorMatrix
+			#colorValues = 255
+			#alphaValues += 10*errorMatrix
 
-		dataString = errorGrid.tostring()
-		self.gridDataImporter.CopyImportVoidPointer(dataString, len(dataString))
-	def setupErrorGrid(self,stereoCameras, renderer, centerPoints, gridSize, gridScale):
+		alphaValues[np.nonzero(colorValues)] = 0.5
+		#alphaValues = np.fabs(colorValues)
+		'''
+		for cp in self.centerPoints:
+			x = cp[0] + gridSize[0]*gridScale[0]/2
+			y = cp[1] + gridSize[1]*gridScale[1]/2
+			z = cp[2] + gridSize[2]*gridScale[2]/2
+			i = int(x / gridScale[0])
+			j = int(y / gridScale[1])
+			k = int(z / gridScale[2])
+			colorValues[i,j,k] = 255#min(255,colorValues[i,j,k] + 150)
+			alphaValues[i,j,k] += 50
+		'''
+
+		alphaImporter = vtkImageImportFromArray()
+		alphaImporter.SetArray(alphaValues)
+		colorImporter = vtkImageImportFromArray()
+		colorImporter.SetArray(colorValues)
+
+		self.imageImport = vtk.vtkImageAppendComponents()
+		self.imageImport.AddInputConnection(colorImporter.GetOutputPort())
+		self.imageImport.AddInputConnection(alphaImporter.GetOutputPort())
+
+	def setupErrorGrid(self,stereoCameras, renderer, gridSize, gridScale):
 		iren = self.errorGridViewer.GetRenderWindow().GetInteractor()
 
 		self.setupFloorGrid(self.mainVTKRenderer, [gridSize[0], gridSize[2]], [gridScale[0], gridScale[2]])
@@ -64,41 +93,28 @@ class MainWindow(VTKMainWindow):
 		#print errorGrid
 			
 			#errorGrid[0:(gridSize[0]-1), gridSize[1]-1-i,0:(gridSize[2]-1)] = i
-		#for cp in centerPoints:
-		#	cp[0] += gridSize[0]*gridScale/2
-		#	cp[1] += gridSize[1]*gridScale/2
-		#	cp[2] += gridSize[2]*gridScale/2
-		#	i = int(cp[0] / gridScale)
-		#	j = int(cp[1] / gridScale)
-		#	k = int(cp[2] / gridScale)
-		#	errorGrid[i,j,k] += 150
 
-		self.gridDataImporter = vtk.vtkImageImport()
 		self.rebuildCoverage()
 
-		self.gridDataImporter.SetDataScalarTypeToUnsignedChar()
-		self.gridDataImporter.SetNumberOfScalarComponents(2)
-
-		self.gridDataImporter.SetDataExtent(0, (gridSize[0] - 1), 0, (gridSize[1] - 1), 0, (gridSize[2] - 1))
-		self.gridDataImporter.SetWholeExtent(0, (gridSize[0] - 1), 0, (gridSize[1] - 1), 0, (gridSize[2] - 1))
-		self.gridDataImporter.SetDataSpacing(1.0,1.0,1.0)
-		self.gridDataImporter.SetDataOrigin(0,0,0)
-
 		alphaChannelFunc = vtk.vtkPiecewiseFunction()
-		alphaChannelFunc.AddPoint(0, 1.0)
-		alphaChannelFunc.AddPoint(255, 0.0)
+		alphaChannelFunc.AddPoint(0, 0.0)
+		alphaChannelFunc.AddPoint(1.0, 0.3)
 
 		colorFunc = vtk.vtkColorTransferFunction()
-		colorFunc.AddRGBPoint(0, 1.0,1.0,1.0)
-		colorFunc.AddRGBPoint(50, 0.5,0.5,0.5)
-		colorFunc.AddRGBPoint(255, 1.0,1.0,1.0)
+		colorFunc.AddRGBPoint(-1.0, 0.230, 0.299, 0.754)
+		colorFunc.AddRGBPoint(0.0, 1.0, 1.0, 1.0)
+		colorFunc.AddRGBPoint(1.0, 0.706, 0.016, 0.150)
+
+		scalarBar = vtk.vtkScalarBarActor()
+		scalarBar.SetLookupTable(colorFunc)
 
 		volumeProperty = vtk.vtkVolumeProperty()
+		volumeProperty.IndependentComponentsOff()
 		volumeProperty.SetColor(0,colorFunc)
-		volumeProperty.SetScalarOpacity(1,alphaChannelFunc)
+		volumeProperty.SetScalarOpacity(alphaChannelFunc)
 
 		self.volumeMapper = vtk.vtkSmartVolumeMapper()
-		self.volumeMapper.SetInputConnection(self.gridDataImporter.GetOutputPort())
+		self.volumeMapper.SetInputConnection(self.imageImport.GetOutputPort())
 
 		volume = vtk.vtkVolume()
 		volume.SetOrigin(gridSize[0]/2, gridSize[1]/2,gridSize[2]/2)
@@ -108,9 +124,10 @@ class MainWindow(VTKMainWindow):
 		volume.SetMapper(self.volumeMapper)
 		volume.SetProperty(volumeProperty)
 
-		#interactorStyle = vtk.vtkInteractorStyleTerrain()
-		#iren.SetInteractorStyle(interactorStyle)
+		interactorStyle = vtk.vtkInteractorStyleTerrain()
+		iren.SetInteractorStyle(interactorStyle)
 		self.mainVTKRenderer.AddVolume(volume)
+		self.mainVTKRenderer.AddActor(scalarBar)
 		iren.Initialize()
 
 if __name__ == '__main__':
@@ -123,18 +140,35 @@ if __name__ == '__main__':
 	files = os.listdir(folderPath)
 	centerPoints = []
 	rmses = []
+
+	gridSize = [50,50,50]
+	scannerVolumeSize = [3000,3000,3000]
+	gridScale = [scannerVolumeSize[0] / gridSize[0], scannerVolumeSize[1] / gridSize[1], scannerVolumeSize[2] / gridSize[2]]
+
+	errorMatrices = []
 	for fileName in files:
 		if fileName.endswith('.obj'):
 			vertices, faces, normals = loadOBJ(folderPath + '/' + fileName)
 			bounds = Mesh(vertices.T, faces, normals).getBounds()
 			p0 = [bounds[0][0],bounds[1][0],bounds[2][0],150]
-			cp, radius = fitSphere(vertices,cp,150, bounds)
+			cp, radius = fitSphere(vertices,p0,150, bounds)
 			centerPoints.append(cp)
-			rmses.append(np.linalg.norm(fittingErrorSphere(p0,vertices))/np.sqrt(len(vertices)))
+			errors = fittingErrorSphere(cp.tolist()+[radius],vertices) - radius
 
-	gridSize = [50,50,50]
-	scannerVolumeSize = [3000,3000,3000]
-	gridScale = [scannerVolumeSize[0] / gridSize[0], scannerVolumeSize[1] / gridSize[1], scannerVolumeSize[2] / gridSize[2]]
+			rmses.append(np.linalg.norm(errors)/np.sqrt(len(vertices)))
+			errorMatrix = np.zeros((gridSize[0], gridSize[1], gridSize[2]), dtype=np.float)
+			for v,e in zip(vertices, errors):
+				x = v[0] + gridSize[0]*gridScale[0]/2
+				y = v[1] + gridSize[1]*gridScale[1]/2
+				z = v[2] + gridSize[2]*gridScale[2]/2
+				i = int(x / gridScale[0])
+				j = int(y / gridScale[1])
+				k = int(z / gridScale[2])
+				errorMatrix[i,j,k] = e
+			errorMatrix = errorMatrix/np.max(np.fabs(errorMatrix))
+			#print errorMatrix.max(), errorMatrix.min()
+			errorMatrices.append(errorMatrix)
+
 	
 	calibrationFolderPath = sys.argv[2]
 	stereoCameras = getStereoCamerasFromCalibration(calibrationFolderPath)
@@ -168,5 +202,5 @@ if __name__ == '__main__':
 				os.makedirs(calibrationFolderPath + '/coverageMatrices/')
 			np.save(fileName, visibilityMatrix)
 	
-	window = MainWindow(stereoCameras, centerPoints, rmses, gridSize, gridScale)
+	window = MainWindow(stereoCameras, centerPoints, errorMatrices, gridSize, gridScale)
 	sys.exit(app.exec_())

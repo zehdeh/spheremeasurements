@@ -42,8 +42,9 @@ class VTKMainWindow(QtWidgets.QMainWindow):
 		self.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.cameraDock);
 
 	def addCamera(self, renderer, camera):
-		vtkCamera = vtk.vtkCamera()
 		camPosition = np.linalg.inv(camera.R).dot(camera.position)
+		vtkCamera = vtk.vtkCamera()
+		'''
 		vtkCamera.SetPosition(camPosition[0], camPosition[1], camPosition[2])
 		vtkCamera.SetFocalPoint(0,0,0)
 		vtkCamera.SetThickness(500)
@@ -56,15 +57,27 @@ class VTKMainWindow(QtWidgets.QMainWindow):
 
 		frustum = vtk.vtkFrustumSource()
 		frustum.SetPlanes(planes)
-		#cube.SetXLength(100)
-		#cube.SetYLength(100)
-		#cube.SetZLength(100)
+		'''
+		cube = vtk.vtkCubeSource()
+		cube.SetXLength(100)
+		cube.SetYLength(100)
+		cube.SetZLength(100)
 
 		mapper = vtk.vtkPolyDataMapper()
-		mapper.SetInputConnection(frustum.GetOutputPort())
+		mapper.SetInputConnection(cube.GetOutputPort())
+
+		#transform = vtk.vtkPerspectiveTransform()
+		#transform.SetupCamera(camPosition[0], camPosition[1], camPosition[2], 0, 0, 0, 0, 1, 0)
 
 		actor = vtk.vtkActor()
 		actor.SetMapper(mapper)
+		'''
+		print actor.GetXRange()
+		print actor.GetYRange()
+		print actor.GetZRange()
+		'''
+		#actor.SetUserMatrix(transform.GetMatrix())
+		actor.SetPosition(camPosition[0], camPosition[1], camPosition[2])
 		actor.GetProperty().SetRepresentationToWireframe()
 
 		renderer.AddActor(actor)
