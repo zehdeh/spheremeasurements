@@ -5,17 +5,21 @@ import os
 import sys
 import timeit
 import numpy as np
-from cycler import cycler
+import time
+
+import Queue
+import threading
+
 from math import isnan
 from scipy.special import sph_harm
-from scipy.sparse import lil_matrix, hstack
-from scipy.sparse.linalg import lsqr
 from src.OBJIO import loadOBJ
 from src.fitting import fitSphere
 from src.mesh import Mesh
+from scipy.optimize import leastsq
+
+from cycler import cycler
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
-from scipy.optimize import leastsq
 
 def getSphericalCoordinates(vertices, centerPoint):
 	vertices = vertices - centerPoint
@@ -39,50 +43,42 @@ def residuals(aa, Yval, rs):
 
 def getAMatrix(theta, phi, l):
 	n = len(phi)
-	#A = np.zeros((n,2*l+1))
-	A = lil_matrix((n, 2*l+1))
+
+	A = np.zeros((n, 2*l+1))
 	for i in range(n):
-		for j in range(0,2*l+1):
-			s = sph_harm(l, j-l, theta[i], phi[i]).real
-			if not isnan(s):
-				A[i, j] = s
+		A[i] = [sph_harm(l, j-l, theta[i], phi[i]).real for j in range(0, 2*l+1)]
+	A = np.nan_to_num(A)
 	
 	return A
-def sirf(sphericalCoordinates, LMax):
+def sirf(sphericalCoordinates, Lmax):
 	phi, theta, r = sphericalCoordinates
 
 	s = 5
 	A = getAMatrix(theta, phi, 0)
 	for i in range(1,s):
-		A = hstack([A,getAMatrix(theta, phi, i)])
+		A = np.concatenate((A,getAMatrix(theta, phi, i)), axis=1)
 	
-	b0 = np.zeros(A.shape[1])
-	#b, flag = leastsq(residuals, b0, args=(A,r))
-	b = lsqr(A,r)[0]
+	b = np.zeros((Lmax+1)**2)
+	b[0:A.shape[1]], flag = leastsq(residuals, b[0:A.shape[1]], args=(A,r))
 
-	res = r - A.dot(b)
-	b.resize((Lmax+1)**2)
+	res = r - A.dot(b[0:A.shape[1]])
 	for l in range(s, Lmax+1):
 		Al = getAMatrix(theta, phi, l)
 		lowerBound = l**2
 		upperBound = (l+1)**2
 
-		#b[lowerBound:upperBound], flag = leastsq(residuals, b[lowerBound:upperBound], args=(Al,res))
-		b[lowerBound:upperBound] = lsqr(Al,res)[0]
+		b[lowerBound:upperBound], flag = leastsq(residuals, b[lowerBound:upperBound], args=(Al,res))
 		res = res - Al.dot(b[lowerBound:upperBound])
+		A = np.concatenate((A,Al), axis=1)
 
 
-	#LMatrix = np.zeros((Lmax+1, Lmax*2+1))
 	ys = np.zeros(Lmax+1)
 	for i in range(Lmax+1):
 		lowerBound = i**2
 		upperBound = (i+1)**2
-		#LMatrix[i, 0:(upperBound-lowerBound)] = b[lowerBound:upperBound]
 		ys[i] = np.linalg.norm(b[lowerBound:upperBound], ord=2)
-		#print 'from ' + str((i)**2)
-		#print 'to ' + str((i+1)**2)
 	
-	return b, ys
+	return b, ys, A
 
 def nlsf(sphericalCoordinates, LMax):
 	phi, theta, r = sphericalCoordinates
@@ -124,15 +120,34 @@ def loadOBJwithSphericalCoordinates(fileName):
 	centerPoint, radius = fitSphere(vertices, p0, 150, bounds)
 
 	sphericalCoordinates = getSphericalCoordinates(vertices, centerPoint)
+	#phi, theta, r = sphericalCoordinates
+	#sphericalCoordinates = np.array([phi, theta, r-radius])
 
 	return sphericalCoordinates
+
+def processSphere(filePath):
+	Lmax = int(sys.argv[2])
+	sphericalCoordinates = loadOBJwithSphericalCoordinates(filePath)
+
+	noPasses = 2
+
+	finalYs = np.zeros(Lmax + 1)
+	for i in range(noPasses):
+		a, ys, A = sirf(sphericalCoordinates, Lmax)
+		finalYs += ys
+		phi, theta, r = sphericalCoordinates
+
+		r = r - A.dot(a)
+		sphericalCoordinates = np.array([phi, theta, r])
+
+		
+	return finalYs
 
 if __name__ == '__main__':
 	if len(sys.argv) < 3:
 		print "Please specify OBJPATH NOFREQUENCIES"
 		sys.exit(0)
 
-	Lmax = int(sys.argv[2])
 
 	folderPath = sys.argv[1]
 	files = os.listdir(folderPath)
@@ -142,22 +157,34 @@ if __name__ == '__main__':
 
 	fig = plt.figure()
 	ax = fig.add_subplot(111)
-	ax.set_prop_cycle(cycler('color',[cm(1.*(i*10)/numColors) for i in range(numColors)]))
+	ax.set_prop_cycle(cycler('color',[cm(1.*i/numColors) for i in range(numColors)]))
+	#+ cycler('linestyle', ['-', '--', ':', '-.']))
+	'''
+	threads = list()
+	for i in range(10):
+		thread = spThread('thread-' + str(i), workQueue, queueLock)
+		thread.start()
+		threads.append(thread)
+		'''
+	i = 0
 	for fileName in files:
 		if fileName.endswith('.obj'):
-			sphericalCoordinates = loadOBJwithSphericalCoordinates(folderPath + fileName)
+			#workQueue.put(folderPath + fileName)
+			#sphericalCoordinates = loadOBJwithSphericalCoordinates(folderPath + fileName)
 
 			start_time = timeit.default_timer()
-			a, ys = sirf(sphericalCoordinates, Lmax)
+			ys = processSphere(folderPath + fileName)
 			print(timeit.default_timer() - start_time)
 
 			xa = np.arange(0, len(ys))
 			plt.plot(xa, ys, label=fileName[0:-11])
-			break
+			i += 1
+			if i == 3:
+				break
 
 			#rmse = np.linalg.norm(r - r_approx) / np.sqrt(len(a1))
 
-	plt.legend()
+		plt.legend()
 	plt.grid(True)
 	plt.gca().set_yscale('log')
 	plt.show()
