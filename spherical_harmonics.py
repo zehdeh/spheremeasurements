@@ -55,6 +55,7 @@ def sirf(sphericalCoordinates, LMax):
 	b0 = np.zeros(A.shape[1])
 	b, flag = leastsq(residuals, b0, args=(A,r))
 
+
 	res = r - A.dot(b)
 	for l in range(s, Lmax+1):
 		Al = getAMatrix(theta, phi, l)
@@ -69,6 +70,7 @@ def sirf(sphericalCoordinates, LMax):
 		print upperBound
 		print len(bl)
 		b = np.concatenate((b, bl))
+	print len(b)
 
 	LMatrix = np.zeros((Lmax+1, Lmax*2+1))
 	ys = np.zeros(Lmax+1)
