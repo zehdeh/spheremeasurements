@@ -129,15 +129,18 @@ def processSphere(filePath):
 	Lmax = int(sys.argv[2])
 	sphericalCoordinates = loadOBJwithSphericalCoordinates(filePath)
 
-	noPasses = 1
+	noPasses = 4
 
 	finalYs = np.zeros(Lmax + 1)
 	for i in range(noPasses):
+		print "Pass " + str(i)
 		a, ys, A = sirf(sphericalCoordinates, Lmax)
 		finalYs += ys
 		phi, theta, r = sphericalCoordinates
 
 		r = r - A.dot(a)
+		rmse = np.linalg.norm(r) / np.sqrt(len(r))
+		print "RMSE: " + str(rmse)
 		sphericalCoordinates = np.array([phi, theta, r])
 
 		
@@ -157,12 +160,12 @@ if __name__ == '__main__':
 
 	fig = plt.figure()
 	ax = fig.add_subplot(111)
-	colors = [cm(1.*i/numColors) for i in range(numColors)]
+	#colors = [cm(1.*i/numColors) for i in range(numColors)]
 	#lineStyle = np.tile(['-', '--', ':', '-.'], len(colors)/4)
-	lineWidth = np.tile([2,3], len(colors)/2)
+	#lineWidth = np.tile([2,3], len(colors)/2)
 
 	#ax.set_prop_cycle(cycler('color', colors) + cycler('linestyle', lineStyle) + cycler('linewidth', lineWidth))
-	ax.set_prop_cycle(cycler('color', colors) + cycler('linewidth', lineWidth))
+	#ax.set_prop_cycle(cycler('color', colors) + cycler('linewidth', lineWidth))
 	'''
 	threads = list()
 	for i in range(10):
@@ -180,7 +183,7 @@ if __name__ == '__main__':
 			print(timeit.default_timer() - start_time)
 
 			xa = np.arange(0, len(ys))
-			plt.plot(xa, ys, label=fileName[0:-11])
+			plt.plot(xa, ys, label=fileName[0:-4])
 
 			#rmse = np.linalg.norm(r - r_approx) / np.sqrt(len(a1))
 
