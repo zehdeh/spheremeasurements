@@ -7,6 +7,7 @@ from vtk.util import numpy_support
 from src.fitting import fitSphere, fittingErrorSphere
 from src.mesh import Mesh
 from src.OBJIO import loadOBJ
+import matplotlib.pyplot as plt
  
 class CurvaturesDemo():
 	def CurvaturesDemo(self):
@@ -16,6 +17,7 @@ class CurvaturesDemo():
 		p0 = [bounds[0][0],bounds[1][0],bounds[2][0],150]
 		cp, radius = fitSphere(vertices,p0,150, bounds)
 		errors = fittingErrorSphere(cp.tolist() + [radius], vertices) - 150
+
 
 		# We are going to handle two different sources.
 		# The first source is a superquadric source.
@@ -63,23 +65,31 @@ class CurvaturesDemo():
 			if idx % 2 == 0:
 				curvatures[idx].SetCurvatureTypeToGaussian()
 				curvatures[idx].Update()
-				npcurv =  numpy_support.vtk_to_numpy(curvatures[idx].GetOutput().GetPointData().GetScalars())
-
-				mean = np.mean(npcurv)
-				std = np.std(npcurv)
+				npcurv1 =  numpy_support.vtk_to_numpy(curvatures[idx].GetOutput().GetPointData().GetScalars())
+		
+				mean = np.mean(npcurv1)
+				std = np.std(npcurv1)
+				print std
 
 				min1 = 0.01*(mean - std)
 				max1 = 0.01*(mean + std)
 			else:
 				curvatures[idx].SetCurvatureTypeToMean()
 				curvatures[idx].Update()
-				npcurv =  numpy_support.vtk_to_numpy(curvatures[idx].GetOutput().GetPointData().GetScalars())
+				npcurv2 =  numpy_support.vtk_to_numpy(curvatures[idx].GetOutput().GetPointData().GetScalars())
 
-				mean = np.mean(npcurv)
-				std = np.std(npcurv)
+
+				mean = np.mean(npcurv2)
+				std = np.std(npcurv2)
 
 				min2 = mean - std
 				max2 = mean + std
+		fig = plt.figure()
+		xa = np.arange(-0.1, 0.1,0.001)
+		plt.hist(npcurv1, bins=xa)
+		plt.hist(npcurv2, bins=xa)
+		plt.gca().set_yscale('log')
+		plt.show()
 
 		# Lookup table.
 		lut = list()
