@@ -129,7 +129,7 @@ def processSphere(filePath):
 	Lmax = int(sys.argv[2])
 	sphericalCoordinates = loadOBJwithSphericalCoordinates(filePath)
 
-	noPasses = 2
+	noPasses = 1
 
 	finalYs = np.zeros(Lmax + 1)
 	for i in range(noPasses):
@@ -157,8 +157,12 @@ if __name__ == '__main__':
 
 	fig = plt.figure()
 	ax = fig.add_subplot(111)
-	ax.set_prop_cycle(cycler('color',[cm(1.*i/numColors) for i in range(numColors)]))
-	#+ cycler('linestyle', ['-', '--', ':', '-.']))
+	colors = [cm(1.*i/numColors) for i in range(numColors)]
+	#lineStyle = np.tile(['-', '--', ':', '-.'], len(colors)/4)
+	lineWidth = np.tile([2,3], len(colors)/2)
+
+	#ax.set_prop_cycle(cycler('color', colors) + cycler('linestyle', lineStyle) + cycler('linewidth', lineWidth))
+	ax.set_prop_cycle(cycler('color', colors) + cycler('linewidth', lineWidth))
 	'''
 	threads = list()
 	for i in range(10):
@@ -166,7 +170,6 @@ if __name__ == '__main__':
 		thread.start()
 		threads.append(thread)
 		'''
-	i = 0
 	for fileName in files:
 		if fileName.endswith('.obj'):
 			#workQueue.put(folderPath + fileName)
@@ -178,9 +181,6 @@ if __name__ == '__main__':
 
 			xa = np.arange(0, len(ys))
 			plt.plot(xa, ys, label=fileName[0:-11])
-			i += 1
-			if i == 3:
-				break
 
 			#rmse = np.linalg.norm(r - r_approx) / np.sqrt(len(a1))
 
