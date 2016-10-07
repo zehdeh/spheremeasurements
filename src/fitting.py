@@ -20,3 +20,19 @@ def fitSphere(vertices, p0, nominalRadius, bounds, fitRadius=True):
 	radius = res.x[3]
 
 	return centerPoint, radius
+
+def calculateMeanCurvature(polyData):
+	import vtk
+	from vtk.util import numpy_support
+	cleaner = vtk.vtkCleanPolyData()
+	cleaner.SetInputData(polyData)
+	cleaner.Update()
+
+	meanCurvature = vtk.vtkCurvatures()
+	meanCurvature.SetCurvatureTypeToGaussian()
+	meanCurvature.SetInputConnection(cleaner.GetOutputPort())
+	meanCurvature.Update()
+
+	npcurv =  numpy_support.vtk_to_numpy(meanCurvature.GetOutput().GetPointData().GetScalars())
+
+	return npcurv

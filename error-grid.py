@@ -1,5 +1,6 @@
 #! /usr/bin/python
 
+import timeit
 import sys
 from math import atan2,sqrt,fabs
 import os
@@ -11,7 +12,7 @@ import vtk
 from PyQt5 import QtGui, QtCore, QtWidgets
 from vtk.qt.QVTKRenderWindowInteractor import QVTKRenderWindowInteractor
 from vtk.util.vtkImageImportFromArray import vtkImageImportFromArray
-from src.OBJIO import loadOBJ, writeOBJ
+from src.OBJIO import loadOBJ, writeOBJ, loadOBJviaVTK
 from src.fitting import fitSphere, fittingErrorSphere, calculateMeanCurvature
 from src.thirdparty.body.loaders.scanner_frame import Pod
 from src.mesh import Mesh
@@ -98,7 +99,7 @@ class MainWindow(VTKMainWindow):
 
 		alphaChannelFunc = vtk.vtkPiecewiseFunction()
 		alphaChannelFunc.AddPoint(0, 0.0)
-		alphaChannelFunc.AddPoint(1.0, 0.3)
+		alphaChannelFunc.AddPoint(1.0, 0.5)
 
 		colorFunc = vtk.vtkColorTransferFunction()
 		colorFunc.AddRGBPoint(-1.0, 0.230, 0.299, 0.754)
@@ -140,7 +141,8 @@ if __name__ == '__main__':
 	files = os.listdir(folderPath)
 	centerPoints = []
 
-	gridSize = [50,50,50]
+	#gridSize = [50,50,50]
+	gridSize = [100,100,100]
 	scannerVolumeSize = [3000,3000,3000]
 	gridScale = [scannerVolumeSize[0] / gridSize[0], scannerVolumeSize[1] / gridSize[1], scannerVolumeSize[2] / gridSize[2]]
 
@@ -148,13 +150,16 @@ if __name__ == '__main__':
 	for fileName in files:
 		if fileName.endswith('.obj'):
 			print 'Processing ' + fileName[0:-4]
-			vertices, faces, normals = loadOBJ(folderPath + '/' + fileName)
+			vertices, faces, normals, polyData = loadOBJviaVTK(folderPath + fileName)
+
+			#print len(faces), len(faces2)
 			bounds = Mesh(vertices.T, faces, normals).getBounds()
 			p0 = [bounds[0][0],bounds[1][0],bounds[2][0],150]
 			cp, radius = fitSphere(vertices,p0,150, bounds)
 			centerPoints.append(cp)
+
 			#errors = fittingErrorSphere(cp.tolist()+[radius],vertices) - radius
-			errors = calculateMeanCurvature(vertices, faces)
+			errors = calculateMeanCurvature(polyData)
 
 			errorMatrix = np.zeros((gridSize[0], gridSize[1], gridSize[2]), dtype=np.float)
 			for v,e in zip(vertices, errors):
@@ -174,6 +179,8 @@ if __name__ == '__main__':
 	stereoCameras = getStereoCamerasFromCalibration(calibrationFolderPath)
 
 	for l,stereoCamera in stereoCameras.iteritems():
+		stereoCamera.visibilityMatrix = np.zeros((gridSize[0], gridSize[1], gridSize[2]), dtype=np.uint8)
+		'''
 		fileName = calibrationFolderPath + '/coverageMatrices/' + str(stereoCamera.name) + '_' + str(gridSize[0]) + '_' + str(gridSize[1]) + '_' + str(gridSize[2])
 		if os.path.isfile(fileName + '.npy'):
 			stereoCamera.visibilityMatrix = np.load(fileName + '.npy')
@@ -201,6 +208,7 @@ if __name__ == '__main__':
 			if not os.path.exists(calibrationFolderPath + '/coverageMatrices/'):
 				os.makedirs(calibrationFolderPath + '/coverageMatrices/')
 			np.save(fileName, visibilityMatrix)
+			'''
 	
 	window = MainWindow(stereoCameras, centerPoints, errorMatrices, gridSize, gridScale)
 	sys.exit(app.exec_())

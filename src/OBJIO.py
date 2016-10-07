@@ -1,4 +1,24 @@
+from array import *
+import vtk
+import locale
+from vtk.util import numpy_support
 import numpy as np
+
+def loadOBJviaVTK(fileName):
+
+	locale.setlocale(locale.LC_NUMERIC, 'C')
+	reader = vtk.vtkOBJReader()
+	reader.SetFileName(fileName)
+	reader.Update()
+
+	polyData = reader.GetOutput()
+
+	vertices =  numpy_support.vtk_to_numpy(polyData.GetPoints().GetData())
+	faces = numpy_support.vtk_to_numpy(polyData.GetPolys().GetData())
+	faces = faces.reshape((-1,4)).T[1:4].T
+	normals = numpy_support.vtk_to_numpy(polyData.GetPointData().GetNormals())
+
+	return vertices, faces, normals, polyData
 
 def loadOBJ(fileName):
 	"""Loads a Wavefront OBJ file. """

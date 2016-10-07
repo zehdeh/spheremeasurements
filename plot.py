@@ -18,9 +18,6 @@ class CurvaturesDemo():
 		cp, radius = fitSphere(vertices,p0,150, bounds)
 		errors = fittingErrorSphere(cp.tolist() + [radius], vertices) - 150
 
-
-		# We are going to handle two different sources.
-		# The first source is a superquadric source.
 		reader = vtk.vtkOBJReader()
 		reader.SetFileName(sys.argv[1])
 
