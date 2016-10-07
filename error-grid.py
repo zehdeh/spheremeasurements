@@ -12,7 +12,7 @@ from PyQt5 import QtGui, QtCore, QtWidgets
 from vtk.qt.QVTKRenderWindowInteractor import QVTKRenderWindowInteractor
 from vtk.util.vtkImageImportFromArray import vtkImageImportFromArray
 from src.OBJIO import loadOBJ, writeOBJ
-from src.fitting import fitSphere, fittingErrorSphere
+from src.fitting import fitSphere, fittingErrorSphere, calculateMeanCurvature
 from src.thirdparty.body.loaders.scanner_frame import Pod
 from src.mesh import Mesh
 from src.ui import VTKMainWindow, QVTKRenderWindowInteractorWheelfix
@@ -62,7 +62,7 @@ class MainWindow(VTKMainWindow):
 			#colorValues = 255
 			#alphaValues += 10*errorMatrix
 
-		alphaValues[np.nonzero(colorValues)] = 0.5
+		alphaValues = np.abs(colorValues)
 		#alphaValues = np.fabs(colorValues)
 		'''
 		for cp in self.centerPoints:
@@ -139,7 +139,6 @@ if __name__ == '__main__':
 	folderPath = sys.argv[1]
 	files = os.listdir(folderPath)
 	centerPoints = []
-	rmses = []
 
 	gridSize = [50,50,50]
 	scannerVolumeSize = [3000,3000,3000]
@@ -148,14 +147,15 @@ if __name__ == '__main__':
 	errorMatrices = []
 	for fileName in files:
 		if fileName.endswith('.obj'):
+			print 'Processing ' + fileName[0:-4]
 			vertices, faces, normals = loadOBJ(folderPath + '/' + fileName)
 			bounds = Mesh(vertices.T, faces, normals).getBounds()
 			p0 = [bounds[0][0],bounds[1][0],bounds[2][0],150]
 			cp, radius = fitSphere(vertices,p0,150, bounds)
 			centerPoints.append(cp)
-			errors = fittingErrorSphere(cp.tolist()+[radius],vertices) - radius
+			#errors = fittingErrorSphere(cp.tolist()+[radius],vertices) - radius
+			errors = calculateMeanCurvature(vertices, faces)
 
-			rmses.append(np.linalg.norm(errors)/np.sqrt(len(vertices)))
 			errorMatrix = np.zeros((gridSize[0], gridSize[1], gridSize[2]), dtype=np.float)
 			for v,e in zip(vertices, errors):
 				x = v[0] + gridSize[0]*gridScale[0]/2
