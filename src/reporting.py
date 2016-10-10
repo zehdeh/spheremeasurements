@@ -17,6 +17,9 @@ def writeReport(filePath, measures, results):
 	for i, result in enumerate(results):
 		for j, val in enumerate(result):
 			c = ws.cell(row = 2+i, column = j+1)
-			c.value = val
+			try:
+				c.value = val
+			except ValueError:
+				c.value = float(val)
 
 	wb.save(filePath)

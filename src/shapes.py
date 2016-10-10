@@ -5,7 +5,8 @@ from opendr.serialization import load_mesh
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 from opendr.geometry import GaussianCurvature
 import vtk
-from src.fitting import distance
+from src.fitting import distance, calculateMeanCurvature
+from src.OBJIO import loadOBJviaVTK
 
 
 def randomPartition(n, nData):
@@ -53,11 +54,15 @@ def ransac(data,fitfun,errorfun,n,k,t,d):
 class Shape(object):
 	__metaclass__ = abc.ABCMeta
 	def __init__(self,filePath):
-		self._mesh = load_mesh(filePath)
-		self._vertices = self.mesh.v.T
-		self._faces = self.mesh.f
+		#self._mesh = load_mesh(filePath)
+		#self._vertices = self.mesh.v.T
+		#self._faces = self.mesh.f
 		self._filePath = filePath
 
+		self._vertices, self._faces, self._normals, self.polyData = loadOBJviaVTK(filePath)
+		self._vertices = self._vertices.T
+
+		self.curvature = calculateMeanCurvature(self.polyData)
 		#self.curvature = np.asarray(GaussianCurvature(self._vertices.T, self._faces))
 	@property
 	def mesh(self):

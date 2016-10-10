@@ -1,6 +1,7 @@
 from shapes import Sphere, Plane
 from utils import measureRadialDeviation
 import numpy as np
+from src.fitting import calculateGaussianCurvature, calculateMeanCurvature
 
 class Measure:
 	def __init__(self, name, fun, color=False):
@@ -66,12 +67,20 @@ def getMeasures(shape):
 		measures.append(radialDeviation)
 		data = []
 
-		avgCurvature = Measure('Curvature avg',
-			lambda x: np.mean(x.getCurvature()), True)
+		avgCurvature = Measure('Mean Curvature avg',
+			lambda x: np.mean(calculateMeanCurvature(x.polyData)), True)
 		measures.append(avgCurvature)
 
-		stdCurvature = Measure('Curvature std',
-			lambda x: np.std(x.getCurvature()), True)
+		stdCurvature = Measure('Mean Curvature std',
+			lambda x: np.std(calculateMeanCurvature(x.polyData)), True)
+		measures.append(stdCurvature)
+
+		avgCurvature = Measure('Gaussian Curvature avg',
+			lambda x: np.mean(calculateGaussianCurvature(x.polyData)), True)
+		measures.append(avgCurvature)
+
+		stdCurvature = Measure('Gaussian Curvature std',
+			lambda x: np.std(calculateGaussianCurvature(x.polyData)), True)
 		measures.append(stdCurvature)
 
 		relAvgCurvature = Measure('Relative curvature avg',
