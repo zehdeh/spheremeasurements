@@ -1,5 +1,6 @@
 from math import sin,cos
 from matplotlib.patches import FancyArrowPatch
+from mpl_toolkits.mplot3d import proj3d
 from src.fitting import distance
 import numpy as np
 import scipy

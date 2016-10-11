@@ -7,13 +7,11 @@ def distance(p1,p2):
 def fittingErrorSphere(center, vertices):
 	x0,y0,z0,R = center
 	x,y,z = vertices.T
-	return distance([x0,y0,z0],[x,y,z])
+	res = distance([x0,y0,z0],[x,y,z])
+	return res
 
 def fitSphere(vertices, p0, nominalRadius, bounds, fitRadius=True):
-	if fitRadius:
-		errorfun = lambda p,vertices: fittingErrorSphere(p,vertices) - p[3]
-	else:
-		errorfun = lambda p,vertices: fittingErrorSphere(p,vertices) - nominalRadius
+	errorfun = lambda p,vertices: fittingErrorSphere(p,vertices) - p[3]
 
 	res = least_squares(errorfun, p0, bounds=([bounds[0][0], bounds[1][0], bounds[2][0], -np.inf], [bounds[0][1], bounds[1][1], bounds[2][1], np.inf]), args=(vertices,))
 	centerPoint = res.x[0:3]
@@ -21,18 +19,38 @@ def fitSphere(vertices, p0, nominalRadius, bounds, fitRadius=True):
 
 	return centerPoint, radius
 
-def calculateMeanCurvature(polyData):
+def fittingErrorPlane(point, vertices):
+	plane_xyz = point[0:3]
+	distance = (plane_xyz*vertices.T).sum(axis=1) + point[3]
+	return distance / np.linalg.norm(plane_xyz)
+
+def fitPlane(vertices, p0=[0.1,0.1,0.1,0.1]):
+	residuals = lambda p,signal,vertices: fittingErrorPlane(p,vertices)
+	res,flag = leastsq(residuals, p0, (None,vertices))
+	return res
+
+def calculateCurvature(polyData, ctype=0):
 	import vtk
 	from vtk.util import numpy_support
 	cleaner = vtk.vtkCleanPolyData()
 	cleaner.SetInputData(polyData)
 	cleaner.Update()
 
-	meanCurvature = vtk.vtkCurvatures()
-	meanCurvature.SetCurvatureTypeToGaussian()
-	meanCurvature.SetInputConnection(cleaner.GetOutputPort())
-	meanCurvature.Update()
+	curvature = vtk.vtkCurvatures()
+	if ctype == 0:
+		curvature.SetCurvatureTypeToGaussian()
+	else:
+		curvature.SetCurvatureTypeToMean()
+	curvature.SetInputConnection(cleaner.GetOutputPort())
+	curvature.Update()
 
-	npcurv =  numpy_support.vtk_to_numpy(meanCurvature.GetOutput().GetPointData().GetScalars())
+	npcurv =  numpy_support.vtk_to_numpy(curvature.GetOutput().GetPointData().GetScalars())
 
 	return npcurv
+
+
+def calculateMeanCurvature(polyData):
+	return calculateCurvature(polyData, 0)
+
+def calculateGaussianCurvature(polyData):
+	return calculateCurvature(polyData, 1)
