@@ -120,8 +120,8 @@ def loadOBJwithSphericalCoordinates(fileName):
 	centerPoint, radius = fitSphere(vertices, p0, 150, bounds)
 
 	sphericalCoordinates = getSphericalCoordinates(vertices, centerPoint)
-	#phi, theta, r = sphericalCoordinates
-	#sphericalCoordinates = np.array([phi, theta, r-radius])
+	phi, theta, r = sphericalCoordinates
+	sphericalCoordinates = np.array([phi, theta, r-radius])
 
 	return sphericalCoordinates
 
