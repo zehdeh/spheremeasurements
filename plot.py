@@ -6,12 +6,15 @@ import numpy as np
 from vtk.util import numpy_support
 from src.fitting import fitSphere, fittingErrorSphere
 from src.mesh import Mesh
-from src.OBJIO import loadOBJ
+from src.OBJIO import loadOBJ, loadOBJviaVTK
 import matplotlib.pyplot as plt
+from pymetis import part_graph
+from opendr.topology import get_vert_connectivity
  
 class CurvaturesDemo():
 	def CurvaturesDemo(self):
-		vertices, faces, normals = loadOBJ(sys.argv[1])
+		#vertices, faces, normals = loadOBJ(sys.argv[1])
+		vertices, faces, normals, polyData = loadOBJviaVTK(sys.argv[1])
 
 		bounds = Mesh(vertices.T, faces, normals).getBounds()
 		p0 = [bounds[0][0],bounds[1][0],bounds[2][0],150]
@@ -24,13 +27,6 @@ class CurvaturesDemo():
 
 		reader.Update()
 		polydata = reader.GetOutput()
-
-		# Now we have the sources, lets put them into a list.
-		sources = list()
-		sources.append(reader)
-		sources.append(reader)
-		sources.append(reader)
-		sources.append(reader)
 
 		# Colour transfer function.
 		ctf = vtk.vtkColorTransferFunction()
@@ -53,7 +49,27 @@ class CurvaturesDemo():
 		min3 = mean - std
 		max3 = mean + std
 
+		polydata2 = vtk.vtkPolyData()
+		polydata2.DeepCopy(polydata)
+
+		cnct = get_vert_connectivity(vertices, faces)
+		nbrs = [np.nonzero(np.array(cnct[:,i].todense()))[0] for i in range(cnct.shape[1])]
+		edgeCuts, parts = part_graph(5,nbrs)
+
+		partsvtk = vtk.vtkUnsignedCharArray()
+		partsvtk.SetNumberOfComponents(1)
+		for p in parts:
+			partsvtk.InsertNextTuple([p])
+
 		polydata.GetPointData().SetScalars(scalars)
+		polydata2.GetPointData().SetScalars(partsvtk)
+
+		# Now we have the sources, lets put them into a list.
+		sources = list()
+		sources.append(reader)
+		sources.append(reader)
+		sources.append(polydata)
+		sources.append(polydata2)
 
 		curvatures = list()        
 		for idx in range(2):
@@ -102,7 +118,7 @@ class CurvaturesDemo():
 			if idx == 2:
 				lut[idx].SetRange(min3, max3)
 			if idx == 3:
-				lut[idx].SetRange(min3, max3)
+				lut[idx].SetRange(np.min(parts), np.max(parts))
 			lut[idx].Build()
 
 
@@ -135,7 +151,7 @@ class CurvaturesDemo():
 				mappers[idx].SetLookupTable(lut[idx])
 			else:
 				#mappers[idx].SetInputConnection(sources[idx].GetOutputPort())
-				mappers[idx].SetInputData(polydata)
+				mappers[idx].SetInputData(sources[idx])
 				mappers[idx].SetColorModeToMapScalars()
 				#mappers[idx].GetPointData().SetScalars(scalars)
 				mappers[idx].SetLookupTable(lut[idx])

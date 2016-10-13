@@ -74,7 +74,11 @@ if __name__ == '__main__':
 	rotationAxis = np.cross([0,-1,0], normal)
 	rotationAngle = np.arccos(np.dot([0,-1,0], normal))
 	R = getRotationMatrix(rotationAngle, rotationAxis)
-	vertices = R.dot(vertices.T).T
+	vertices = R.dot(vertices.T)[0:2].T
+	vertices = vertices[vertices[:,0].argsort()].T
+	maxY = max(vertices[1,-1], vertices[1,0])
+	vertices = vertices.T[vertices[1] >= maxY]
+
 
 
 	#arrow2 = Arrow3D(\
@@ -91,7 +95,8 @@ if __name__ == '__main__':
 	#ax.add_artist(arrow2)
 
 	#ax.scatter(vertices.T[0],vertices.T[1],vertices.T[2], color='b', marker='.')
-	ax.scatter(vertices.T[0],vertices.T[1], color='b', marker='.')
+	#ax.scatter(vertices.T[0],vertices.T[1], color='b', marker='.')
+	ax.plot(vertices.T[0], vertices.T[1])
 
 	#ax.scatter(centerPoint1.T[0],centerPoint1.T[1],centerPoint1.T[2], color='g', marker='o')
 	#ax.scatter(centerPoint2.T[0],centerPoint2.T[1],centerPoint2.T[2], color='g', marker='o')
