@@ -18,8 +18,10 @@ class CurvaturesDemo():
 
 		bounds = Mesh(vertices.T, faces, normals).getBounds()
 		p0 = [bounds[0][0],bounds[1][0],bounds[2][0],150]
-		cp, radius = fitSphere(vertices,p0,150, bounds)
-		errors = fittingErrorSphere(cp.tolist() + [radius], vertices) - 150
+		cp, radius = fitSphere(vertices,p0,75, bounds)
+		errors = fittingErrorSphere(cp.tolist() + [radius], vertices) - 75
+
+		print 'Fitting error (min / max / mean / total): ' + str(errors.min()) + ' / ' + str(np.mean(errors)) + ' / ' + str(errors.max()) + ' / ' + str(np.sum(errors))
 
 		reader = vtk.vtkOBJReader()
 		reader.SetFileName(sys.argv[1])
@@ -82,7 +84,7 @@ class CurvaturesDemo():
 		
 				mean = np.mean(npcurv1)
 				std = np.std(npcurv1)
-				print std
+				print 'Curvature (min / max / mean / total): ' + str(np.min(npcurv1)) + ' / ' + str(np.max(npcurv1)) + ' / ' + str(np.mean(npcurv1)) + ' / ' + str(np.sum(npcurv1))
 
 				min1 = 0.01*(mean - std)
 				max1 = 0.01*(mean + std)

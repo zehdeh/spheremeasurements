@@ -1,4 +1,4 @@
-#! /usr/bin/python
+#! /usr/bin/python2.7
 
 import sys
 import numpy as np
@@ -7,6 +7,7 @@ from opendr.topology import get_vert_connectivity
 import matplotlib.pyplot as plt
 from scipy.sparse import *
 import scipy
+from pymetis import part_graph
 
 
 if __name__ == '__main__':
@@ -18,6 +19,8 @@ if __name__ == '__main__':
 	nbrs = [np.nonzero(np.array(cnct[:,i].todense()))[0] for i in range(cnct.shape[1])]
 	N = shape.vertices.shape[1]
 
+	edgeCuts, parts = part_graph(5,nbrs)
+
 	
 	D = np.diag([len(d) for d in nbrs])
 
@@ -26,7 +29,7 @@ if __name__ == '__main__':
 	L = D - A
 	L_csc = bsr_matrix(L)
 
-	k = 50#shape.vertices.shape[1]-20
+	k = 5#shape.vertices.shape[1]-20
 	#eigenvals, eigenvectors = scipy.sparse.linalg.eigs(L_csc)
 	eigenvals, eigenvectors = scipy.sparse.linalg.eigsh(L,k, which='SA')
 	#eigenvals, eigenvectors = np.linalg.eig(L)
@@ -47,9 +50,3 @@ if __name__ == '__main__':
 	plt.show()
 
 	vertices2 = np.real(eigenvectors[:,:k].dot(Xhat[:k]))
-	from mayavi import mlab
-
-	mesh = mlab.triangular_mesh(vertices2.T[0], vertices2.T[1], vertices2.T[2], shape.faces)
-	mlab.scalarbar(mesh)
-	mlab.outline()
-	mlab.show()
