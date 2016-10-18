@@ -84,7 +84,6 @@ class CurvaturesDemo():
 		
 				mean = np.mean(npcurv1)
 				std = np.std(npcurv1)
-				print 'Curvature (min / max / mean / total): ' + str(np.min(npcurv1)) + ' / ' + str(np.max(npcurv1)) + ' / ' + str(np.mean(npcurv1)) + ' / ' + str(np.sum(npcurv1))
 
 				min1 = 0.01*(mean - std)
 				max1 = 0.01*(mean + std)
@@ -96,6 +95,7 @@ class CurvaturesDemo():
 
 				mean = np.mean(npcurv2)
 				std = np.std(npcurv2)
+				print 'Curvature (min / max / mean / total): ' + str(np.min(npcurv2)) + ' / ' + str(np.max(npcurv2)) + ' / ' + str(np.mean(npcurv2)) + ' / ' + str(np.sum(npcurv2))
 
 				min2 = mean - std
 				max2 = mean + std

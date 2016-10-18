@@ -22,14 +22,14 @@ from src.calibration import getStereoCamerasFromCalibration, StereoCamera
 
 
 class MainWindow(VTKMainWindow):
-	def __init__(self, stereoCameras, centerPoints, errorMatrices, gridSize, gridScale, parent = None):
+	def __init__(self, stereoCameras, centerPoints, errorMatrix, gridSize, gridScale, parent = None):
 		VTKMainWindow.__init__(self, stereoCameras, vtk.vtkRenderer(), parent)
 
 		tabWidget = QtWidgets.QTabWidget();
 		self.errorGridViewer = QVTKRenderWindowInteractorWheelfix(tabWidget)
 		
 		self.centerPoints = centerPoints
-		self.errorMatrices = errorMatrices
+		self.errorMatrix = errorMatrix
 		self.errorGridViewer.GetRenderWindow().AddRenderer(self.mainVTKRenderer)
 		self.setupErrorGrid(stereoCameras, self.mainVTKRenderer, gridSize, gridScale)
 		tabWidget.addTab(self.errorGridViewer, 'Camera Visibility')
@@ -58,10 +58,10 @@ class MainWindow(VTKMainWindow):
 		
 		#colorValues[:,:,:] = -1.0
 		
-		for errorMatrix in errorMatrices:
-			colorValues += errorMatrix
+		colorValues = self.errorMatrix
 			#colorValues = 255
 			#alphaValues += 10*errorMatrix
+		colorValues = colorValues/np.max(colorValues)
 
 		alphaValues = np.abs(colorValues)
 		#alphaValues = np.fabs(colorValues)
@@ -99,10 +99,10 @@ class MainWindow(VTKMainWindow):
 
 		alphaChannelFunc = vtk.vtkPiecewiseFunction()
 		alphaChannelFunc.AddPoint(0, 0.0)
-		alphaChannelFunc.AddPoint(1.0, 0.5)
+		alphaChannelFunc.AddPoint(1.0, 0.8)
 
 		colorFunc = vtk.vtkColorTransferFunction()
-		colorFunc.AddRGBPoint(-1.0, 0.230, 0.299, 0.754)
+		#colorFunc.AddRGBPoint(-1.0, 0.230, 0.299, 0.754)
 		colorFunc.AddRGBPoint(0.0, 1.0, 1.0, 1.0)
 		colorFunc.AddRGBPoint(1.0, 0.706, 0.016, 0.150)
 
@@ -145,36 +145,45 @@ if __name__ == '__main__':
 	gridSize = [100,100,100]
 	scannerVolumeSize = [3000,3000,3000]
 	gridScale = [scannerVolumeSize[0] / gridSize[0], scannerVolumeSize[1] / gridSize[1], scannerVolumeSize[2] / gridSize[2]]
+	print files[230]
 
-	errorMatrices = []
-	for fileName in files:
-		if fileName.endswith('.obj'):
-			print 'Processing ' + fileName[0:-4]
-			vertices, faces, normals, polyData = loadOBJviaVTK(folderPath + fileName)
+	matrixFileName = folderPath + '/meanCurvature' + '_' + str(gridSize[0]) + '_' + str(gridSize[1]) + '_' + str(gridSize[2]) + '.npy'
+	if os.path.isfile(matrixFileName + '.npy'):
+		totalErrorMatrix = np.load(matrixFileName + '.npy')
+	else:
+		errorMatrices = []
+		for fileName in files:
+			if fileName.endswith('.obj'):
+				print 'Processing ' + fileName[0:-4]
+				vertices, faces, normals, polyData = loadOBJviaVTK(folderPath + fileName)
 
-			#print len(faces), len(faces2)
-			bounds = Mesh(vertices.T, faces, normals).getBounds()
-			p0 = [bounds[0][0],bounds[1][0],bounds[2][0],150]
-			cp, radius = fitSphere(vertices,p0,150, bounds)
-			centerPoints.append(cp)
+				#print len(faces), len(faces2)
+				bounds = Mesh(vertices.T, faces, normals).getBounds()
+				p0 = [bounds[0][0],bounds[1][0],bounds[2][0],150]
+				cp, radius = fitSphere(vertices,p0,150, bounds)
+				centerPoints.append(cp)
 
-			#errors = fittingErrorSphere(cp.tolist()+[radius],vertices) - radius
-			errors = calculateMeanCurvature(polyData)
+				#errors = fittingErrorSphere(cp.tolist()+[radius],vertices) - radius
+				errors = calculateMeanCurvature(polyData)
 
-			errorMatrix = np.zeros((gridSize[0], gridSize[1], gridSize[2]), dtype=np.float)
-			for v,e in zip(vertices, errors):
-				x = v[0] + gridSize[0]*gridScale[0]/2
-				y = v[1] + gridSize[1]*gridScale[1]/2
-				z = v[2] + gridSize[2]*gridScale[2]/2
-				i = int(x / gridScale[0])
-				j = int(y / gridScale[1])
-				k = int(z / gridScale[2])
-				errorMatrix[i,j,k] = e
-			errorMatrix = errorMatrix/np.max(np.fabs(errorMatrix))
-			#print errorMatrix.max(), errorMatrix.min()
-			errorMatrices.append(errorMatrix)
+				errorMatrix = np.zeros((gridSize[0], gridSize[1], gridSize[2]), dtype=np.float)
+				for v,e in zip(vertices, errors):
+					x = v[0] + gridSize[0]*gridScale[0]/2
+					y = v[1] + gridSize[1]*gridScale[1]/2
+					z = v[2] + gridSize[2]*gridScale[2]/2
+					i = int(x / gridScale[0])
+					j = int(y / gridScale[1])
+					k = int(z / gridScale[2])
+					errorMatrix[i,j,k] = e
+				errorMatrix = np.fabs(errorMatrix)
+				#print errorMatrix.max(), errorMatrix.min()
+				errorMatrices.append(errorMatrix)
+		
+		totalErrorMatrix = np.zeros((gridSize[0], gridSize[1], gridSize[2]), dtype=np.float)
+		for errorMatrix in errorMatrices:
+			totalErrorMatrix += errorMatrix
+		np.save(matrixFileName, totalErrorMatrix)
 
-	
 	calibrationFolderPath = sys.argv[2]
 	stereoCameras = getStereoCamerasFromCalibration(calibrationFolderPath)
 
@@ -210,5 +219,5 @@ if __name__ == '__main__':
 			np.save(fileName, visibilityMatrix)
 			'''
 	
-	window = MainWindow(stereoCameras, centerPoints, errorMatrices, gridSize, gridScale)
+	window = MainWindow(stereoCameras, centerPoints, totalErrorMatrix, gridSize, gridScale)
 	sys.exit(app.exec_())
