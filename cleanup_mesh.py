@@ -6,12 +6,36 @@ import numpy as np
 from math import floor, ceil
 import matplotlib.pyplot as plt
 from src.OBJIO import loadOBJ, writeOBJ
+from opendr.topology import get_vert_connectivity
+from scipy.sparse.csgraph import connected_components
+import scipy
+import networkx as nx
+from Queue import Queue
+from threading import Thread
 
 def centerModel(vertices):
 	avgs = [np.mean(x) for x in vertices.T]
 	vertices -= avgs
 	return avgs
 
+def removeSmallIsolatedComponents(vertices, faces, normals):
+	cnct = get_vert_connectivity(vertices, faces)
+	nbrs = [np.nonzero(np.array(cnct[:,i].todense()))[0] for i in range(cnct.shape[1])]
+	A = cnct.toarray()
+	A[A > 0] = 1
+
+	G = nx.from_numpy_matrix(A)
+	connectedComponents = sorted(nx.connected_components(G), key=len, reverse=True)
+	if len(connectedComponents) > 1:
+		indicesToDelete = np.array([j for c in connectedComponents[1:] for j in c])
+		vertices = np.delete(vertices, indicesToDelete, axis=0)
+		normals = np.delete(normals, indicesToDelete, axis=0)
+
+		faceHasBadVs = np.all(np.in1d(faces.ravel(), indicesToDelete, invert=True).reshape(faces.shape), axis=1)
+		faces = faces[np.where(faceHasBadVs)]
+		faces = np.array([f - len(indicesToDelete[f > indicesToDelete]) for f in faces.ravel()]).reshape(faces.shape)
+
+	return vertices, faces, normals
 
 def removeVerticesByCondition(condition, vertices, faces, normals):
 	mask = condition(vertices)
@@ -20,10 +44,11 @@ def removeVerticesByCondition(condition, vertices, faces, normals):
 
 	vertices = vertices[indices]
 	normals = normals[indices]
-	faces = [f for f in faces if not bool(set(indicesExclude) & set(f))]
+	#print "Removing invalid faces..."
+	faceHasBadVs = np.all(np.in1d(faces.ravel(), indicesExclude, invert=True).reshape(faces.shape), axis=1)
+	faces = faces[np.where(faceHasBadVs)]
 
-	for i,f in enumerate(faces):
-		faces[i] = [x - len(indicesExclude[x > indicesExclude]) for x in f]
+	faces = np.array([f - len(indicesExclude[f > indicesExclude]) for f in faces.ravel()]).reshape(faces.shape)
 
 	return vertices, np.asarray(faces), normals
 
@@ -34,8 +59,7 @@ def removeIsolatedVertices(vertices, faces, normals):
 	vertices = vertices[list(set(referencedVertices))]
 	normals = normals[list(set(referencedVertices))]
 
-	for i,f in enumerate(faces):
-		faces[i] = [x - len(isolatedIndices[x > isolatedIndices]) for x in f]
+	faces = np.array([f - len(isolatedIndices[f > isolatedIndices]) for f in faces.ravel()]).reshape(faces.shape)
 	
 	return vertices, faces, normals
 
@@ -104,7 +128,7 @@ if __name__ == '__main__':
 			print 'Processing ' + fileName + '...'
 			vertices, faces, normals = loadOBJ(folderPath + '/' + fileName)
 
-			vertices, faces, normals = removeIsolatedVertices(vertices, faces, normals)
+			#vertices, faces, normals = removeIsolatedVertices(vertices, faces, normals)
 			#uv = np.asarray([0,1,0])
 			#uv = uv.T / np.linalg.norm(uv)
 			#plane = uv.tolist() + [-200]
@@ -114,9 +138,11 @@ if __name__ == '__main__':
 			#condition = lambda x: np.linalg.norm(centerPoint - x, axis=1) > 1340
 			#vertices, faces = removeVerticesByCondition(condition, vertices, faces)
 			#offset = centerModel(vertices)
-			sphereCenter = houghTransformation(vertices, faces, normals, 75)
-			condition = lambda x: np.linalg.norm(sphereCenter - x, axis=1) < 80
+			sphereCenter = houghTransformation(vertices, faces, normals, 150)
+			condition = lambda x: np.linalg.norm(sphereCenter - x, axis=1) < 155
 			vertices, faces, normals = removeVerticesByCondition(condition, vertices, faces, normals)
+
+			vertices, faces, normals = removeSmallIsolatedComponents(vertices, faces, normals)
 
 			if sys.argv[2].endswith('.obj'):
 				writeOBJ(sys.argv[2], vertices, faces, normals)
