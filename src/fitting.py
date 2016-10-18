@@ -50,7 +50,7 @@ def calculateCurvature(polyData, ctype=0):
 
 
 def calculateMeanCurvature(polyData):
-	return calculateCurvature(polyData, 0)
+	return calculateCurvature(polyData, ctype=1)
 
 def calculateGaussianCurvature(polyData):
-	return calculateCurvature(polyData, 1)
+	return calculateCurvature(polyData, ctype=0)
