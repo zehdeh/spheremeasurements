@@ -112,13 +112,11 @@ def pointPlaneDistance(point, vertices):
 	distance = (plane_xyz*vertices.T).sum(axis=1) + point[3]
 	return distance / np.linalg.norm(plane_xyz)
 
-def processMesh(q, folderPath):
-	while True:
-		fileName = q.get()
+def processMesh(fileName, folderPath):
 		print 'Processing ' + fileName + '...'
-		vertices, faces, normals,polyMesh = loadOBJviaVTK(folderPath + '/' + fileName)
+		vertices, faces, normals = loadOBJ(folderPath + '/' + fileName)
 
-		#vertices, faces, normals = removeIsolatedVertices(vertices, faces, normals)
+		vertices, faces, normals = removeIsolatedVertices(vertices, faces, normals)
 		#uv = np.asarray([0,1,0])
 		#uv = uv.T / np.linalg.norm(uv)
 		#plane = uv.tolist() + [-200]
@@ -128,6 +126,7 @@ def processMesh(q, folderPath):
 		#condition = lambda x: np.linalg.norm(centerPoint - x, axis=1) > 1340
 		#vertices, faces = removeVerticesByCondition(condition, vertices, faces)
 		#offset = centerModel(vertices)
+
 		sphereCenter = houghTransformation(vertices, faces, normals, 150)
 		condition = lambda x: np.linalg.norm(sphereCenter - x, axis=1) < 155
 		vertices, faces, normals = removeVerticesByCondition(condition, vertices, faces, normals)
@@ -139,7 +138,6 @@ def processMesh(q, folderPath):
 		else:
 			outputFile = sys.argv[2] + '/' + fileName
 			writeOBJ(outputFile, vertices, faces, normals)
-		q.task_done()
 
 if __name__ == '__main__':
 	if sys.argv[1].endswith('.obj'):
@@ -152,18 +150,11 @@ if __name__ == '__main__':
 		folderPath = sys.argv[1]
 		files = os.listdir(folderPath)
 	
-	q = Queue()
-	numThreads = 1
 
-	for i in range(numThreads):
-		worker = Thread(target=processMesh, args=(q,folderPath))
-		worker.setDaemon(True)
-		worker.start()
 	
 	for fileName in files:
 		if fileName.endswith('.obj'):
-			q.put(fileName)
+			processMesh(fileName, folderPath)
 	
-	q.join()
 
 

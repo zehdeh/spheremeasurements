@@ -44,7 +44,6 @@ class VTKMainWindow(QtWidgets.QMainWindow):
 	def addCamera(self, renderer, camera):
 		camPosition = np.linalg.inv(camera.R).dot(camera.position)
 		vtkCamera = vtk.vtkCamera()
-		'''
 		vtkCamera.SetPosition(camPosition[0], camPosition[1], camPosition[2])
 		vtkCamera.SetFocalPoint(0,0,0)
 		vtkCamera.SetThickness(500)
@@ -62,15 +61,18 @@ class VTKMainWindow(QtWidgets.QMainWindow):
 		cube.SetXLength(100)
 		cube.SetYLength(100)
 		cube.SetZLength(100)
+		'''
 
 		mapper = vtk.vtkPolyDataMapper()
-		mapper.SetInputConnection(cube.GetOutputPort())
+		#mapper.SetInputConnection(cube.GetOutputPort())
+		mapper.SetInputConnection(frustum.GetOutputPort())
 
 		#transform = vtk.vtkPerspectiveTransform()
 		#transform.SetupCamera(camPosition[0], camPosition[1], camPosition[2], 0, 0, 0, 0, 1, 0)
 
 		actor = vtk.vtkActor()
 		actor.SetMapper(mapper)
+
 		'''
 		print actor.GetXRange()
 		print actor.GetYRange()
@@ -81,6 +83,7 @@ class VTKMainWindow(QtWidgets.QMainWindow):
 		actor.GetProperty().SetRepresentationToWireframe()
 
 		renderer.AddActor(actor)
+		renderer.AddActor(labelActor)
 		self.vtkCameras.append(vtkCamera)
 	def setupFloorGrid(self, renderer, noCells, gridScale):
 		grid = vtk.vtkRectilinearGrid()

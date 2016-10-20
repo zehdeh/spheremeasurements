@@ -11,7 +11,13 @@ def loadOBJviaVTK(fileName):
 	reader.SetFileName(fileName)
 	reader.Update()
 
+	#cleaner = vtk.vtkCleanPolyData()
+	#cleaner.SetInputConnection(reader.GetOutputPort())
+	#cleaner.SetTolerance(0.005)
+	#cleaner.Update()
+
 	polyData = reader.GetOutput()
+	#polyData = cleaner.GetOutput()
 
 	vertices =  numpy_support.vtk_to_numpy(polyData.GetPoints().GetData())
 	vertices = vertices.astype(dtype='float64')
@@ -25,6 +31,27 @@ def loadOBJviaVTK(fileName):
 		npNormals = numpy_support.vtk_to_numpy(normals)
 
 	return vertices, faces, npNormals, polyData
+
+def getVTKMesh(vertices, faces, normals):
+	points = vtk.vtkPoints()
+	for v in vertices:
+		points.InsertNextPoint(v[0], v[1], v[2])
+
+	polygons = vtk.vtkCellArray()
+	for f in faces:
+		polygon = vtk.vtkPolygon()
+		polygon.GetPointIds().SetNumberOfIds(3)
+		polygon.GetPointIds().SetId(0, f[0])
+		polygon.GetPointIds().SetId(1, f[1])
+		polygon.GetPointIds().SetId(2, f[2])
+
+		polygons.InsertNextCell(polygon)
+
+	polydata = vtk.vtkPolyData()
+	polydata.SetPoints(points)
+	polydata.SetPolys(polygons)
+
+	return polydata
 
 def loadOBJ(fileName):
 	"""Loads a Wavefront OBJ file. """

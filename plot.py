@@ -6,22 +6,32 @@ import numpy as np
 from vtk.util import numpy_support
 from src.fitting import fitSphere, fittingErrorSphere
 from src.mesh import Mesh
-from src.OBJIO import loadOBJ, loadOBJviaVTK
+from src.OBJIO import loadOBJ, loadOBJviaVTK, getVTKMesh
 import matplotlib.pyplot as plt
 from pymetis import part_graph
 from opendr.topology import get_vert_connectivity
+import pymesh
  
 class CurvaturesDemo():
 	def CurvaturesDemo(self):
 		#vertices, faces, normals = loadOBJ(sys.argv[1])
 		vertices, faces, normals, polyData = loadOBJviaVTK(sys.argv[1])
+		#polyData = getVTKMesh(vertices, faces, normals)
 
 		bounds = Mesh(vertices.T, faces, normals).getBounds()
 		p0 = [bounds[0][0],bounds[1][0],bounds[2][0],150]
 		cp, radius = fitSphere(vertices,p0,75, bounds)
-		errors = fittingErrorSphere(cp.tolist() + [radius], vertices) - 75
+		errors = fittingErrorSphere(cp.tolist() + [radius], vertices) - 150
 
 		print 'Fitting error (min / max / mean / total): ' + str(errors.min()) + ' / ' + str(np.mean(errors)) + ' / ' + str(errors.max()) + ' / ' + str(np.sum(errors))
+
+		#mesh = pymesh.form_mesh(vertices,faces)
+		#mesh.add_attribute('vertex_normal')
+		#mesh.set_attribute('vertex_normal', normals)
+		#mesh.add_attribute('vertex_mean_curvature')
+		#curv3 = mesh.get_attribute('vertex_mean_curvature')
+				
+		#print 'Curvature method2 (min / max / mean / total): ' + str(np.min(curv3)) + ' / ' + str(np.max(curv3)) + ' / ' + str(np.mean(curv3)) + ' / ' + str(np.sum(curv3))
 
 		reader = vtk.vtkOBJReader()
 		reader.SetFileName(sys.argv[1])
@@ -91,7 +101,6 @@ class CurvaturesDemo():
 				curvatures[idx].SetCurvatureTypeToMean()
 				curvatures[idx].Update()
 				npcurv2 =  numpy_support.vtk_to_numpy(curvatures[idx].GetOutput().GetPointData().GetScalars())
-
 
 				mean = np.mean(npcurv2)
 				std = np.std(npcurv2)

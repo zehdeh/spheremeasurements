@@ -6,11 +6,12 @@ import sys
 import timeit
 import numpy as np
 import time
+import pymesh
 
 import Queue
 import threading
 
-from math import isnan
+from math import isnan, sin
 from scipy.special import sph_harm
 from src.OBJIO import loadOBJ
 from src.fitting import fitSphere
@@ -107,7 +108,8 @@ def nlsf(sphericalCoordinates, LMax):
 	for j,a in enumerate(a1):
 		l,m = kToLM[j]
 		LMMatrix[int(l),int(m+l)] = a
-		ys[int(l)]  = np.linalg.norm(LMMatrix[int(l)], ord=2)
+		#ys[int(l)]  = np.linalg.norm(LMMatrix[int(l)], ord=2)
+		ys[int(l)] = np.sum(LMMatrix[int(l)])
 
 	r_approx = Y.dot(a1)
 
@@ -119,17 +121,27 @@ def loadOBJwithSphericalCoordinates(fileName):
 	p0 = [bounds[0][0],bounds[1][0],bounds[2][0],150]
 	centerPoint, radius = fitSphere(vertices, p0, 150, bounds)
 
-	sphericalCoordinates = getSphericalCoordinates(vertices, centerPoint)
-	phi, theta, r = sphericalCoordinates
-	sphericalCoordinates = np.array([phi, theta, r-radius])
+	mesh = pymesh.form_mesh(vertices, faces)
+	mesh.add_attribute('vertex_area')
+	vertexAreas = mesh.get_attribute('vertex_area')
 
-	return sphericalCoordinates
+	sphericalCoordinates = getSphericalCoordinates(vertices, centerPoint)
+	#phi, theta, r = sphericalCoordinates
+	#sphericalCoordinates = np.array([phi, theta, r-radius])
+
+	return sphericalCoordinates, vertexAreas
 
 def processSphere(filePath):
 	Lmax = int(sys.argv[2])
-	sphericalCoordinates = loadOBJwithSphericalCoordinates(filePath)
+	sphericalCoordinates, vertexAreas = loadOBJwithSphericalCoordinates(filePath)
 
-	noPasses = 4
+	phi, theta, r = sphericalCoordinates
+	vertexAreas = vertexAreas / np.max(vertexAreas)
+	#vertexAreas = 1/vertexAreas
+
+	r = r*(vertexAreas)
+	sphericalCoordinates = [phi, theta, r]
+	noPasses = 2
 
 	finalYs = np.zeros(Lmax + 1)
 	for i in range(noPasses):
@@ -152,8 +164,12 @@ if __name__ == '__main__':
 		sys.exit(0)
 
 
-	folderPath = sys.argv[1]
-	files = os.listdir(folderPath)
+	if sys.argv[1].endswith('.obj'):
+		folderPath = ''
+		files = [sys.argv[1]]
+	else:
+		folderPath = sys.argv[1]
+		files = os.listdir(folderPath)
 	numColors = len(files)
 
 	cm = plt.get_cmap('gist_rainbow')

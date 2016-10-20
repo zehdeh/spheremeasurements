@@ -19,6 +19,7 @@ from src.mesh import Mesh
 from src.ui import VTKMainWindow, QVTKRenderWindowInteractorWheelfix
 from opendr.camera import ProjectPoints
 from src.calibration import getStereoCamerasFromCalibration, StereoCamera
+import pymesh
 
 
 class MainWindow(VTKMainWindow):
@@ -98,13 +99,13 @@ class MainWindow(VTKMainWindow):
 		self.rebuildCoverage()
 
 		alphaChannelFunc = vtk.vtkPiecewiseFunction()
-		alphaChannelFunc.AddPoint(0, 0.0)
-		alphaChannelFunc.AddPoint(1.0, 0.8)
+		alphaChannelFunc.AddPoint(0.003, 0.0)
+		alphaChannelFunc.AddPoint(0.11, 0.8)
 
 		colorFunc = vtk.vtkColorTransferFunction()
 		#colorFunc.AddRGBPoint(-1.0, 0.230, 0.299, 0.754)
 		colorFunc.AddRGBPoint(0.0, 1.0, 1.0, 1.0)
-		colorFunc.AddRGBPoint(1.0, 0.706, 0.016, 0.150)
+		colorFunc.AddRGBPoint(0.01, 0.706, 0.016, 0.150)
 
 		scalarBar = vtk.vtkScalarBarActor()
 		scalarBar.SetLookupTable(colorFunc)
@@ -114,8 +115,13 @@ class MainWindow(VTKMainWindow):
 		volumeProperty.SetColor(0,colorFunc)
 		volumeProperty.SetScalarOpacity(alphaChannelFunc)
 
+		gaussianFilter = vtk.vtkImageGaussianSmooth()
+		gaussianFilter.SetInputConnection(self.imageImport.GetOutputPort())
+		gaussianFilter.Update()
+
 		self.volumeMapper = vtk.vtkSmartVolumeMapper()
-		self.volumeMapper.SetInputConnection(self.imageImport.GetOutputPort())
+		#self.volumeMapper.SetInputConnection(self.imageImport.GetOutputPort())
+		self.volumeMapper.SetInputConnection(gaussianFilter.GetOutputPort())
 
 		volume = vtk.vtkVolume()
 		volume.SetOrigin(gridSize[0]/2, gridSize[1]/2,gridSize[2]/2)
@@ -142,16 +148,18 @@ if __name__ == '__main__':
 	centerPoints = []
 
 	#gridSize = [50,50,50]
-	gridSize = [100,100,100]
+	#gridSize = [100,100,100]
+	gridSize = [200,200,200]
 	scannerVolumeSize = [3000,3000,3000]
 	gridScale = [scannerVolumeSize[0] / gridSize[0], scannerVolumeSize[1] / gridSize[1], scannerVolumeSize[2] / gridSize[2]]
-	print files[230]
 
-	matrixFileName = folderPath + '/meanCurvature' + '_' + str(gridSize[0]) + '_' + str(gridSize[1]) + '_' + str(gridSize[2]) + '.npy'
+	matrixFileName = folderPath + '/meanCurvature' + '_' + str(gridSize[0]) + '_' + str(gridSize[1]) + '_' + str(gridSize[2])
+	#matrixFileName = folderPath + '/fittingError' + '_' + str(gridSize[0]) + '_' + str(gridSize[1]) + '_' + str(gridSize[2])
 	if os.path.isfile(matrixFileName + '.npy'):
 		totalErrorMatrix = np.load(matrixFileName + '.npy')
 	else:
-		errorMatrices = []
+		totalErrorMatrix = np.zeros((gridSize[0], gridSize[1], gridSize[2]), dtype=np.float)
+		nMatrix = np.zeros((gridSize[0], gridSize[1], gridSize[2]), dtype=np.int32)
 		for fileName in files:
 			if fileName.endswith('.obj'):
 				print 'Processing ' + fileName[0:-4]
@@ -164,6 +172,9 @@ if __name__ == '__main__':
 				centerPoints.append(cp)
 
 				#errors = fittingErrorSphere(cp.tolist()+[radius],vertices) - radius
+				#mesh = pymesh.form_mesh(vertices,faces)
+				#mesh.add_attribute('vertex_mean_curvature')
+				#errors = mesh.get_attribute('vertex_mean_curvature')
 				errors = calculateMeanCurvature(polyData)
 
 				errorMatrix = np.zeros((gridSize[0], gridSize[1], gridSize[2]), dtype=np.float)
@@ -171,17 +182,16 @@ if __name__ == '__main__':
 					x = v[0] + gridSize[0]*gridScale[0]/2
 					y = v[1] + gridSize[1]*gridScale[1]/2
 					z = v[2] + gridSize[2]*gridScale[2]/2
-					i = int(x / gridScale[0])
+					k = int(x / gridScale[0])
 					j = int(y / gridScale[1])
-					k = int(z / gridScale[2])
+					i = int(z / gridScale[2])
 					errorMatrix[i,j,k] = e
+					nMatrix[i,j,k] += 1
 				errorMatrix = np.fabs(errorMatrix)
 				#print errorMatrix.max(), errorMatrix.min()
-				errorMatrices.append(errorMatrix)
+				totalErrorMatrix += errorMatrix
 		
-		totalErrorMatrix = np.zeros((gridSize[0], gridSize[1], gridSize[2]), dtype=np.float)
-		for errorMatrix in errorMatrices:
-			totalErrorMatrix += errorMatrix
+		totalErrorMatrix[np.nonzero(nMatrix)] = totalErrorMatrix[np.nonzero(nMatrix)] / nMatrix[np.nonzero(nMatrix)]
 		np.save(matrixFileName, totalErrorMatrix)
 
 	calibrationFolderPath = sys.argv[2]
