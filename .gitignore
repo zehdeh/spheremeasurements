@@ -2,6 +2,7 @@
 res/Metalsphere2/*.obj
 res/archive/
 report.xlsx
+*.npy
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
