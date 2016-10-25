@@ -30,6 +30,8 @@ if __name__ == '__main__':
 	vertices, faces, normals, polyData = loadOBJviaVTK(sys.argv[1])
 	centerPoint = np.mean(vertices, axis=0)
 	vertices = vertices - centerPoint
+	for n in normals:
+		print n
 
 	centerPoint = np.mean(vertices, axis=0)
 
@@ -50,15 +52,15 @@ if __name__ == '__main__':
 
 	verticesDirections = vertices - centerPoint
 	distances = verticesDirections.dot(normal)[...,None]
-	vertices -= distances*normal
+	#vertices -= distances*normal
 
 	rotationAxis = np.cross([0,0,1], normal)
 	rotationAngle = np.arccos(np.dot([0,0,1], normal))
 	R = getRotationMatrix(rotationAngle, rotationAxis)
 	app = np.ones(vertices.shape[0])
-	vertices = np.vstack([vertices.T, app]).T
-	vertices = R.dot(vertices.T).T
-	vertices[:,2] = 0
+	#vertices = np.vstack([vertices.T, app]).T
+	#vertices = R.dot(vertices.T).T
+	#vertices[:,2] = 0
 
 	centerPoint = np.mean(vertices, axis=0)
 
@@ -74,10 +76,10 @@ if __name__ == '__main__':
 	rotationAxis = np.cross([0,-1,0], normal)
 	rotationAngle = np.arccos(np.dot([0,-1,0], normal))
 	R = getRotationMatrix(rotationAngle, rotationAxis)
-	vertices = R.dot(vertices.T)[0:2].T
-	vertices = vertices[vertices[:,0].argsort()].T
-	maxY = max(vertices[1,-1], vertices[1,0])
-	vertices = vertices.T[vertices[1] >= maxY]
+	#vertices = R.dot(vertices.T)[0:2].T
+	#vertices = vertices[vertices[:,0].argsort()].T
+	#maxY = max(vertices[1,-1], vertices[1,0])
+	#vertices = vertices.T[vertices[1] >= maxY]
 
 
 
@@ -87,16 +89,16 @@ if __name__ == '__main__':
 	#[p0[2], p0[2]+n2[2]*100])
 
 	fig = plt.figure()
-	#ax = fig.add_subplot(111, projection='3d')
-	ax = fig.add_subplot(111)
+	ax = fig.add_subplot(111, projection='3d')
+	#ax = fig.add_subplot(111)
 	#ax.plot_surface(xx, yy, z1)
 	#ax.plot_surface(xx, yy, z2)
 	#ax.add_artist(arrow)
 	#ax.add_artist(arrow2)
 
-	#ax.scatter(vertices.T[0],vertices.T[1],vertices.T[2], color='b', marker='.')
+	ax.scatter(vertices.T[0],vertices.T[1],vertices.T[2], color='b', marker='.')
 	#ax.scatter(vertices.T[0],vertices.T[1], color='b', marker='.')
-	ax.plot(vertices.T[0], vertices.T[1])
+	#ax.plot(vertices.T[0], vertices.T[1])
 
 	#ax.scatter(centerPoint1.T[0],centerPoint1.T[1],centerPoint1.T[2], color='g', marker='o')
 	#ax.scatter(centerPoint2.T[0],centerPoint2.T[1],centerPoint2.T[2], color='g', marker='o')
