@@ -11,7 +11,7 @@ import pymesh
 import Queue
 import threading
 
-from math import isnan, sin
+from math import isnan, sin, degrees
 from scipy.special import sph_harm
 from src.OBJIO import loadOBJ
 from src.fitting import fitSphere
@@ -21,6 +21,11 @@ from scipy.optimize import leastsq
 from cycler import cycler
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
+import matplotlib.colors as mcolors
+import matplotlib.cm as mplcm
+
+from pyshtools.spectralanalysis import SHPowerSpectrum, SHPowerSpectrumDensity
+from pyshtools.expand import SHExpandLSQ
 
 def getSphericalCoordinates(vertices, centerPoint):
 	vertices = vertices - centerPoint
@@ -42,36 +47,53 @@ def getCartesianCoordinates(theta, phi, r, centerPoint):
 def residuals(aa, Yval, rs):
 	return (Yval.dot(aa) - rs)
 
-def getAMatrix(theta, phi, l):
+def getAMatrix(theta, phi, l, filePath, oldA=None):
 	n = len(phi)
+	
+	path = os.path.split(filePath)
+	fileName = path[-1][:-4]
 
-	A = np.zeros((n, 2*l+1))
-	for i in range(n):
-		A[i] = [sph_harm(l, j-l, theta[i], phi[i]).real for j in range(0, 2*l+1)]
-	A = np.nan_to_num(A)
+	matrixName = fileName + '_' + str(l)
+	matrixPath = os.path.join(path[0],matrixName)
+	if os.path.isfile(matrixPath + '.npy'):
+		A = np.load(matrixPath + '.npy')
+		print 'Using cache for ' + str(l)
+	else:
+		A = np.zeros((n, 2*l+1))
+		if oldA is None:
+			for i in range(n):
+				A[i] = [sph_harm(j-l, l, theta[i], phi[i]).real for j in range(0, 2*l+1)]
+			A = np.nan_to_num(A)
+		else:
+			A[:,1:2*l] = oldA
+			for i in range(n):
+				A[i,0] = sph_harm(-l, l, theta[i], phi[i]).real
+				A[i,-1] = sph_harm(l, l, theta[i], phi[i]).real
+		np.save(matrixPath,A)
 	
 	return A
-def sirf(sphericalCoordinates, Lmax):
+def sirf(sphericalCoordinates, Lmax, fileName):
 	phi, theta, r = sphericalCoordinates
 
 	s = 5
-	A = getAMatrix(theta, phi, 0)
+	A = getAMatrix(theta, phi, 0, fileName)
 	for i in range(1,s):
-		A = np.concatenate((A,getAMatrix(theta, phi, i)), axis=1)
+		A = np.concatenate((A,getAMatrix(theta, phi, i, fileName)), axis=1)
 	
 	b = np.zeros((Lmax+1)**2)
 	b[0:A.shape[1]], flag = leastsq(residuals, b[0:A.shape[1]], args=(A,r))
 
+	np.set_printoptions(threshold=np.inf)
 	res = r - A.dot(b[0:A.shape[1]])
+	Al = getAMatrix(theta, phi, s-1, fileName)
 	for l in range(s, Lmax+1):
-		Al = getAMatrix(theta, phi, l)
+		Al = getAMatrix(theta, phi, l, fileName, Al)
 		lowerBound = l**2
 		upperBound = (l+1)**2
 
 		b[lowerBound:upperBound], flag = leastsq(residuals, b[lowerBound:upperBound], args=(Al,res))
 		res = res - Al.dot(b[lowerBound:upperBound])
 		A = np.concatenate((A,Al), axis=1)
-
 
 	ys = np.zeros(Lmax+1)
 	for i in range(Lmax+1):
@@ -108,8 +130,7 @@ def nlsf(sphericalCoordinates, LMax):
 	for j,a in enumerate(a1):
 		l,m = kToLM[j]
 		LMMatrix[int(l),int(m+l)] = a
-		#ys[int(l)]  = np.linalg.norm(LMMatrix[int(l)], ord=2)
-		ys[int(l)] = np.sum(LMMatrix[int(l)])
+		ys[int(l)]  = np.linalg.norm(LMMatrix[int(l)], ord=2)
 
 	r_approx = Y.dot(a1)
 
@@ -136,17 +157,19 @@ def processSphere(filePath):
 	sphericalCoordinates, vertexAreas = loadOBJwithSphericalCoordinates(filePath)
 
 	phi, theta, r = sphericalCoordinates
+	#phi = [degrees(p) for p in phi]
+	#theta = [degrees(t) for t in theta]
 	vertexAreas = vertexAreas / np.max(vertexAreas)
 	#vertexAreas = 1/vertexAreas
 
 	r = r*(vertexAreas)
 	sphericalCoordinates = [phi, theta, r]
-	noPasses = 2
+	noPasses = 4
 
 	finalYs = np.zeros(Lmax + 1)
 	for i in range(noPasses):
 		print "Pass " + str(i)
-		a, ys, A = sirf(sphericalCoordinates, Lmax)
+		a, ys, A = sirf(sphericalCoordinates, Lmax, filePath)
 		finalYs += ys
 		phi, theta, r = sphericalCoordinates
 
@@ -170,15 +193,27 @@ if __name__ == '__main__':
 	else:
 		folderPath = sys.argv[1]
 		files = os.listdir(folderPath)
-	numColors = len(files)
+
+	numColors = 0
+	for fileName in files:
+		if fileName.endswith('.obj'):
+			numColors += 1
 
 	cm = plt.get_cmap('gist_rainbow')
 
 	fig = plt.figure()
 	ax = fig.add_subplot(111)
 	#colors = [cm(1.*i/numColors) for i in range(numColors)]
-	#lineStyle = np.tile(['-', '--', ':', '-.'], len(colors)/4)
-	#lineWidth = np.tile([2,3], len(colors)/2)
+	cNorm  = mcolors.Normalize(vmin=0, vmax=numColors-1)
+	scalarMap = mplcm.ScalarMappable(norm=cNorm, cmap=cm)
+
+	colors = [scalarMap.to_rgba(i) for i in range(numColors)]
+	lineStyle = np.tile(['-', '--', ':', '-.'], len(colors)/4)
+	lineWidth = np.tile([2,3], len(colors)/2)
+	if len(lineStyle) < len(colors):
+		lineStyle = lineStyle[0:len(colors)]
+	print len(lineWidth)
+
 
 	#ax.set_prop_cycle(cycler('color', colors) + cycler('linestyle', lineStyle) + cycler('linewidth', lineWidth))
 	#ax.set_prop_cycle(cycler('color', colors) + cycler('linewidth', lineWidth))
@@ -195,7 +230,7 @@ if __name__ == '__main__':
 			#sphericalCoordinates = loadOBJwithSphericalCoordinates(folderPath + fileName)
 
 			start_time = timeit.default_timer()
-			ys = processSphere(folderPath + fileName)
+			ys = processSphere(os.path.join(folderPath,fileName))
 			print(timeit.default_timer() - start_time)
 
 			xa = np.arange(0, len(ys))
