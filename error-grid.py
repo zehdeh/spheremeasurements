@@ -1,6 +1,5 @@
 #! /usr/bin/python
 
-import timeit
 import sys
 from math import atan2,sqrt,fabs
 import os
@@ -42,6 +41,8 @@ class MainWindow(VTKMainWindow):
 	def onCameraToggle(self, item):
 		self.itemCameraMM[item].visible = (item.checkState() == 2)
 		self.rebuildCoverage()
+		self.imageImport.Update()
+		self.gaussianFilter.Update()
 		self.volumeMapper.SetInputConnection(self.imageImport.GetOutputPort())
 		self.volumeMapper.Update()
 		self.errorGridViewer.GetRenderWindow().Render()
@@ -90,7 +91,7 @@ class MainWindow(VTKMainWindow):
 	def setupErrorGrid(self,stereoCameras, renderer, gridSize, gridScale):
 		iren = self.errorGridViewer.GetRenderWindow().GetInteractor()
 
-		self.setupFloorGrid(self.mainVTKRenderer, [gridSize[0], gridSize[2]], [gridScale[0], gridScale[2]])
+		#self.setupFloorGrid(self.mainVTKRenderer, [gridSize[0], gridSize[2]], [gridScale[0], gridScale[2]])
 
 		#print errorGrid
 			
@@ -115,27 +116,51 @@ class MainWindow(VTKMainWindow):
 		volumeProperty.SetColor(0,colorFunc)
 		volumeProperty.SetScalarOpacity(alphaChannelFunc)
 
-		gaussianFilter = vtk.vtkImageGaussianSmooth()
-		gaussianFilter.SetInputConnection(self.imageImport.GetOutputPort())
-		gaussianFilter.Update()
+		self.gaussianFilter = vtk.vtkImageGaussianSmooth()
+		self.gaussianFilter.SetInputConnection(self.imageImport.GetOutputPort())
+		self.gaussianFilter.Update()
 
 		self.volumeMapper = vtk.vtkSmartVolumeMapper()
 		#self.volumeMapper.SetInputConnection(self.imageImport.GetOutputPort())
-		self.volumeMapper.SetInputConnection(gaussianFilter.GetOutputPort())
+		self.volumeMapper.SetInputConnection(self.gaussianFilter.GetOutputPort())
 
 		volume = vtk.vtkVolume()
-		volume.SetOrigin(gridSize[0]/2, gridSize[1]/2,gridSize[2]/2)
+		volume.SetOrigin(gridSize[0]/2., gridSize[1]/2.,gridSize[2]/2.)
 		volume.SetScale(gridScale[0], gridScale[1], gridScale[2])
 		#volume.SetPosition(0,-gridSize[1]*gridScale/2,0)
-		#volume.SetPosition(0,0,0)
+		volume.SetPosition(0,0,0)
 		volume.SetMapper(self.volumeMapper)
 		volume.SetProperty(volumeProperty)
+
+		cubeAxesActor = vtk.vtkCubeAxesActor()
+		cubeAxesActor.SetBounds(volume.GetBounds())
+
+		cubeAxesActor.SetFlyMode(vtk.VTK_FLY_FURTHEST_TRIAD)
+		cubeAxesActor.SetGridLineLocation(vtk.VTK_GRID_LINES_FURTHEST)
+		cubeAxesActor.DrawXGridlinesOn()
+		cubeAxesActor.DrawYGridlinesOn()
+		cubeAxesActor.DrawZGridlinesOn()
+
+		cubeAxesActor.XAxisMinorTickVisibilityOff()
+		cubeAxesActor.YAxisMinorTickVisibilityOff()
+		cubeAxesActor.ZAxisMinorTickVisibilityOff()
+
+		cubeAxesActor.XAxisLabelVisibilityOff()
+		cubeAxesActor.YAxisLabelVisibilityOff()
+		cubeAxesActor.ZAxisLabelVisibilityOff()
+
+		cubeAxesActor.SetCamera(self.mainVTKRenderer.GetActiveCamera())
 
 		interactorStyle = vtk.vtkInteractorStyleTerrain()
 		iren.SetInteractorStyle(interactorStyle)
 		self.mainVTKRenderer.AddVolume(volume)
+		#self.mainVTKRenderer.AddActor(cubeAxesActor)
 		self.mainVTKRenderer.AddActor(scalarBar)
 		iren.Initialize()
+		
+		self.mainVTKRenderer.ResetCamera()
+		#self.mainVTKRenderer.GetActiveCamera().SetFocalPoint(0,0,0)
+		#self.mainVTKRenderer.GetActiveCamera().SetPosition(0,0,-3000)
 
 if __name__ == '__main__':
 	if len(sys.argv) < 3:
