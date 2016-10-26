@@ -1,5 +1,5 @@
 #! /usr/bin/python
-
+USE_CACHE = False
 
 import os
 import sys
@@ -55,7 +55,7 @@ def getAMatrix(theta, phi, l, filePath, oldA=None):
 
 	matrixName = fileName + '_' + str(l)
 	matrixPath = os.path.join(path[0],matrixName)
-	if os.path.isfile(matrixPath + '.npy'):
+	if os.path.isfile(matrixPath + '.npy') and USE_CACHE:
 		A = np.load(matrixPath + '.npy')
 		print 'Using cache for ' + str(l)
 	else:
@@ -75,7 +75,8 @@ def getAMatrix(theta, phi, l, filePath, oldA=None):
 def sirf(sphericalCoordinates, Lmax, fileName):
 	phi, theta, r = sphericalCoordinates
 
-	s = 5
+	s = 10
+	# areas auf beide Seiten!
 	A = getAMatrix(theta, phi, 0, fileName)
 	for i in range(1,s):
 		A = np.concatenate((A,getAMatrix(theta, phi, i, fileName)), axis=1)
@@ -152,19 +153,35 @@ def loadOBJwithSphericalCoordinates(fileName):
 
 	return sphericalCoordinates, vertexAreas
 
+def simple_transform(sphericalCoordinates, Lmax, vertexAreas):
+	phi, theta, radii = sphericalCoordinates
+	
+	for i,r,a in enumerate(zip(radii, vertexAreas)):
+		for l in range(Lmax + 1):
+			for m in range(-l,l+1):
+				c = a*r*sph_harm(m, l, theta[i], phi[i]).real
+
 def processSphere(filePath):
 	Lmax = int(sys.argv[2])
 	sphericalCoordinates, vertexAreas = loadOBJwithSphericalCoordinates(filePath)
 
 	phi, theta, r = sphericalCoordinates
-	#phi = [degrees(p) for p in phi]
-	#theta = [degrees(t) for t in theta]
+	phi = [degrees(p) for p in phi]
+	theta = [degrees(t) for t in theta]
 	vertexAreas = vertexAreas / np.max(vertexAreas)
-	#vertexAreas = 1/vertexAreas
 
+	#r = r*vertexAreas
+	cirf, chi = SHExpandLSQ(r, phi, theta, Lmax)
+	
+	a = SHPowerSpectrum(cirf)
+	#a = [np.linalg.norm(ms, ord=2) for ms in np.sum(cirf, axis=0)]
+	print a
+	finalYs = a
+
+	'''
 	r = r*(vertexAreas)
 	sphericalCoordinates = [phi, theta, r]
-	noPasses = 4
+	noPasses = 1
 
 	finalYs = np.zeros(Lmax + 1)
 	for i in range(noPasses):
@@ -179,6 +196,7 @@ def processSphere(filePath):
 		sphericalCoordinates = np.array([phi, theta, r])
 
 		
+	'''
 	return finalYs
 
 if __name__ == '__main__':
