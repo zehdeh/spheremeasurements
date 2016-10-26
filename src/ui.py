@@ -1,6 +1,8 @@
 import vtk
+from math import sqrt
 from PyQt5 import QtGui, QtCore, QtWidgets
 from vtk.qt.QVTKRenderWindowInteractor import QVTKRenderWindowInteractor
+import cv2
 
 import numpy as np
 
@@ -24,10 +26,17 @@ class VTKMainWindow(QtWidgets.QMainWindow):
 
 		self.vtkCameras = []
 		self.itemCameraMM = dict()
+		camPositions = vtk.vtkPoints()
+		labels = vtk.vtkStringArray()
+		labels.SetName('label')
+
 		for i,stereoCamera in stereoCameras.iteritems():
 			self.addCamera(self.mainVTKRenderer,stereoCamera.A)
 			self.addCamera(self.mainVTKRenderer,stereoCamera.B)
-			self.addCamera(self.mainVTKRenderer,stereoCamera.C)
+			camPosition = self.addCamera(self.mainVTKRenderer,stereoCamera.C)
+
+			labels.InsertNextValue(str(stereoCamera.name))
+			camPositions.InsertNextPoint(camPosition[0], camPosition[1], camPosition[2])
 
 			listItem = QtWidgets.QListWidgetItem("Camera " + str(stereoCamera.name), self.cameraList)
 			listItem.setFlags(listItem.flags() | QtCore.Qt.ItemIsUserCheckable)
@@ -37,6 +46,21 @@ class VTKMainWindow(QtWidgets.QMainWindow):
 			self.itemCameraMM[listItem] = stereoCamera
 
 		self.cameraList.itemChanged.connect(self.onCameraToggle)
+		labelPolyData = vtk.vtkPolyData()
+		labelPolyData.SetPoints(camPositions)
+		labelPolyData.GetPointData().AddArray(labels)
+
+		hier = vtk.vtkPointSetToLabelHierarchy()
+		hier.SetInputData(labelPolyData)
+		hier.SetLabelArrayName('label')
+
+		labelMapper = vtk.vtkLabelPlacementMapper()
+		labelMapper.SetInputConnection(hier.GetOutputPort())
+
+		labelActor = vtk.vtkActor2D()
+		labelActor.SetMapper(labelMapper)
+
+		self.mainVTKRenderer.AddActor(labelActor)
 
 		self.stereoCameras = stereoCameras
 		self.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.cameraDock);
@@ -47,9 +71,18 @@ class VTKMainWindow(QtWidgets.QMainWindow):
 		vtkCamera.SetPosition(camPosition[0], camPosition[1], camPosition[2])
 		vtkCamera.SetFocalPoint(0,0,0)
 		vtkCamera.SetThickness(500)
+
+		rot, J = cv2.Rodrigues(camera.R)
+		theta = sqrt(rot[0]**2 + rot[1]**2 + rot[2]**2)
+		v = rot/theta
+
+		transform = vtk.vtkTransform()
+		transform.RotateWXYZ(theta, v[0], v[1], v[2])
+
 		planesArray = [0 for i in range(24)]
 
 		vtkCamera.GetFrustumPlanes(camera.w/camera.h, planesArray)
+		vtkCamera.ApplyTransform(transform)
 
 		planes = vtk.vtkPlanes()
 		planes.SetFrustumPlanes(planesArray)
@@ -72,6 +105,8 @@ class VTKMainWindow(QtWidgets.QMainWindow):
 
 		actor = vtk.vtkActor()
 		actor.SetMapper(mapper)
+		actor.GetProperty().SetColor(0.4,0.4,0.4)
+		actor.GetProperty().SetOpacity(0.5)
 
 		'''
 		print actor.GetXRange()
@@ -79,12 +114,13 @@ class VTKMainWindow(QtWidgets.QMainWindow):
 		print actor.GetZRange()
 		'''
 		#actor.SetUserMatrix(transform.GetMatrix())
-		actor.SetPosition(camPosition[0], camPosition[1], camPosition[2])
+		#actor.SetPosition(camPosition[0], camPosition[1], camPosition[2])
 		actor.GetProperty().SetRepresentationToWireframe()
 
 		renderer.AddActor(actor)
-		renderer.AddActor(labelActor)
 		self.vtkCameras.append(vtkCamera)
+
+		return camPosition
 	def setupFloorGrid(self, renderer, noCells, gridScale):
 		grid = vtk.vtkRectilinearGrid()
  
