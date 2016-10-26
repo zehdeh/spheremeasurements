@@ -19,11 +19,6 @@ class VTKMainWindow(QtWidgets.QMainWindow):
 
 		self.mainVTKRenderer = mainVTKRenderer
 
-		self.cameraDock = QtWidgets.QDockWidget('Cameras', self)
-		self.cameraDock.setAllowedAreas(QtCore.Qt.LeftDockWidgetArea | QtCore.Qt.RightDockWidgetArea);
-		self.cameraList = QtWidgets.QListWidget(self.cameraDock)
-		self.cameraDock.setWidget(self.cameraList)
-
 		self.vtkCameras = []
 		self.itemCameraMM = dict()
 		camPositions = vtk.vtkPoints()
@@ -38,14 +33,7 @@ class VTKMainWindow(QtWidgets.QMainWindow):
 			labels.InsertNextValue(str(stereoCamera.name))
 			camPositions.InsertNextPoint(camPosition[0], camPosition[1], camPosition[2])
 
-			listItem = QtWidgets.QListWidgetItem("Camera " + str(stereoCamera.name), self.cameraList)
-			listItem.setFlags(listItem.flags() | QtCore.Qt.ItemIsUserCheckable)
-			listItem.setCheckState(QtCore.Qt.Checked)
-			self.cameraList.addItem(listItem)
 			
-			self.itemCameraMM[listItem] = stereoCamera
-
-		self.cameraList.itemChanged.connect(self.onCameraToggle)
 		labelPolyData = vtk.vtkPolyData()
 		labelPolyData.SetPoints(camPositions)
 		labelPolyData.GetPointData().AddArray(labels)
@@ -63,7 +51,6 @@ class VTKMainWindow(QtWidgets.QMainWindow):
 		self.mainVTKRenderer.AddActor(labelActor)
 
 		self.stereoCameras = stereoCameras
-		self.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.cameraDock);
 
 	def addCamera(self, renderer, camera):
 		camPosition = np.linalg.inv(camera.R).dot(camera.position)
