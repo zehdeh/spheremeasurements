@@ -47,6 +47,13 @@ class MainWindow(VTKMainWindow):
 		self.volumeMapper.Update()
 		self.errorGridViewer.GetRenderWindow().Render()
 		self.mainVTKRenderer.ResetCamera()
+	def switchDisplayMode(self,btn,mode):
+		if btn.isChecked():
+			if mode == 0:
+				self.volume.VisibilityOn()
+			else:
+				self.volume.VisibilityOff()
+			self.mainVTKRenderer.GetRenderWindow().Render()
 	def rebuildCoverage(self):
 		alphaValues = np.zeros((gridSize[0], gridSize[1], gridSize[2]), dtype=np.float)
 		colorValues = np.zeros((gridSize[0], gridSize[1], gridSize[2]), dtype=np.float)
@@ -124,16 +131,16 @@ class MainWindow(VTKMainWindow):
 		#self.volumeMapper.SetInputConnection(self.imageImport.GetOutputPort())
 		self.volumeMapper.SetInputConnection(self.gaussianFilter.GetOutputPort())
 
-		volume = vtk.vtkVolume()
-		volume.SetOrigin(gridSize[0]/2., gridSize[1]/2.,gridSize[2]/2.)
-		volume.SetScale(gridScale[0], gridScale[1], gridScale[2])
+		self.volume = vtk.vtkVolume()
+		self.volume.SetOrigin(gridSize[0]/2., gridSize[1]/2.,gridSize[2]/2.)
+		self.volume.SetScale(gridScale[0], gridScale[1], gridScale[2])
 		#volume.SetPosition(0,-gridSize[1]*gridScale/2,0)
-		volume.SetPosition(0,0,0)
-		volume.SetMapper(self.volumeMapper)
-		volume.SetProperty(volumeProperty)
+		self.volume.SetPosition(0,0,0)
+		self.volume.SetMapper(self.volumeMapper)
+		self.volume.SetProperty(volumeProperty)
 
 		cubeAxesActor = vtk.vtkCubeAxesActor()
-		cubeAxesActor.SetBounds(volume.GetBounds())
+		cubeAxesActor.SetBounds(self.volume.GetBounds())
 
 		cubeAxesActor.SetFlyMode(vtk.VTK_FLY_FURTHEST_TRIAD)
 		cubeAxesActor.SetGridLineLocation(vtk.VTK_GRID_LINES_FURTHEST)
@@ -153,7 +160,7 @@ class MainWindow(VTKMainWindow):
 
 		interactorStyle = vtk.vtkInteractorStyleTerrain()
 		iren.SetInteractorStyle(interactorStyle)
-		self.mainVTKRenderer.AddVolume(volume)
+		self.mainVTKRenderer.AddVolume(self.volume)
 		#self.mainVTKRenderer.AddActor(cubeAxesActor)
 		self.mainVTKRenderer.AddActor(scalarBar)
 		iren.Initialize()

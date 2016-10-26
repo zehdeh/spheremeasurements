@@ -18,6 +18,12 @@ class VTKMainWindow(QtWidgets.QMainWindow):
 		QtWidgets.QMainWindow.__init__(self,parent)
 
 		self.mainVTKRenderer = mainVTKRenderer
+		self.settingsPanel = QtWidgets.QWidget()
+		self.settingsDock = QtWidgets.QDockWidget('Properties',self)
+		self.settingsDock.setWidget(self.settingsPanel)
+
+		self.cameraActors = []
+		self.setupSettings()
 
 		self.vtkCameras = []
 		self.itemCameraMM = dict()
@@ -51,6 +57,24 @@ class VTKMainWindow(QtWidgets.QMainWindow):
 		self.mainVTKRenderer.AddActor(labelActor)
 
 		self.stereoCameras = stereoCameras
+		self.addDockWidget(QtCore.Qt.BottomDockWidgetArea, self.settingsDock)
+	def setupSettings(self):
+		grid = QtWidgets.QGridLayout()
+		grid.setSpacing(10)
+
+		displayMode = QtWidgets.QLabel('Display mode')
+		errorMode = QtWidgets.QRadioButton('Voxels')
+		errorMode.setChecked(True)
+		errorMode.toggled.connect(lambda: self.switchDisplayMode(errorMode, 0))
+		normalsMode = QtWidgets.QRadioButton('Normal vectors')
+		normalsMode.toggled.connect(lambda: self.switchDisplayMode(normalsMode, 1))
+
+
+		grid.addWidget(displayMode, 1, 0)
+		grid.addWidget(errorMode, 1, 1)
+		grid.addWidget(normalsMode, 1, 2)
+
+		self.settingsPanel.setLayout(grid)
 
 	def addCamera(self, renderer, camera):
 		camPosition = np.linalg.inv(camera.R).dot(camera.position)
@@ -70,6 +94,9 @@ class VTKMainWindow(QtWidgets.QMainWindow):
 
 		vtkCamera.GetFrustumPlanes(camera.w/camera.h, planesArray)
 		vtkCamera.ApplyTransform(transform)
+		print 'planes:'
+		print np.min(planesArray)
+		print np.max(planesArray)
 
 		planes = vtk.vtkPlanes()
 		planes.SetFrustumPlanes(planesArray)
@@ -94,6 +121,9 @@ class VTKMainWindow(QtWidgets.QMainWindow):
 		actor.SetMapper(mapper)
 		actor.GetProperty().SetColor(0.4,0.4,0.4)
 		actor.GetProperty().SetOpacity(0.5)
+		print 'Bounds:'
+		print np.min(actor.GetBounds())
+		print np.max(actor.GetBounds())
 
 		'''
 		print actor.GetXRange()
@@ -105,6 +135,7 @@ class VTKMainWindow(QtWidgets.QMainWindow):
 		actor.GetProperty().SetRepresentationToWireframe()
 
 		renderer.AddActor(actor)
+		self.cameraActors.append(actor)
 		self.vtkCameras.append(vtkCamera)
 
 		return camPosition
