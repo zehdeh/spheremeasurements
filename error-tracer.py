@@ -9,13 +9,14 @@ from PyQt5 import QtGui, QtCore, QtWidgets
 from vtk.qt.QVTKRenderWindowInteractor import QVTKRenderWindowInteractor
 from src.thirdparty.body.loaders.scanner_frame import Pod
 from opendr.camera import ProjectPoints
-from src.ui import VTKMainWindow, QVTKRenderWindowInteractorWheelfix, StereoCamera
+from src.ui import VTKMainWindow, QVTKRenderWindowInteractorWheelfix
+from src.calibration import getStereoCamerasFromCalibration, StereoCamera
 
 from src.OBJIO import loadOBJ, writeOBJ
 
 class MainWindow(VTKMainWindow):
 	def __init__(self, stereoCameras, vertices, faces, parent = None):
-		VTKMainWindow.__init__(self,parent)
+		VTKMainWindow.__init__(self, stereoCameras, vtk.vtkRenderer(), parent)
 
 		tabWidget = QtWidgets.QTabWidget();
 		errorTracerViewer = QVTKRenderWindowInteractorWheelfix(tabWidget)
@@ -26,20 +27,18 @@ class MainWindow(VTKMainWindow):
 		cameraList = QtWidgets.QListWidget()
 		cameraDock.setWidget(cameraList)
 
-		self.setupErrorTracer(errorTracerViewer,cameras, vertices, faces)
+		self.setupErrorTracer(errorTracerViewer, vertices, faces)
 		tabWidget.addTab(errorTracerViewer, 'Camera Visibility')
 
 		self.setCentralWidget(tabWidget)
 		self.show()
-	def setupErrorTracer(self, errorTracerViewer, cameras, vertices, faces):
-		renderer = vtk.vtkRenderer()
-		errorTracerViewer.GetRenderWindow().AddRenderer(renderer)
+	def onCameraToggle():
+		pass
+	def setupErrorTracer(self, errorTracerViewer, vertices, faces):
+		errorTracerViewer.GetRenderWindow().AddRenderer(self.mainVTKRenderer)
 		iren = errorTracerViewer.GetRenderWindow().GetInteractor()
 
-		for camera in cameras:
-			self.addCamera(renderer,camera[1])
-
-		self.setupFloorGrid(renderer, [50,50], [60,60])
+		self.setupFloorGrid(self.mainVTKRenderer, [50,50], [60,60])
 		points = vtk.vtkPoints()
 		for v in vertices:
 			points.InsertNextPoint(v[0], v[1], v[2])
@@ -57,7 +56,7 @@ class MainWindow(VTKMainWindow):
 		colors = vtk.vtkUnsignedCharArray()
 		colors.SetNumberOfComponents(3)
 		for v in vertices:
-			camera = cameras[7][1]
+			camera = self.stereoCameras[7].A
 			ppoints = ProjectPoints(f=camera.f.ravel(), rt=camera.r.ravel(), t=camera.t.ravel(), k=camera.k.ravel(), c=camera.c.ravel())
 			ppoints.v = v
 			if ppoints.r[0] < 1600 and ppoints.r[0] >= 0 and ppoints.r[1] < 1200 and ppoints.r[1] >= 0:
@@ -77,7 +76,7 @@ class MainWindow(VTKMainWindow):
 		actor = vtk.vtkActor()
 		actor.SetMapper(mapper)
 
-		renderer.AddActor(actor)
+		self.mainVTKRenderer.AddActor(actor)
 
 		iren.Initialize()
 
@@ -88,14 +87,8 @@ if __name__ == '__main__':
 	app = QtWidgets.QApplication(sys.argv)
 	vertices, faces, normals = loadOBJ(sys.argv[1])
 
-	folderPath = sys.argv[2]
-	files = os.listdir(folderPath)
-	cameras = []
-	for fileName in files:
-		if fileName.endswith('.tka'):
-			imagePath = folderPath + fileName[0:-4] + '.bmp'
-			pod = Pod(folderPath + fileName, imagePath,image_scale=1.0,to_meters=False,bg_image_filename=imagePath)
-			cameras.append((fileName[0:-4],pod.camera()))
+	calibrationFolderPath = sys.argv[2]
+	stereoCameras = getStereoCamerasFromCalibration(calibrationFolderPath)
 
-	window = MainWindow(cameras, vertices, faces)
+	window = MainWindow(stereoCameras, vertices, faces)
 	sys.exit(app.exec_())
