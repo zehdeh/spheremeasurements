@@ -12,6 +12,8 @@ from scipy.special import sph_harm
 from src.OBJIO import loadOBJwithSphericalCoordinates
 from src.fitting import fitSphere
 from src.spherical_harmonics.nlsf import nlsf
+from src.mesh import Mesh
+from src.voronoi import getVoronoiArea
 from scipy.optimize import leastsq
 
 from cycler import cycler
@@ -37,7 +39,7 @@ def getCartesianCoordinates(theta, phi, r, centerPoint):
 def residuals(aa, Yval, rs):
 	return (Yval.dot(aa) - rs)
 
-def getAMatrix(phi, theta, l, filePath, oldA=None):
+def getAMatrix(theta, phi, l, filePath, oldA=None):
 	n = len(phi)
 	
 	path = os.path.split(filePath)
@@ -53,7 +55,6 @@ def getAMatrix(phi, theta, l, filePath, oldA=None):
 		if oldA is None:
 			for i in range(n):
 				A[i] = [sph_harm(j-l, l, phi[i], theta[i]).real for j in range(0, 2*l+1)]
-			A = np.nan_to_num(A)
 		else:
 			A[:,1:2*l] = oldA
 			for i in range(n):
@@ -139,21 +140,47 @@ def simple_transform(sphericalCoordinates, Lmax, vertexAreas, removeCoefficients
 	
 	return ys
 
+def matlab_approach(sphericalCoordinates, Lmax, vertexAreas):
+	phi, theta, radii = sphericalCoordinates
+	#radii = np.ones(theta.shape[0])
+	Y_N = np.ones((phi.shape[0],(Lmax+1)**2),dtype=np.complex)
+	for l in range(Lmax + 1):
+		Y_N[:,(l)**2:l**2+l*2+1] = np.array([sph_harm(m-l, l, theta, phi) for m in range(0, 2*l+1)]).T
+	
+	b = np.linalg.inv(Y_N.T.dot(Y_N)).dot(Y_N.T).dot(radii)
+	return b
+
 def processSphere(filePath):
 	print 'Processing ' + os.path.split(filePath)[-1]
 	Lmax = int(sys.argv[2])
-	sphericalCoordinates, vertexAreas = loadOBJwithSphericalCoordinates(filePath)
+	vertices, faces, normals  = loadOBJ(filePath)
+
+	bounds = Mesh(vertices.T, faces, normals).getBounds()
+	p0 = [bounds[0][0],bounds[1][0],bounds[2][0],150]
+	centerPoint, radius = fitSphere(vertices, p0, 150, bounds)
+
+	sphericalCoordinates = getSphericalCoordinates(vertices, centerPoint)
+	print 'Calculating areas'
+	vertexAreas = np.ones(faces.shape[0])#getVoronoiArea(vertices, faces)
+	vertexAreas = vertexAreas/np.linalg.norm(vertexAreas)
 
 	phi, theta, r = sphericalCoordinates
 	phi = [degrees(p) for p in phi]
 	theta = [degrees(t) for t in theta]
 	vertexAreas = vertexAreas / np.linalg.norm(vertexAreas, ord=2)
 
-	matlab_approach(sphericalCoordinates, Lmax, vertexAreas)
-	sys.exit(0)
-	#finalYs = simple_transform(sphericalCoordinates, Lmax, vertexAreas, True)
+	finalYs = matlab_approach(sphericalCoordinates, Lmax, vertexAreas)
+
+	'''
+	#r = r*vertexAreas
+	cirf, chi = SHExpandLSQ(r, phi, theta, Lmax)
 	
-	r = r*np.sqrt(vertexAreas)
+	a = SHPowerSpectrum(cirf)
+	#a = [np.linalg.norm(ms, ord=2) for ms in np.sum(cirf, axis=0)]
+	print a
+	finalYs = a
+
+	r = r*(vertexAreas)
 	sphericalCoordinates = [phi, theta, r]
 	noPasses = 1
 
@@ -168,6 +195,7 @@ def processSphere(filePath):
 		rmse = np.linalg.norm(r) / np.sqrt(len(r))
 		print "RMSE: " + str(rmse)
 		sphericalCoordinates = np.array([phi, theta, r])
+	'''
 
 		
 	return finalYs
@@ -205,26 +233,24 @@ if __name__ == '__main__':
 	paddedLineStyles = np.tile(lineStyles, len(colors)/len(lineStyles))
 	paddedLineWidths = np.tile(lineWidths, len(colors)/len(lineWidths))
 	if len(paddedLineStyles) < len(colors):
-		paddedLineStyles = np.hstack((paddedLineStyles, lineStyles[0:len(colors)-len(paddedLineStyles)]))
+		paddedLineStyles = np.hstack((paddedLineStyles,lineStyles[0:len(colors)-len(paddedLineStyles)]))
 	if len(paddedLineWidths) < len(colors):
-		paddedLineWidths = np.hstack((paddedLineWidths, lineWidths[0:len(colors)-len(paddedLineWidths)]))
+		paddedLineWidths = np.hstack((paddedLineWidths,lineWidths[0:len(colors)-len(paddedLineWidths)]))
 
 	ax.set_prop_cycle(cycler('color', colors) + cycler('linestyle', paddedLineStyles) + cycler('linewidth', paddedLineWidths))
 	for fileName in files:
 		if fileName.endswith('.obj'):
-			#workQueue.put(folderPath + fileName)
-			#sphericalCoordinates = loadOBJwithSphericalCoordinates(folderPath + fileName)
 
 			start_time = timeit.default_timer()
 			ys = processSphere(os.path.join(folderPath,fileName))
 			print(timeit.default_timer() - start_time)
 
 			xa = np.arange(0, len(ys))
-			plt.plot(xa, ys, label=fileName[0:-4])
+			plt.plot(xa, np.absolute(ys), label=fileName[0:-4])
 
 			#rmse = np.linalg.norm(r - r_approx) / np.sqrt(len(a1))
 
 	plt.legend(fontsize=9)
 	plt.grid(True)
-	plt.gca().set_yscale('log')
+	#plt.gca().set_yscale('log')
 	plt.show()
