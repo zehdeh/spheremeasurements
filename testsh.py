@@ -6,16 +6,12 @@ import sys
 import timeit
 import numpy as np
 import time
-import pymesh
-
-import Queue
-import threading
 
 from math import isnan, sin, degrees
 from scipy.special import sph_harm
-from src.OBJIO import loadOBJ
+from src.OBJIO import loadOBJwithSphericalCoordinates
 from src.fitting import fitSphere
-from src.mesh import Mesh
+from src.spherical_harmonics.nlsf import nlsf
 from scipy.optimize import leastsq
 
 from cycler import cycler
@@ -27,12 +23,6 @@ import matplotlib.cm as mplcm
 from pyshtools.spectralanalysis import SHPowerSpectrum, SHPowerSpectrumDensity
 from pyshtools.expand import SHExpandLSQ
 
-def getSphericalCoordinates(vertices, centerPoint):
-	vertices = vertices - centerPoint
-	r = np.sqrt(vertices.T[0]**2 + vertices.T[1]**2 + vertices.T[2]**2)
-	theta = np.arccos(vertices.T[2] / r)
-	phi = np.arctan(vertices.T[1]/vertices.T[0])
-	return np.array([phi, theta, r])
 
 def getCartesianCoordinates(theta, phi, r, centerPoint):
 	x = r*np.sin(theta)*np.cos(phi)
@@ -47,7 +37,7 @@ def getCartesianCoordinates(theta, phi, r, centerPoint):
 def residuals(aa, Yval, rs):
 	return (Yval.dot(aa) - rs)
 
-def getAMatrix(theta, phi, l, filePath, oldA=None):
+def getAMatrix(phi, theta, l, filePath, oldA=None):
 	n = len(phi)
 	
 	path = os.path.split(filePath)
@@ -62,33 +52,35 @@ def getAMatrix(theta, phi, l, filePath, oldA=None):
 		A = np.zeros((n, 2*l+1))
 		if oldA is None:
 			for i in range(n):
-				A[i] = [sph_harm(j-l, l, theta[i], phi[i]).real for j in range(0, 2*l+1)]
+				A[i] = [sph_harm(j-l, l, phi[i], theta[i]).real for j in range(0, 2*l+1)]
 			A = np.nan_to_num(A)
 		else:
 			A[:,1:2*l] = oldA
 			for i in range(n):
-				A[i,0] = sph_harm(-l, l, theta[i], phi[i]).real
-				A[i,-1] = sph_harm(l, l, theta[i], phi[i]).real
+				A[i,0] = sph_harm(-l, l, phi[i], theta[i]).real
+				A[i,-1] = sph_harm(l, l, phi[i], theta[i]).real
 		np.save(matrixPath,A)
 	
 	return A
-def sirf(sphericalCoordinates, Lmax, fileName):
+def sirf(sphericalCoordinates, Lmax, fileName, vertexAreas):
 	phi, theta, r = sphericalCoordinates
 
-	s = 10
+	s = 5
 	# areas auf beide Seiten!
-	A = getAMatrix(theta, phi, 0, fileName)
+	A = getAMatrix(phi, theta, 0, fileName)
 	for i in range(1,s):
-		A = np.concatenate((A,getAMatrix(theta, phi, i, fileName)), axis=1)
+		A = np.concatenate((A,getAMatrix(phi, theta, i, fileName)), axis=1)
 	
+	A = A*np.sqrt(vertexAreas)[:,None]
 	b = np.zeros((Lmax+1)**2)
 	b[0:A.shape[1]], flag = leastsq(residuals, b[0:A.shape[1]], args=(A,r))
 
 	np.set_printoptions(threshold=np.inf)
 	res = r - A.dot(b[0:A.shape[1]])
-	Al = getAMatrix(theta, phi, s-1, fileName)
+	Al = getAMatrix(phi, theta, s-1, fileName)
 	for l in range(s, Lmax+1):
-		Al = getAMatrix(theta, phi, l, fileName, Al)
+		print 'test'
+		Al = getAMatrix(phi, theta, l, fileName, Al)
 		lowerBound = l**2
 		upperBound = (l+1)**2
 
@@ -104,89 +96,71 @@ def sirf(sphericalCoordinates, Lmax, fileName):
 	
 	return b, ys, A
 
-def nlsf(sphericalCoordinates, LMax):
-	phi, theta, r = sphericalCoordinates
+def getSH(L,sphericalCoordinates):
+	Ndirs = sphericalCoordinates.shape[1]
+	Nharm = (L+1)**2
 
-	n = len(phi)
-	k = (Lmax + 1)**2
-	Y = np.zeros((n,k))
-	
-	kToLM = np.zeros((k,2))
-	for i in range(n):
-		for l in range(Lmax+1):
-			for m in range(-l,l+1):
-				j = l**2 + l + m + 1
-				kToLM[j-1,:] = [l,m]
-				s = sph_harm(l, m, theta[i], phi[i]).real
-				#print 'l ' + str(l)
-				#print 'm ' + str(m)
-				if not isnan(s):
-					Y[i,j-1] = s
+	Y_N = np.zeros((Nharm, Ndirs))
+	idx_Y = 0
 
-	a0 = np.zeros(k)
-	a1, flag = leastsq(residuals, a0, args=(Y,r))
+	for l in range(L+1):
+		m = np.arange(0,l)
 
-	ys = np.zeros(Lmax+1)
-	LMMatrix = np.zeros((k,k))
-	for j,a in enumerate(a1):
-		l,m = kToLM[j]
-		LMMatrix[int(l),int(m+l)] = a
-		ys[int(l)]  = np.linalg.norm(LMMatrix[int(l)], ord=2)
+		Lnm = np.polynomial.legendre.legval(l, np.cos(sphericalCoordinates[1]))
 
-	r_approx = Y.dot(a1)
+		numerator = (2*l+1)*np.math.factorial(l-m)
+		denominator = (4*np.pi*np.math.factorial(l+m))
+		print numerator.shape
+		print denominator.shape
+		norm = np.sqrt(numerator/ denominator)
+		Nnm = norm * np.ones((1,Ndirs))
 
-	return a1, ys, r_approx
+		Exp = np.exp(1j*m*sphericalCoordinates[0])
+		Ynm_pos = Nnm * Lnm * Exp
 
-def loadOBJwithSphericalCoordinates(fileName):
-	vertices, faces, normals = loadOBJ(fileName)
-	bounds = Mesh(vertices.T, faces, normals).getBounds()
-	p0 = [bounds[0][0],bounds[1][0],bounds[2][0],150]
-	centerPoint, radius = fitSphere(vertices, p0, 150, bounds)
+		if n != 0:
+			pass
+def matlab_approach(sphericalCoordinates, Lmax, vertexAreas):
+	getSH(Lmax, sphericalCoordinates)
 
-	mesh = pymesh.form_mesh(vertices, faces)
-	mesh.add_attribute('vertex_area')
-	vertexAreas = mesh.get_attribute('vertex_area')
-
-	sphericalCoordinates = getSphericalCoordinates(vertices, centerPoint)
-	#phi, theta, r = sphericalCoordinates
-	#sphericalCoordinates = np.array([phi, theta, r-radius])
-
-	return sphericalCoordinates, vertexAreas
-
-def simple_transform(sphericalCoordinates, Lmax, vertexAreas):
+def simple_transform(sphericalCoordinates, Lmax, vertexAreas, removeCoefficients=False):
 	phi, theta, radii = sphericalCoordinates
 	
-	for i,r,a in enumerate(zip(radii, vertexAreas)):
-		for l in range(Lmax + 1):
-			for m in range(-l,l+1):
-				c = a*r*sph_harm(m, l, theta[i], phi[i]).real
+	totalArea = np.sum(vertexAreas)
+	ys = np.zeros(Lmax + 1)
+	coefficients = np.zeros((Lmax+1)**2)
+	for l in range(Lmax + 1):
+		for m in range(-l,l+1):
+			j = l**2 + l + m
+			coefficients[j] = np.sum(radii*np.absolute(sph_harm(m, l, phi, theta))*vertexAreas)/totalArea
+			if removeCoefficients:
+				radii -= coefficients[j]*np.absolute(sph_harm(m, l, phi, theta))
+		ys[l] = np.linalg.norm(coefficients[l**2:(l**2 + 2*l + 1)], ord=2)
+	
+	return ys
 
 def processSphere(filePath):
+	print 'Processing ' + os.path.split(filePath)[-1]
 	Lmax = int(sys.argv[2])
 	sphericalCoordinates, vertexAreas = loadOBJwithSphericalCoordinates(filePath)
 
 	phi, theta, r = sphericalCoordinates
 	phi = [degrees(p) for p in phi]
 	theta = [degrees(t) for t in theta]
-	vertexAreas = vertexAreas / np.max(vertexAreas)
+	vertexAreas = vertexAreas / np.linalg.norm(vertexAreas, ord=2)
 
-	#r = r*vertexAreas
-	cirf, chi = SHExpandLSQ(r, phi, theta, Lmax)
+	matlab_approach(sphericalCoordinates, Lmax, vertexAreas)
+	sys.exit(0)
+	#finalYs = simple_transform(sphericalCoordinates, Lmax, vertexAreas, True)
 	
-	a = SHPowerSpectrum(cirf)
-	#a = [np.linalg.norm(ms, ord=2) for ms in np.sum(cirf, axis=0)]
-	print a
-	finalYs = a
-
-	'''
-	r = r*(vertexAreas)
+	r = r*np.sqrt(vertexAreas)
 	sphericalCoordinates = [phi, theta, r]
 	noPasses = 1
 
 	finalYs = np.zeros(Lmax + 1)
 	for i in range(noPasses):
 		print "Pass " + str(i)
-		a, ys, A = sirf(sphericalCoordinates, Lmax, filePath)
+		a, ys, A = sirf(sphericalCoordinates, Lmax, filePath, vertexAreas)
 		finalYs += ys
 		phi, theta, r = sphericalCoordinates
 
@@ -196,7 +170,6 @@ def processSphere(filePath):
 		sphericalCoordinates = np.array([phi, theta, r])
 
 		
-	'''
 	return finalYs
 
 if __name__ == '__main__':
@@ -226,22 +199,17 @@ if __name__ == '__main__':
 	scalarMap = mplcm.ScalarMappable(norm=cNorm, cmap=cm)
 
 	colors = [scalarMap.to_rgba(i) for i in range(numColors)]
-	lineStyle = np.tile(['-', '--', ':', '-.'], len(colors)/4)
-	lineWidth = np.tile([2,3], len(colors)/2)
-	if len(lineStyle) < len(colors):
-		lineStyle = lineStyle[0:len(colors)]
-	print len(lineWidth)
+	lineStyles = ['-', '--', ':', '-.']
+	lineWidths = [2,3]
 
+	paddedLineStyles = np.tile(lineStyles, len(colors)/len(lineStyles))
+	paddedLineWidths = np.tile(lineWidths, len(colors)/len(lineWidths))
+	if len(paddedLineStyles) < len(colors):
+		paddedLineStyles = np.hstack((paddedLineStyles, lineStyles[0:len(colors)-len(paddedLineStyles)]))
+	if len(paddedLineWidths) < len(colors):
+		paddedLineWidths = np.hstack((paddedLineWidths, lineWidths[0:len(colors)-len(paddedLineWidths)]))
 
-	#ax.set_prop_cycle(cycler('color', colors) + cycler('linestyle', lineStyle) + cycler('linewidth', lineWidth))
-	#ax.set_prop_cycle(cycler('color', colors) + cycler('linewidth', lineWidth))
-	'''
-	threads = list()
-	for i in range(10):
-		thread = spThread('thread-' + str(i), workQueue, queueLock)
-		thread.start()
-		threads.append(thread)
-		'''
+	ax.set_prop_cycle(cycler('color', colors) + cycler('linestyle', paddedLineStyles) + cycler('linewidth', paddedLineWidths))
 	for fileName in files:
 		if fileName.endswith('.obj'):
 			#workQueue.put(folderPath + fileName)
@@ -256,7 +224,7 @@ if __name__ == '__main__':
 
 			#rmse = np.linalg.norm(r - r_approx) / np.sqrt(len(a1))
 
-		plt.legend()
+	plt.legend(fontsize=9)
 	plt.grid(True)
 	plt.gca().set_yscale('log')
 	plt.show()
