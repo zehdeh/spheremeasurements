@@ -94,9 +94,9 @@ class VTKMainWindow(QtWidgets.QMainWindow):
 
 		vtkCamera.GetFrustumPlanes(camera.w/camera.h, planesArray)
 		vtkCamera.ApplyTransform(transform)
-		print 'planes:'
-		print np.min(planesArray)
-		print np.max(planesArray)
+		#print 'planes:'
+		#print np.min(planesArray)
+		#print np.max(planesArray)
 
 		planes = vtk.vtkPlanes()
 		planes.SetFrustumPlanes(planesArray)
@@ -121,9 +121,9 @@ class VTKMainWindow(QtWidgets.QMainWindow):
 		actor.SetMapper(mapper)
 		actor.GetProperty().SetColor(0.4,0.4,0.4)
 		actor.GetProperty().SetOpacity(0.5)
-		print 'Bounds:'
-		print np.min(actor.GetBounds())
-		print np.max(actor.GetBounds())
+		#print 'Bounds:'
+		#print np.min(actor.GetBounds())
+		#print np.max(actor.GetBounds())
 
 		'''
 		print actor.GetXRange()

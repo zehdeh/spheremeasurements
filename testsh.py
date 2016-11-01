@@ -119,6 +119,8 @@ def processSphere(filePath):
 		lowerBound = i**2
 		upperBound = (i+1)**2
 		finalYs[i] = np.linalg.norm(finalA[lowerBound:upperBound], ord=2)
+	
+	print 'Summed coefficients: ' + str(np.sum(finalYs))
 
 	return finalYs
 

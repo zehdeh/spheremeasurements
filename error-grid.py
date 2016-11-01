@@ -1,5 +1,7 @@
 #! /usr/bin/python
 
+USE_CACHE = False
+
 import sys
 from math import atan2,sqrt,fabs
 import os
@@ -11,6 +13,7 @@ import vtk
 from PyQt5 import QtGui, QtCore, QtWidgets
 from vtk.qt.QVTKRenderWindowInteractor import QVTKRenderWindowInteractor
 from vtk.util.vtkImageImportFromArray import vtkImageImportFromArray
+from vtk.util.numpy_support import numpy_to_vtk
 from src.OBJIO import loadOBJ, writeOBJ, loadOBJviaVTK
 from src.fitting import fitSphere, fittingErrorSphere, calculateMeanCurvature
 from src.thirdparty.body.loaders.scanner_frame import Pod
@@ -19,6 +22,7 @@ from src.ui import VTKMainWindow, QVTKRenderWindowInteractorWheelfix
 from opendr.camera import ProjectPoints
 from src.calibration import getStereoCamerasFromCalibration, StereoCamera
 import pymesh
+from src.utils import cartesianProduct
 
 
 class MainWindow(VTKMainWindow):
@@ -104,15 +108,34 @@ class MainWindow(VTKMainWindow):
 		#print errorGrid
 			
 			#errorGrid[0:(gridSize[0]-1), gridSize[1]-1-i,0:(gridSize[2]-1)] = i
+		self.rebuildCoverage()
+
+		indexPoints = cartesianProduct((np.arange(-10,10),np.arange(-10,10), np.arange(-10,10)))*100
+		dataArray = numpy_to_vtk(indexPoints,array_type=vtk.VTK_INT)
+
+		points = vtk.vtkPoints()
+		points.SetData(dataArray)
+		polyData = vtk.vtkPolyData()
+		polyData.SetPoints(points)
 		normals = self.vectorField.reshape(-1,3)
 
 		normalsArray = vtk.vtkDoubleArray()
 		normalsArray.SetNumberOfComponents(3)
 
+		print 'test1'
 		arrowSource = vtk.vtkArrowSource()
 		glyph3D = vtk.vtkGlyph3D()
+		#glyph3D.SetVectorModeToUseVector()
+		glyph3D.SetSourceConnection(arrowSource.GetOutputPort())
+		glyph3D.SetInputData(polyData)
+		glyph3D.Update()
 
-		self.rebuildCoverage()
+		vectorMapper = vtk.vtkPolyDataMapper()
+		vectorMapper.SetInputConnection(glyph3D.GetOutputPort())
+
+		vectorActor = vtk.vtkActor()
+		vectorActor.SetMapper(vectorMapper)
+		#vectorActor.SetScale(gridScale[0], gridScale[1], gridScale[2])
 
 		alphaChannelFunc = vtk.vtkPiecewiseFunction()
 		alphaChannelFunc.AddPoint(0.003, 0.0)
@@ -138,6 +161,7 @@ class MainWindow(VTKMainWindow):
 		self.volumeMapper = vtk.vtkSmartVolumeMapper()
 		#self.volumeMapper.SetInputConnection(self.imageImport.GetOutputPort())
 		self.volumeMapper.SetInputConnection(self.gaussianFilter.GetOutputPort())
+		print 'test2'
 
 		self.volume = vtk.vtkVolume()
 		self.volume.SetOrigin(gridSize[0]/2., gridSize[1]/2.,gridSize[2]/2.)
@@ -146,6 +170,7 @@ class MainWindow(VTKMainWindow):
 		self.volume.SetPosition(0,0,0)
 		self.volume.SetMapper(self.volumeMapper)
 		self.volume.SetProperty(volumeProperty)
+		print 'test3'
 
 		cubeAxesActor = vtk.vtkCubeAxesActor()
 		cubeAxesActor.SetBounds(self.volume.GetBounds())
@@ -168,10 +193,15 @@ class MainWindow(VTKMainWindow):
 
 		interactorStyle = vtk.vtkInteractorStyleTerrain()
 		iren.SetInteractorStyle(interactorStyle)
+
+		print 'test4'
 		self.mainVTKRenderer.AddVolume(self.volume)
 		#self.mainVTKRenderer.AddActor(cubeAxesActor)
 		self.mainVTKRenderer.AddActor(scalarBar)
+		print 'test5'
+		self.mainVTKRenderer.AddActor(vectorActor)
 		iren.Initialize()
+		print 'test6'
 		
 		self.mainVTKRenderer.ResetCamera()
 		#self.mainVTKRenderer.GetActiveCamera().SetFocalPoint(0,0,0)
@@ -195,13 +225,14 @@ if __name__ == '__main__':
 
 	matrixFileName = folderPath + '/meanCurvature' + '_' + str(gridSize[0]) + '_' + str(gridSize[1]) + '_' + str(gridSize[2])
 	#matrixFileName = folderPath + '/fittingError' + '_' + str(gridSize[0]) + '_' + str(gridSize[1]) + '_' + str(gridSize[2])
-	if os.path.isfile(matrixFileName + '.npy'):
+	if os.path.isfile(matrixFileName + '.npy') and USE_CACHE:
 		totalErrorMatrix = np.load(matrixFileName + '.npy')
 		totalVectorField = np.zeros((gridSize[0], gridSize[1], gridSize[2]), dtype=(np.float,3))
 	else:
 		totalErrorMatrix = np.zeros((gridSize[0], gridSize[1], gridSize[2]), dtype=np.float)
 		totalVectorField = np.zeros((gridSize[0], gridSize[1], gridSize[2]), dtype=(np.float,3))
 		nMatrix = np.zeros((gridSize[0], gridSize[1], gridSize[2]), dtype=np.int32)
+		l = 0
 		for fileName in files:
 			if fileName.endswith('.obj'):
 				print 'Processing ' + fileName[0:-4]
@@ -235,9 +266,13 @@ if __name__ == '__main__':
 				#print errorMatrix.max(), errorMatrix.min()
 				totalErrorMatrix += errorMatrix
 				totalVectorField += vectorField
+				if l < 5:
+					l += 1
+				else:
+					break
 		
 		totalErrorMatrix[np.nonzero(nMatrix)] = totalErrorMatrix[np.nonzero(nMatrix)] / nMatrix[np.nonzero(nMatrix)]
-		np.save(matrixFileName, totalErrorMatrix)
+		#np.save(matrixFileName, totalErrorMatrix)
 		#print totalVectorField[:,:,:].shape
 
 	calibrationFolderPath = sys.argv[2]
