@@ -1,6 +1,6 @@
 #! /usr/bin/python
 
-USE_CACHE = False
+USE_CACHE = True
 
 import sys
 from math import atan2,sqrt,fabs
@@ -110,24 +110,42 @@ class MainWindow(VTKMainWindow):
 			#errorGrid[0:(gridSize[0]-1), gridSize[1]-1-i,0:(gridSize[2]-1)] = i
 		self.rebuildCoverage()
 
-		indexPoints = cartesianProduct((np.arange(-10,10),np.arange(-10,10), np.arange(-10,10)))*100
+		#indexPoints = cartesianProduct((np.arange(-100,100),np.arange(-100,100), np.arange(-100,100)))*10
+
+		normals = self.vectorField.reshape(-1,3)
+		nonzeroNormalIdx = np.unique(np.nonzero(normals)[0])
+		normals = normals[nonzeroNormalIdx]
+
+		#indexPoints = np.array([[1,0,0],[2,0,0],[3,0,0]])*100
+		indexPoints = np.ascontiguousarray(np.array(np.unravel_index(nonzeroNormalIdx, gridSize)).T)
 		dataArray = numpy_to_vtk(indexPoints,array_type=vtk.VTK_INT)
+
+		#normals = np.array([[100,0,0],[0,100,0],[0,0,100]])
+		normalsArray = numpy_to_vtk(normals)
 
 		points = vtk.vtkPoints()
 		points.SetData(dataArray)
 		polyData = vtk.vtkPolyData()
 		polyData.SetPoints(points)
-		normals = self.vectorField.reshape(-1,3)
-
-		normalsArray = vtk.vtkDoubleArray()
-		normalsArray.SetNumberOfComponents(3)
+		polyData.GetPointData().SetNormals(normalsArray)
 
 		print 'test1'
+		print gridScale
+		'''
 		arrowSource = vtk.vtkArrowSource()
+		arrowSource.SetTipLength(10)
+		arrowSource.SetShaftRadius(10)
+		arrowSource.SetTipRadius(5)
+		'''
+		arrowSource = vtk.vtkLineSource()
+
 		glyph3D = vtk.vtkGlyph3D()
 		#glyph3D.SetVectorModeToUseVector()
 		glyph3D.SetSourceConnection(arrowSource.GetOutputPort())
 		glyph3D.SetInputData(polyData)
+		glyph3D.SetVectorModeToUseNormal()
+		glyph3D.SetScaleModeToScaleByVector()
+		glyph3D.SetScaleFactor(1)
 		glyph3D.Update()
 
 		vectorMapper = vtk.vtkPolyDataMapper()
@@ -135,7 +153,8 @@ class MainWindow(VTKMainWindow):
 
 		vectorActor = vtk.vtkActor()
 		vectorActor.SetMapper(vectorMapper)
-		#vectorActor.SetScale(gridScale[0], gridScale[1], gridScale[2])
+		vectorActor.SetScale(gridScale[0], gridScale[1], gridScale[2])
+		vectorActor.SetOrigin(gridSize[0]/2., gridSize[1]/2.,gridSize[2]/2.)
 
 		alphaChannelFunc = vtk.vtkPiecewiseFunction()
 		alphaChannelFunc.AddPoint(0.003, 0.0)
@@ -224,10 +243,11 @@ if __name__ == '__main__':
 	gridScale = [scannerVolumeSize[0] / gridSize[0], scannerVolumeSize[1] / gridSize[1], scannerVolumeSize[2] / gridSize[2]]
 
 	matrixFileName = folderPath + '/meanCurvature' + '_' + str(gridSize[0]) + '_' + str(gridSize[1]) + '_' + str(gridSize[2])
+	vectorFileName = folderPath + '/vectorField' + '_' + str(gridSize[0]) + '_' + str(gridSize[1]) + '_' + str(gridSize[2])
 	#matrixFileName = folderPath + '/fittingError' + '_' + str(gridSize[0]) + '_' + str(gridSize[1]) + '_' + str(gridSize[2])
 	if os.path.isfile(matrixFileName + '.npy') and USE_CACHE:
 		totalErrorMatrix = np.load(matrixFileName + '.npy')
-		totalVectorField = np.zeros((gridSize[0], gridSize[1], gridSize[2]), dtype=(np.float,3))
+		totalVectorField = np.load(vectorFileName + '.npy')
 	else:
 		totalErrorMatrix = np.zeros((gridSize[0], gridSize[1], gridSize[2]), dtype=np.float)
 		totalVectorField = np.zeros((gridSize[0], gridSize[1], gridSize[2]), dtype=(np.float,3))
@@ -259,20 +279,24 @@ if __name__ == '__main__':
 					k = int(x / gridScale[0])
 					j = int(y / gridScale[1])
 					i = int(z / gridScale[2])
-					errorMatrix[i,j,k] = e
-					vectorField[i,j,k] += e*n
-					nMatrix[i,j,k] += 1
+					if i < errorMatrix.shape[2] and j < errorMatrix.shape[1] and k < errorMatrix.shape[0]:
+						errorMatrix[i,j,k] = e
+						vectorField[i,j,k] += n
+						nMatrix[i,j,k] += 1
 				errorMatrix = np.fabs(errorMatrix)
 				#print errorMatrix.max(), errorMatrix.min()
 				totalErrorMatrix += errorMatrix
 				totalVectorField += vectorField
-				if l < 5:
-					l += 1
-				else:
-					break
+				#if l < 20:
+				l += 1
+				#else:
+				#	break
 		
 		totalErrorMatrix[np.nonzero(nMatrix)] = totalErrorMatrix[np.nonzero(nMatrix)] / nMatrix[np.nonzero(nMatrix)]
-		#np.save(matrixFileName, totalErrorMatrix)
+		totalVectorField[np.nonzero(nMatrix)] = totalVectorField[np.nonzero(nMatrix)] * totalErrorMatrix[np.nonzero(nMatrix)][...,None]
+
+		np.save(matrixFileName, totalErrorMatrix)
+		np.save(vectorFileName, totalVectorField)
 		#print totalVectorField[:,:,:].shape
 
 	calibrationFolderPath = sys.argv[2]
