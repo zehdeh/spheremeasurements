@@ -4,6 +4,12 @@ import locale
 from vtk.util import numpy_support
 import numpy as np
 
+def getBounds(vertices):
+	xbounds = [np.min(vertices[0]),np.max(vertices[0])]
+	ybounds = [np.min(vertices[1]),np.max(vertices[1])]
+	zbounds = [np.min(vertices[2]),np.max(vertices[2])]
+	return [xbounds,ybounds,zbounds]
+
 def loadOBJviaVTK(fileName):
 
 	locale.setlocale(locale.LC_NUMERIC, 'C')
