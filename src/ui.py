@@ -78,22 +78,26 @@ class VTKMainWindow(QtWidgets.QMainWindow):
 
 	def addCamera(self, renderer, camera):
 		camPosition = np.linalg.inv(camera.R).dot(camera.position)
+
 		vtkCamera = vtk.vtkCamera()
 		vtkCamera.SetPosition(camPosition[0], camPosition[1], camPosition[2])
-		vtkCamera.SetFocalPoint(0,0,0)
-		vtkCamera.SetThickness(500)
 
 		rot, J = cv2.Rodrigues(camera.R)
 		theta = sqrt(rot[0]**2 + rot[1]**2 + rot[2]**2)
 		v = rot/theta
 
+		vtkCamera.SetFocalPoint(0,0,0)
+		#vtkCamera.SetDistance(camera.focalLength)
+		vtkCamera.SetThickness(500)
+
 		transform = vtk.vtkTransform()
 		transform.RotateWXYZ(theta, v[0], v[1], v[2])
+		#vtkCamera.SetUserTransform(transform)
+
 
 		planesArray = [0 for i in range(24)]
 
 		vtkCamera.GetFrustumPlanes(camera.w/camera.h, planesArray)
-		vtkCamera.ApplyTransform(transform)
 		#print 'planes:'
 		#print np.min(planesArray)
 		#print np.max(planesArray)

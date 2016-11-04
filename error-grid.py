@@ -56,8 +56,10 @@ class MainWindow(VTKMainWindow):
 		if btn.isChecked():
 			if mode == 0:
 				self.volume.VisibilityOn()
+				self.vectorActor.VisibilityOff()
 			else:
 				self.volume.VisibilityOff()
+				self.vectorActor.VisibilityOn()
 			self.mainVTKRenderer.GetRenderWindow().Render()
 	def rebuildCoverage(self):
 		alphaValues = np.zeros((gridSize[0], gridSize[1], gridSize[2]), dtype=np.float)
@@ -118,6 +120,9 @@ class MainWindow(VTKMainWindow):
 
 		#indexPoints = np.array([[1,0,0],[2,0,0],[3,0,0]])*100
 		indexPoints = np.ascontiguousarray(np.array(np.unravel_index(nonzeroNormalIdx, gridSize)).T)
+		tmp = indexPoints[:,0].copy()
+		indexPoints[:,0] = indexPoints[:,2]
+		indexPoints[:,2] = tmp
 		dataArray = numpy_to_vtk(indexPoints,array_type=vtk.VTK_INT)
 
 		#normals = np.array([[100,0,0],[0,100,0],[0,0,100]])
@@ -129,8 +134,6 @@ class MainWindow(VTKMainWindow):
 		polyData.SetPoints(points)
 		polyData.GetPointData().SetNormals(normalsArray)
 
-		print 'test1'
-		print gridScale
 		'''
 		arrowSource = vtk.vtkArrowSource()
 		arrowSource.SetTipLength(10)
@@ -151,10 +154,11 @@ class MainWindow(VTKMainWindow):
 		vectorMapper = vtk.vtkPolyDataMapper()
 		vectorMapper.SetInputConnection(glyph3D.GetOutputPort())
 
-		vectorActor = vtk.vtkActor()
-		vectorActor.SetMapper(vectorMapper)
-		vectorActor.SetScale(gridScale[0], gridScale[1], gridScale[2])
-		vectorActor.SetOrigin(gridSize[0]/2., gridSize[1]/2.,gridSize[2]/2.)
+		self.vectorActor = vtk.vtkActor()
+		self.vectorActor.VisibilityOff()
+		self.vectorActor.SetMapper(vectorMapper)
+		self.vectorActor.SetScale(gridScale[0], gridScale[1], gridScale[2])
+		self.vectorActor.SetOrigin(gridSize[0]/2., gridSize[1]/2.,gridSize[2]/2.)
 
 		alphaChannelFunc = vtk.vtkPiecewiseFunction()
 		alphaChannelFunc.AddPoint(0.003, 0.0)
@@ -173,14 +177,13 @@ class MainWindow(VTKMainWindow):
 		volumeProperty.SetColor(0,colorFunc)
 		volumeProperty.SetScalarOpacity(alphaChannelFunc)
 
-		self.gaussianFilter = vtk.vtkImageGaussianSmooth()
-		self.gaussianFilter.SetInputConnection(self.imageImport.GetOutputPort())
-		self.gaussianFilter.Update()
+		#self.gaussianFilter = vtk.vtkImageGaussianSmooth()
+		#self.gaussianFilter.SetInputConnection(self.imageImport.GetOutputPort())
+		#self.gaussianFilter.Update()
 
 		self.volumeMapper = vtk.vtkSmartVolumeMapper()
-		#self.volumeMapper.SetInputConnection(self.imageImport.GetOutputPort())
-		self.volumeMapper.SetInputConnection(self.gaussianFilter.GetOutputPort())
-		print 'test2'
+		self.volumeMapper.SetInputConnection(self.imageImport.GetOutputPort())
+		#self.volumeMapper.SetInputConnection(self.gaussianFilter.GetOutputPort())
 
 		self.volume = vtk.vtkVolume()
 		self.volume.SetOrigin(gridSize[0]/2., gridSize[1]/2.,gridSize[2]/2.)
@@ -189,7 +192,6 @@ class MainWindow(VTKMainWindow):
 		self.volume.SetPosition(0,0,0)
 		self.volume.SetMapper(self.volumeMapper)
 		self.volume.SetProperty(volumeProperty)
-		print 'test3'
 
 		cubeAxesActor = vtk.vtkCubeAxesActor()
 		cubeAxesActor.SetBounds(self.volume.GetBounds())
@@ -213,14 +215,11 @@ class MainWindow(VTKMainWindow):
 		interactorStyle = vtk.vtkInteractorStyleTerrain()
 		iren.SetInteractorStyle(interactorStyle)
 
-		print 'test4'
 		self.mainVTKRenderer.AddVolume(self.volume)
 		#self.mainVTKRenderer.AddActor(cubeAxesActor)
 		self.mainVTKRenderer.AddActor(scalarBar)
-		print 'test5'
-		self.mainVTKRenderer.AddActor(vectorActor)
+		self.mainVTKRenderer.AddActor(self.vectorActor)
 		iren.Initialize()
-		print 'test6'
 		
 		self.mainVTKRenderer.ResetCamera()
 		#self.mainVTKRenderer.GetActiveCamera().SetFocalPoint(0,0,0)
@@ -281,7 +280,8 @@ if __name__ == '__main__':
 					i = int(z / gridScale[2])
 					if i < errorMatrix.shape[2] and j < errorMatrix.shape[1] and k < errorMatrix.shape[0]:
 						errorMatrix[i,j,k] = e
-						vectorField[i,j,k] += n
+						n = n/np.linalg.norm(n)
+						vectorField[i,j,k] += n*e*10
 						nMatrix[i,j,k] += 1
 				errorMatrix = np.fabs(errorMatrix)
 				#print errorMatrix.max(), errorMatrix.min()
@@ -293,7 +293,7 @@ if __name__ == '__main__':
 				#	break
 		
 		totalErrorMatrix[np.nonzero(nMatrix)] = totalErrorMatrix[np.nonzero(nMatrix)] / nMatrix[np.nonzero(nMatrix)]
-		totalVectorField[np.nonzero(nMatrix)] = totalVectorField[np.nonzero(nMatrix)] * totalErrorMatrix[np.nonzero(nMatrix)][...,None]
+		totalVectorField[np.nonzero(nMatrix)] = totalVectorField[np.nonzero(nMatrix)] / nMatrix[np.nonzero(nMatrix)][...,None]
 
 		np.save(matrixFileName, totalErrorMatrix)
 		np.save(vectorFileName, totalVectorField)
