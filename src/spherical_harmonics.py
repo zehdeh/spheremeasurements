@@ -11,8 +11,11 @@ def residuals(aa, Yval, rs):
 
 def getSphericalCoordinates(vertices, centerPoint):
 	vertices = vertices - centerPoint
+
+	vertices = vertices / np.linalg.norm(vertices, axis=1,ord=2)[...,None]
+
 	r = np.sqrt(vertices.T[0]**2 + vertices.T[1]**2 + vertices.T[2]**2)
-	theta = np.arccos(vertices.T[2] / r)
+	theta = np.arccos(vertices.T[2])
 	phi = np.arctan2(vertices.T[1],vertices.T[0]) + np.pi
 	return np.array([phi, theta, r])
 
