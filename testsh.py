@@ -23,7 +23,7 @@ import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 import matplotlib.cm as mplcm
 
-def simple_transform(sphericalCoordinates, Lmax, vertexAreas, removeCoefficients=False):
+def simple_transform(sphericalCoordinates, Lmax, vertexAreas):
 	phi, theta, radii = sphericalCoordinates
 	
 	totalArea = np.sum(vertexAreas)
@@ -32,9 +32,7 @@ def simple_transform(sphericalCoordinates, Lmax, vertexAreas, removeCoefficients
 	for l in range(Lmax + 1):
 		for m in range(-l,l+1):
 			j = l**2 + l + m
-			coefficients[j] = np.sum(radii*sph_harm(m, l, phi, theta)*vertexAreas)/totalArea
-			if removeCoefficients:
-				radii -= np.absolute(coefficients[j]*sph_harm(m, l, phi, theta))
+			coefficients[j] = np.sum(radii*sph_harm(m, l, phi, theta).real*vertexAreas)/totalArea
 		ys[l] = np.linalg.norm(coefficients[l**2:(l**2 + 2*l + 1)], ord=2)
 	
 	return ys
@@ -73,14 +71,17 @@ def processSphere(filePath):
 	sphericalCoordinates = sphericalCoordinates[:,~excludedAreasIdx]
 	vertexAreas = vertexAreas[~excludedAreasIdx]
 
-	phi, theta, r = sphericalCoordinates
-	phi = [degrees(p) for p in phi]
-	theta = [degrees(t) for t in theta]
+	#phi, theta, r = sphericalCoordinates
+	#phi = [degrees(p) for p in phi]
+	#theta = [degrees(t) for t in theta]
+	#r = 1
+	#sphericalCoordinates = np.array([phi, theta, r])
 
 	vertexAreas = vertexAreas / np.linalg.norm(vertexAreas, ord=2)
 	
-	#finalYs = simple_transform(sphericalCoordinates, Lmax, vertexAreas, removeCoefficients=True)
+	finalYs = simple_transform(sphericalCoordinates, Lmax, vertexAreas)
 
+	'''
 	noPasses = 1
 	finalA = np.zeros((Lmax+1)**2, dtype=np.complex)
 	for i in range(noPasses):
@@ -93,27 +94,6 @@ def processSphere(filePath):
 		r = np.absolute(r)
 		sphericalCoordinates = np.array([phi, theta, r])
 
-	#r = r*vertexAreas
-
-	'''
-	r = r*(vertexAreas)
-	sphericalCoordinates = [phi, theta, r]
-
-	finalYs = np.zeros(Lmax + 1)
-		print "Pass " + str(i)
-		a, ys, A = sh.sirf(sphericalCoordinates, Lmax, filePath, vertexAreas)
-		finalYs += ys
-		finalYs = a
-		phi, theta, r = sphericalCoordinates
-
-		r = r - A.dot(a)
-		rmse = np.linalg.norm(r) / np.sqrt(len(r))
-		print "RMSE: " + str(rmse)
-		sphericalCoordinates = np.array([phi, theta, r])
-
-		
-
-	'''
 	finalYs = np.zeros(Lmax+1)
 	for i in range(Lmax+1):
 		lowerBound = i**2
@@ -121,6 +101,7 @@ def processSphere(filePath):
 		finalYs[i] = np.linalg.norm(finalA[lowerBound:upperBound], ord=2)
 	
 	print 'Summed coefficients: ' + str(np.sum(finalYs))
+	'''
 
 	return finalYs
 
@@ -146,7 +127,6 @@ if __name__ == '__main__':
 
 	fig = plt.figure()
 	ax = fig.add_subplot(111)
-	#colors = [cm(1.*i/numColors) for i in range(numColors)]
 	cNorm  = mcolors.Normalize(vmin=0, vmax=numColors-1)
 	scalarMap = mplcm.ScalarMappable(norm=cNorm, cmap=cm)
 
@@ -170,9 +150,7 @@ if __name__ == '__main__':
 			print(timeit.default_timer() - start_time)
 
 			xa = np.arange(0, len(ys))
-			plt.plot(xa, np.absolute(ys), label=fileName[0:-4])
-
-			#rmse = np.linalg.norm(r - r_approx) / np.sqrt(len(a1))
+			plt.plot(xa, ys, label=fileName[0:-4])
 
 	plt.legend(fontsize=9)
 	plt.grid(True)
