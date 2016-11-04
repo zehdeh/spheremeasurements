@@ -1,6 +1,6 @@
 # Blender v2.77 (sub 0) OBJ File: ''
 # www.blender.org
-mtllib synthetic_150.mtl
+mtllib synthetic_150_fine.mtl
 o Icosphere
 v 0.000000 -149.999985 0.000000
 v 108.541100 -67.082932 78.858795
