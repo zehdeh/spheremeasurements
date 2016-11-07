@@ -1,6 +1,6 @@
 #! /usr/bin/python
 
-USE_CACHE = True
+USE_CACHE = False
 
 import sys
 from math import atan2,sqrt,fabs
@@ -23,6 +23,7 @@ from opendr.camera import ProjectPoints
 from src.calibration import getStereoCamerasFromCalibration, StereoCamera
 import pymesh
 from src.utils import cartesianProduct
+from scipy.ndimage.filters import convolve
 
 
 class MainWindow(VTKMainWindow):
@@ -291,9 +292,16 @@ if __name__ == '__main__':
 				l += 1
 				#else:
 				#	break
-		
 		totalErrorMatrix[np.nonzero(nMatrix)] = totalErrorMatrix[np.nonzero(nMatrix)] / nMatrix[np.nonzero(nMatrix)]
 		totalVectorField[np.nonzero(nMatrix)] = totalVectorField[np.nonzero(nMatrix)] / nMatrix[np.nonzero(nMatrix)][...,None]
+
+		#sizeX = 4
+		#boxFilter = np.zeros((sizeX,sizeX,sizeX))
+		#boxFilter[:,:,:] = 1/float(sizeX**3)
+		#print 'Applying convolution'
+		#print boxFilter
+		#totalErrorMatrix = convolve(totalErrorMatrix, boxFilter)
+		#print 'Finished applying convolution'
 
 		np.save(matrixFileName, totalErrorMatrix)
 		np.save(vectorFileName, totalVectorField)
