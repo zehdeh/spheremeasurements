@@ -62,6 +62,7 @@ def processSphere(filePath):
 	mesh = form_mesh(vertices, faces)
 	mesh.add_attribute('vertex_area')
 	vertexAreas = mesh.get_attribute('vertex_area')
+	'''
 	vertexAreas = vertexAreas/np.linalg.norm(vertexAreas)
 
 	meanArea = np.mean(vertexAreas)
@@ -70,15 +71,8 @@ def processSphere(filePath):
 	excludedAreasIdx = vertexAreas > (meanArea + stdArea)
 	sphericalCoordinates = sphericalCoordinates[:,~excludedAreasIdx]
 	vertexAreas = vertexAreas[~excludedAreasIdx]
+	'''
 
-	#phi, theta, r = sphericalCoordinates
-	#phi = [degrees(p) for p in phi]
-	#theta = [degrees(t) for t in theta]
-	#r = 1
-	#sphericalCoordinates = np.array([phi, theta, r])
-
-	vertexAreas = vertexAreas / np.linalg.norm(vertexAreas, ord=2)
-	
 	finalYs = simple_transform(sphericalCoordinates, Lmax, vertexAreas)
 
 	'''
