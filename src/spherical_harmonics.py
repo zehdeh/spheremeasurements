@@ -6,17 +6,58 @@ from scipy.special import sph_harm
 from scipy.optimize import leastsq
 from scipy.linalg import lstsq
 
+def back_transform(sphericalCoordinates, coefficients, Lmax, vertexAreas):
+	phi, theta, radii = sphericalCoordinates
+
+	reconstructedRadii = np.zeros((phi.shape[0]))
+	totalArea = np.sum(vertexAreas)
+
+	for l in range(Lmax + 1):
+		for m in range(-l,l+1):
+			j = l**2 + l + m
+			reconstructedRadii += coefficients[j]*sph_harm(m,l,phi,theta).real*vertexAreas
+	
+	#reconstructedRadii = reconstructedRadii/totalArea
+
+	return reconstructedRadii
+
+def simple_transform(sphericalCoordinates, Lmax, vertexAreas):
+	phi, theta, radii = sphericalCoordinates
+	
+	totalArea = np.sum(vertexAreas)
+	ys = np.zeros(Lmax + 1)
+	coefficients = np.zeros((Lmax+1)**2, dtype=np.float)
+	for l in range(Lmax + 1):
+		for m in range(-l,l+1):
+			j = l**2 + l + m
+			coefficients[j] = np.sum(radii*sph_harm(m, l, phi, theta).real*vertexAreas)/totalArea
+		ys[l] = np.linalg.norm(coefficients[l**2:(l**2 + 2*l + 1)], ord=2)
+	
+	return ys, coefficients
+
+def matlab_approach(sphericalCoordinates, Lmax, vertexAreas):
+	phi, theta, radii = sphericalCoordinates
+	#radii = np.ones(theta.shape[0])
+	Y_N = np.ones((phi.shape[0],(Lmax+1)**2),dtype=np.complex)
+	for l in range(Lmax + 1):
+		Y_N[:,(l)**2:l**2+l*2+1] = np.array([sph_harm(m-l, l, phi, theta) for m in range(0, 2*l+1)]).T
+	
+	#b = np.linalg.inv(Y_N.T.dot(Y_N)).dot(Y_N.T).dot(radii)
+	b = lstsq(Y_N*np.sqrt(vertexAreas)[:,None],radii*np.sqrt(vertexAreas))[0]
+	return Y_N,b
+
 def residuals(aa, Yval, rs):
 	return (Yval.dot(aa) - rs)
 
 def getSphericalCoordinates(vertices, centerPoint):
 	vertices = vertices - centerPoint
 
-	vertices = vertices / np.linalg.norm(vertices, axis=1,ord=2)[...,None]
+	#vertices = vertices / np.linalg.norm(vertices, axis=1,ord=2)[...,None]
 
 	r = np.sqrt(vertices.T[0]**2 + vertices.T[1]**2 + vertices.T[2]**2)
-	theta = np.arccos(vertices.T[2])
+	theta = np.arccos(vertices.T[2]/r)
 	phi = np.arctan2(vertices.T[1],vertices.T[0]) + np.pi
+	print r.min(), r.max()
 	return np.array([phi, theta, r])
 
 def getCartesianCoordinates(theta, phi, r, centerPoint):

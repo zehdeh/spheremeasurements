@@ -23,57 +23,29 @@ import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 import matplotlib.cm as mplcm
 
-def simple_transform(sphericalCoordinates, Lmax, vertexAreas):
-	phi, theta, radii = sphericalCoordinates
-	
-	totalArea = np.sum(vertexAreas)
-	ys = np.zeros(Lmax + 1)
-	coefficients = np.zeros((Lmax+1)**2, dtype=np.complex)
-	for l in range(Lmax + 1):
-		for m in range(-l,l+1):
-			j = l**2 + l + m
-			coefficients[j] = np.sum(radii*sph_harm(m, l, phi, theta).real*vertexAreas)/totalArea
-		ys[l] = np.linalg.norm(coefficients[l**2:(l**2 + 2*l + 1)], ord=2)
-	
-	return ys
-
-def matlab_approach(sphericalCoordinates, Lmax, vertexAreas):
-	phi, theta, radii = sphericalCoordinates
-	#radii = np.ones(theta.shape[0])
-	Y_N = np.ones((phi.shape[0],(Lmax+1)**2),dtype=np.complex)
-	for l in range(Lmax + 1):
-		Y_N[:,(l)**2:l**2+l*2+1] = np.array([sph_harm(m-l, l, phi, theta) for m in range(0, 2*l+1)]).T
-	
-	#b = np.linalg.inv(Y_N.T.dot(Y_N)).dot(Y_N.T).dot(radii)
-	b = lstsq(Y_N*np.sqrt(vertexAreas)[:,None],radii*np.sqrt(vertexAreas))[0]
-	return Y_N,b
 
 def processSphere(filePath):
-	print 'Processing ' + os.path.split(filePath)[-1]
+	print 'Processing ' + os.path.split(filePath)[-1][:-4]
 	Lmax = int(sys.argv[2])
-	vertices, faces, normals  = loadOBJ(filePath)
 
-	bounds = Mesh(vertices.T, faces, normals).getBounds()
-	p0 = [bounds[0][0],bounds[1][0],bounds[2][0],150]
-	centerPoint, radius = fitSphere(vertices, p0, 150, bounds)
+	cacheFileName = filePath[:-4] + '_cached_' + str(Lmax)
+	if os.path.isfile(cacheFileName + '.npy'):
+		finalYs = np.load(cacheFileName + '.npy')
+	else:
+		vertices, faces, normals  = loadOBJ(filePath)
 
-	sphericalCoordinates = sh.getSphericalCoordinates(vertices, centerPoint)
-	print 'Calculating areas'
-	mesh = form_mesh(vertices, faces)
-	mesh.add_attribute('vertex_area')
-	vertexAreas = mesh.get_attribute('vertex_area')
-	'''
-	vertexAreas = vertexAreas/np.linalg.norm(vertexAreas)
+		bounds = Mesh(vertices.T, faces, normals).getBounds()
+		p0 = [bounds[0][0],bounds[1][0],bounds[2][0],150]
+		centerPoint, radius = fitSphere(vertices, p0, 150, bounds)
 
-	meanArea = np.mean(vertexAreas)
-	stdArea = np.std(vertexAreas)
-	
-	excludedAreasIdx = vertexAreas > (meanArea + stdArea)
-	sphericalCoordinates = sphericalCoordinates[:,~excludedAreasIdx]
-	vertexAreas = vertexAreas[~excludedAreasIdx]
-	'''
+		sphericalCoordinates = sh.getSphericalCoordinates(vertices, centerPoint)
+		print 'Calculating areas'
+		mesh = form_mesh(vertices, faces)
+		mesh.add_attribute('vertex_area')
+		vertexAreas = mesh.get_attribute('vertex_area')
 
-	finalYs = simple_transform(sphericalCoordinates, Lmax, vertexAreas)
+		finalYs, coefficients = sh.simple_transform(sphericalCoordinates, Lmax, vertexAreas)
+		np.save(cacheFileName, finalYs)
 
 	'''
 	noPasses = 1
@@ -141,6 +113,7 @@ if __name__ == '__main__':
 
 			start_time = timeit.default_timer()
 			ys = processSphere(os.path.join(folderPath,fileName))
+			print 'total: ' + str(np.sum(ys))
 			print(timeit.default_timer() - start_time)
 
 			xa = np.arange(0, len(ys))

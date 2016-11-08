@@ -78,7 +78,7 @@ class MainWindow(VTKMainWindow):
 		colorValues = self.errorMatrix
 			#colorValues = 255
 			#alphaValues += 10*errorMatrix
-		colorValues = colorValues/np.max(colorValues)
+		#colorValues = colorValues/np.max(colorValues)
 
 		alphaValues = np.abs(colorValues)
 		#alphaValues = np.fabs(colorValues)
@@ -295,13 +295,19 @@ if __name__ == '__main__':
 		totalErrorMatrix[np.nonzero(nMatrix)] = totalErrorMatrix[np.nonzero(nMatrix)] / nMatrix[np.nonzero(nMatrix)]
 		totalVectorField[np.nonzero(nMatrix)] = totalVectorField[np.nonzero(nMatrix)] / nMatrix[np.nonzero(nMatrix)][...,None]
 
-		#sizeX = 4
-		#boxFilter = np.zeros((sizeX,sizeX,sizeX))
-		#boxFilter[:,:,:] = 1/float(sizeX**3)
-		#print 'Applying convolution'
-		#print boxFilter
-		#totalErrorMatrix = convolve(totalErrorMatrix, boxFilter)
-		#print 'Finished applying convolution'
+		totalErrorMatrix[np.nonzero(nMatrix)] = totalErrorMatrix[np.nonzero(nMatrix)] / totalErrorMatrix.max()
+
+		sizeX = 20
+		boxFilter = np.zeros((sizeX,sizeX,sizeX))
+		boxFilter[:,:,:] = (1./float(sizeX**3))
+		print 'Applying convolution'
+		print boxFilter
+		totalErrorMatrix = convolve(totalErrorMatrix, boxFilter)
+		print 'Finished applying convolution'
+		print totalErrorMatrix.mean()
+
+		totalErrorMatrix = totalErrorMatrix / np.linalg.norm(totalErrorMatrix)
+		#totalErrorMatrix = totalErrorMatrix / totalErrorMatrix.max()
 
 		np.save(matrixFileName, totalErrorMatrix)
 		np.save(vectorFileName, totalVectorField)
@@ -312,35 +318,6 @@ if __name__ == '__main__':
 
 	for l,stereoCamera in stereoCameras.iteritems():
 		stereoCamera.visibilityMatrix = np.zeros((gridSize[0], gridSize[1], gridSize[2]), dtype=np.uint8)
-		'''
-		fileName = calibrationFolderPath + '/coverageMatrices/' + str(stereoCamera.name) + '_' + str(gridSize[0]) + '_' + str(gridSize[1]) + '_' + str(gridSize[2])
-		if os.path.isfile(fileName + '.npy'):
-			stereoCamera.visibilityMatrix = np.load(fileName + '.npy')
-		else:
-			visibilityMatrix = np.zeros((gridSize[0], gridSize[1], gridSize[2]), dtype=np.uint8)
-			print 'processing camera...'
-			for i in range(gridSize[0]):
-				for j in range(gridSize[1]):
-					for k in range(gridSize[2]):
-						x = (i*gridScale[0]) - (gridSize[0]*gridScale[0]/2)
-						y = (j*gridScale[1]) - (gridSize[1]*gridScale[1]/2)
-						z = (k*gridScale[2]) - (gridSize[2]*gridScale[2]/2)
-
-						stereoCamera.ppointsA.v = [x,y,z]
-						stereoCamera.ppointsB.v = [x,y,z]
-
-						x1 = stereoCamera.ppointsA.r[0]
-						y1 = stereoCamera.ppointsA.r[1]
-						x2 = stereoCamera.ppointsB.r[0]
-						y2 = stereoCamera.ppointsB.r[1]
-
-						if x1 < 1600 and x1 >= 0 and x2 < 1600 and x2 > 0 and y1 < 1200 and y1 >= 0 and y2 < 1200 and y2 >= 0:
-							visibilityMatrix[k,j,i] = 1
-			stereoCamera.visibilityMatrix = visibilityMatrix
-			if not os.path.exists(calibrationFolderPath + '/coverageMatrices/'):
-				os.makedirs(calibrationFolderPath + '/coverageMatrices/')
-			np.save(fileName, visibilityMatrix)
-			'''
 	
 	window = MainWindow(stereoCameras, centerPoints, totalErrorMatrix, totalVectorField, gridSize, gridScale)
 	sys.exit(app.exec_())
