@@ -12,33 +12,36 @@ def back_transform(sphericalCoordinates, coefficients, Lmax, vertexAreas):
 	reconstructedRadii = np.zeros((phi.shape[0]))
 	totalArea = np.sum(vertexAreas)
 
+	Y_N = np.ones((phi.shape[0],(Lmax+1)**2),dtype=np.float)
 	for l in range(Lmax + 1):
-		for m in range(-l,l+1):
-			j = l**2 + l + m
-			reconstructedRadii += coefficients[j]*sph_harm(m,l,phi,theta).real*vertexAreas
-	
-	#reconstructedRadii = reconstructedRadii/totalArea
+		Y_N[:,(l)**2:l**2+l*2+1] = np.array([sph_harm(m-l, l, phi, theta).real for m in range(0, 2*l+1)]).T
+
+	reconstructedRadii = Y_N.dot(coefficients)
 
 	return reconstructedRadii
 
 def simple_transform(sphericalCoordinates, Lmax, vertexAreas):
 	phi, theta, radii = sphericalCoordinates
 	
-	totalArea = np.sum(vertexAreas)
 	ys = np.zeros(Lmax + 1)
 	coefficients = np.zeros((Lmax+1)**2, dtype=np.float)
+
+	Y_N = np.ones((phi.shape[0],(Lmax+1)**2),dtype=np.float)
 	for l in range(Lmax + 1):
-		for m in range(-l,l+1):
-			j = l**2 + l + m
-			coefficients[j] = np.sum(radii*sph_harm(m, l, phi, theta).real*vertexAreas)/totalArea
+		Y_N[:,(l)**2:l**2+l*2+1] = np.array([sph_harm(m-l, l, phi, theta).real for m in range(0, 2*l+1)]).T
+
+	vertexAreas = vertexAreas/np.linalg.norm(vertexAreas)
+	totalArea = np.sum(vertexAreas)
+	coefficients = Y_N.T.dot(np.diag(vertexAreas)).dot(radii)/totalArea
+
+	for l in range(Lmax + 1):
 		ys[l] = np.linalg.norm(coefficients[l**2:(l**2 + 2*l + 1)], ord=2)
-	
 	return ys, coefficients
 
 def matlab_approach(sphericalCoordinates, Lmax, vertexAreas):
 	phi, theta, radii = sphericalCoordinates
 	#radii = np.ones(theta.shape[0])
-	Y_N = np.ones((phi.shape[0],(Lmax+1)**2),dtype=np.complex)
+	Y_N = np.ones((phi.shape[0],(Lmax+1)**2),dtype=np.float)
 	for l in range(Lmax + 1):
 		Y_N[:,(l)**2:l**2+l*2+1] = np.array([sph_harm(m-l, l, phi, theta) for m in range(0, 2*l+1)]).T
 	
