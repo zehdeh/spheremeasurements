@@ -6,17 +6,23 @@ from scipy.special import sph_harm
 from scipy.optimize import leastsq
 from scipy.linalg import lstsq
 
+def getSH(Lmax, phi, theta):
+	Y_N = np.ones((phi.shape[0],(Lmax+1)**2),dtype=np.float)
+	for l in range(Lmax + 1):
+		Y_N[:,(l)**2:l**2+l*2+1] = np.array([sph_harm(m-l, l, phi, theta).real for m in range(0, 2*l+1)]).T
+
+	return Y_N
+
 def back_transform(sphericalCoordinates, coefficients, Lmax, vertexAreas):
 	phi, theta, radii = sphericalCoordinates
 
 	reconstructedRadii = np.zeros((phi.shape[0]))
 	totalArea = np.sum(vertexAreas)
 
-	Y_N = np.ones((phi.shape[0],(Lmax+1)**2),dtype=np.float)
-	for l in range(Lmax + 1):
-		Y_N[:,(l)**2:l**2+l*2+1] = np.array([sph_harm(m-l, l, phi, theta).real for m in range(0, 2*l+1)]).T
+	Y_N = getSH(Lmax, phi, theta)
 
 	reconstructedRadii = Y_N.dot(coefficients)
+	print reconstructedRadii
 
 	return reconstructedRadii
 
@@ -24,15 +30,19 @@ def simple_transform(sphericalCoordinates, Lmax, vertexAreas):
 	phi, theta, radii = sphericalCoordinates
 	
 	ys = np.zeros(Lmax + 1)
-	coefficients = np.zeros((Lmax+1)**2, dtype=np.float)
+	coefficients = np.zeros((Lmax+1)**2)
 
-	Y_N = np.ones((phi.shape[0],(Lmax+1)**2),dtype=np.float)
-	for l in range(Lmax + 1):
-		Y_N[:,(l)**2:l**2+l*2+1] = np.array([sph_harm(m-l, l, phi, theta).real for m in range(0, 2*l+1)]).T
-
-	vertexAreas = vertexAreas/np.linalg.norm(vertexAreas)
+	vertexAreas = (vertexAreas / np.sum(vertexAreas))*4*np.pi
 	totalArea = np.sum(vertexAreas)
-	coefficients = Y_N.T.dot(np.diag(vertexAreas)).dot(radii)/totalArea
+
+	Y_N = getSH(Lmax, phi, theta)
+
+	#for l in range(Lmax+1):
+	#	for m in range(-l,l+1):
+	#		coefficients[l+l+m] = np.sum([sph_harm(m,l, phi[i], theta[i]).real * r * vertexAreas[i] for i,r in enumerate(radii)])
+
+	#vertexAreas = vertexAreas/np.linalg.norm(vertexAreas)
+	coefficients = Y_N.T.dot(np.diag(vertexAreas)).dot(radii)
 
 	for l in range(Lmax + 1):
 		ys[l] = np.linalg.norm(coefficients[l**2:(l**2 + 2*l + 1)], ord=2)

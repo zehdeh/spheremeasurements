@@ -44,6 +44,6 @@ if __name__ == '__main__':
 	print finalYs
 	print reconstructedRadii
 	print radii
-	#r = radii - reconstructedRadii
-	#rmse = np.linalg.norm(r) / np.sqrt(len(r))
-	#print "RMSE: " + str(rmse)
+	r = radii - reconstructedRadii
+	rmse = np.linalg.norm(r) / np.sqrt(r.shape[0])
+	print "RMSE: " + str(rmse)

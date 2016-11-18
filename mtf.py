@@ -3,7 +3,7 @@
 import sys
 import math
 import numpy as np
-from src.OBJIO import loadOBJviaVTK
+from src.OBJIO import loadOBJ
 import matplotlib.pyplot as plt
 #from mpl_toolkits.mplot3d import Axes3D
 from src.utils import Arrow3D
@@ -27,12 +27,70 @@ if __name__ == '__main__':
 		print 'Too few arguments'
 		sys.exit(0)
 	
-	vertices, faces, normals, polyData = loadOBJviaVTK(sys.argv[1])
+	vertices, faces, normals = loadOBJ(sys.argv[1])
 	centerPoint = np.mean(vertices, axis=0)
 	vertices = vertices - centerPoint
-	for n in normals:
-		print n
 
+	indicesLeft = np.where(vertices.T[2] > 15)
+	indicesRight = np.where(vertices.T[2] < -5)
+
+	verticesLeft = vertices[indicesLeft]
+	verticesRight = vertices[indicesRight]
+
+	verticesLeftCenter = np.mean(verticesLeft, axis=0).tolist() + [1]
+	verticesRightCenter = np.mean(verticesRight, axis=0).tolist() + [1]
+	
+	plane1 = fitPlane(verticesLeft.T, verticesLeftCenter)
+	plane2 = fitPlane(verticesRight.T, verticesRightCenter)
+
+	fig = plt.figure()
+	ax = fig.add_subplot(111, projection='3d')
+
+	[xx, yy] = np.meshgrid(range(100),range(100))
+	z = (-plane1[0]*xx - plane1[1]*yy - plane1[3])/plane1[2]
+	ax.plot_surface(xx,yy,z)
+
+	p0 = verticesLeftCenter
+	normal1 = plane1[0:3]/np.linalg.norm(plane1[0:3])
+	arrow = Arrow3D(\
+	[p0[0],p0[0]+normal1[0]*100],\
+	[p0[1],p0[1]+normal1[1]*100],\
+	[p0[2],p0[2]+normal1[2]*100])
+	ax.add_artist(arrow)
+
+	z = (-plane2[0]*xx - plane2[1]*yy - plane2[3])/plane2[2]
+	ax.plot_surface(xx,yy,z,color='r')
+
+	p0 = verticesRightCenter
+	normal2 = plane2[0:3]/np.linalg.norm(plane2[0:3])
+	arrow = Arrow3D(\
+	[p0[0],p0[0]+normal2[0]*100],\
+	[p0[1],p0[1]+normal2[1]*100],\
+	[p0[2],p0[2]+normal2[2]*100])
+	ax.add_artist(arrow)
+
+	crossProduct = np.cross(normal1,normal2)
+	crossProduct = crossProduct/np.linalg.norm(crossProduct)
+
+	p0 = centerPoint
+	arrow = Arrow3D(\
+	[p0[0],p0[0]+crossProduct[0]*100],\
+	[p0[1],p0[1]+crossProduct[1]*100],\
+	[p0[2],p0[2]+crossProduct[2]*100])
+	ax.add_artist(arrow)
+
+	v = vertices - centerPoint
+	dist = v.dot(crossProduct)
+	vertices = vertices - dist[...,None]*crossProduct
+
+	ax.scatter(vertices.T[0],vertices.T[1],vertices.T[2], color='b', marker='.')
+
+	#ax.scatter(verticesLeft.T[0],verticesLeft.T[1],verticesLeft.T[2], color='b', marker='.')
+	#ax.scatter(verticesRight.T[0],verticesRight.T[1],verticesRight.T[2], color='r', marker='.')
+
+	plt.show()
+
+'''
 	centerPoint = np.mean(vertices, axis=0)
 
 	noRows = vertices.shape[0]
@@ -105,8 +163,9 @@ if __name__ == '__main__':
 	ax.set_xlabel('X Label')
 	ax.set_ylabel('Y Label')
 	#ax.set_zlabel('Z Label')
+'''
 
-	'''
+'''
 	# Create cubic bounding box to simulate equal aspect ratio
 	max_range = np.array([vertices.T[0].max()-vertices.T[0].min(), vertices.T[1].max()-vertices.T[1].min(), vertices.T[2].max()-vertices.T[2].min()]).max()
 	Xb = 0.5*max_range*np.mgrid[-1:2:2,-1:2:2,-1:2:2][0].flatten() + 0.5*(vertices.T[0].max()+vertices.T[0].min())
@@ -115,7 +174,7 @@ if __name__ == '__main__':
 	# Comment or uncomment following both lines to test the fake bounding box:
 	for xb, yb, zb in zip(Xb, Yb, Zb):
 		ax.plot([xb], [yb], [zb], 'w')
-	'''
 
 	
 	plt.show()
+'''
