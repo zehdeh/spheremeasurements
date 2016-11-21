@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 #from mpl_toolkits.mplot3d import Axes3D
 from src.utils import Arrow3D
 from src.fitting import fitPlane
+from scipy.spatial import distance
 
 def getRotationMatrix(angle, axis):
 	sina = math.sin(angle)
@@ -44,11 +45,11 @@ if __name__ == '__main__':
 	plane2 = fitPlane(verticesRight.T, verticesRightCenter)
 
 	fig = plt.figure()
-	ax = fig.add_subplot(111, projection='3d')
+	#ax = fig.add_subplot(111, projection='3d')
 
 	[xx, yy] = np.meshgrid(range(100),range(100))
 	z = (-plane1[0]*xx - plane1[1]*yy - plane1[3])/plane1[2]
-	ax.plot_surface(xx,yy,z)
+	#ax.plot_surface(xx,yy,z)
 
 	p0 = verticesLeftCenter
 	normal1 = plane1[0:3]/np.linalg.norm(plane1[0:3])
@@ -56,10 +57,10 @@ if __name__ == '__main__':
 	[p0[0],p0[0]+normal1[0]*100],\
 	[p0[1],p0[1]+normal1[1]*100],\
 	[p0[2],p0[2]+normal1[2]*100])
-	ax.add_artist(arrow)
+	#ax.add_artist(arrow)
 
 	z = (-plane2[0]*xx - plane2[1]*yy - plane2[3])/plane2[2]
-	ax.plot_surface(xx,yy,z,color='r')
+	#ax.plot_surface(xx,yy,z,color='r')
 
 	p0 = verticesRightCenter
 	normal2 = plane2[0:3]/np.linalg.norm(plane2[0:3])
@@ -67,7 +68,7 @@ if __name__ == '__main__':
 	[p0[0],p0[0]+normal2[0]*100],\
 	[p0[1],p0[1]+normal2[1]*100],\
 	[p0[2],p0[2]+normal2[2]*100])
-	ax.add_artist(arrow)
+	#ax.add_artist(arrow)
 
 	crossProduct = np.cross(normal1,normal2)
 	crossProduct = crossProduct/np.linalg.norm(crossProduct)
@@ -77,13 +78,79 @@ if __name__ == '__main__':
 	[p0[0],p0[0]+crossProduct[0]*100],\
 	[p0[1],p0[1]+crossProduct[1]*100],\
 	[p0[2],p0[2]+crossProduct[2]*100])
-	ax.add_artist(arrow)
+	#ax.add_artist(arrow)
+
+	upVector = normal1 + normal2
+	upVector = upVector/np.linalg.norm(upVector)
+	arrow = Arrow3D(\
+	[p0[0],p0[0]+upVector[0]*100],\
+	[p0[1],p0[1]+upVector[1]*100],\
+	[p0[2],p0[2]+upVector[2]*100])
+	#ax.add_artist(arrow)
+
+	xVector = np.cross(upVector, crossProduct)
+	xVector = xVector/np.linalg.norm(xVector)
+	arrow = Arrow3D(\
+	[p0[0],p0[0]+xVector[0]*100],\
+	[p0[1],p0[1]+xVector[1]*100],\
+	[p0[2],p0[2]+xVector[2]*100])
+	#ax.add_artist(arrow)
 
 	v = vertices - centerPoint
 	dist = v.dot(crossProduct)
 	vertices = vertices - dist[...,None]*crossProduct
 
-	ax.scatter(vertices.T[0],vertices.T[1],vertices.T[2], color='b', marker='.')
+
+	xCoordinates = xVector.dot(vertices.T - centerPoint[...,None])
+	yCoordinates = upVector.dot(vertices.T - centerPoint[...,None])
+
+	xCoordinates += math.fabs(xCoordinates.min())
+
+
+	distances = distance.pdist(vertices)
+	distances = distance.squareform(distances)
+	np.fill_diagonal(distances, np.inf)
+	minimalDistance = distances.min()
+
+	xSortedIndices = np.argsort(xCoordinates)
+	yPeak = np.argsort(yCoordinates)[-1]
+	leftLow = yCoordinates[xSortedIndices][:yPeak].min()
+	rightLow = yCoordinates[xSortedIndices][yPeak:].min()
+	yCutOff = max(leftLow, rightLow)
+	yCoordinates += math.fabs(yCutOff)
+
+
+	includedIndices = np.where(yCoordinates >= 0)
+
+	xCoordinates = xCoordinates[includedIndices]
+	yCoordinates = yCoordinates[includedIndices]
+
+
+
+
+	xSpread = xCoordinates.max()
+	noBinsUnadjusted = xSpread / (minimalDistance/2)
+
+	N = xCoordinates.shape[0]
+	noBins = int(pow(2, math.ceil(math.log(N)/math.log(2)-5)))
+
+	xTruePeak = xCoordinates[np.argsort(yCoordinates)[-10]].mean()
+	print xTruePeak
+
+	bins = np.zeros(noBins)
+	binSize = xSpread / noBins
+	for i in range(noBins):
+		xMin = max(0, (i-1)*binSize)
+		xMax = i*binSize
+		yInBin = yCoordinates[np.all([xMin < xCoordinates,xCoordinates < xMax], axis=0)]
+		if yInBin.shape[0] > 0:
+			bins[i] = yInBin.mean()
+
+	plt.plot(np.arange(0, bins.shape[0]), bins)
+	#plt.scatter(xCoordinates, yCoordinates)
+
+
+	#ax.scatter(vertices.T[0],vertices.T[1],vertices.T[2], color='b', marker='.')
 
 	#ax.scatter(verticesLeft.T[0],verticesLeft.T[1],verticesLeft.T[2], color='b', marker='.')
 	#ax.scatter(verticesRight.T[0],verticesRight.T[1],verticesRight.T[2], color='r', marker='.')
