@@ -120,10 +120,10 @@ if __name__ == '__main__':
 	yCoordinates += math.fabs(yCutOff)
 
 
-	includedIndices = np.where(yCoordinates >= 0)
+	#includedIndices = np.where(yCoordinates >= 0)
 
-	xCoordinates = xCoordinates[includedIndices]
-	yCoordinates = yCoordinates[includedIndices]
+	#xCoordinates = xCoordinates[includedIndices]
+	#yCoordinates = yCoordinates[includedIndices]
 
 
 
@@ -132,12 +132,12 @@ if __name__ == '__main__':
 	noBinsUnadjusted = xSpread / (minimalDistance/2)
 
 	N = xCoordinates.shape[0]
-	noBins = int(pow(2, math.ceil(math.log(N)/math.log(2)-5)))
+	noBins = int(N/20.5)
 
 	xTruePeak = xCoordinates[np.argsort(yCoordinates)[-10]].mean()
 	print xTruePeak
 
-	bins = np.zeros(noBins)
+	bins = np.zeros(noBins*2)
 	binSize = xSpread / noBins
 	for i in range(noBins):
 		xMin = max(0, (i-1)*binSize)
@@ -145,8 +145,18 @@ if __name__ == '__main__':
 		yInBin = yCoordinates[np.all([xMin < xCoordinates,xCoordinates < xMax], axis=0)]
 		if yInBin.shape[0] > 0:
 			bins[i] = yInBin.mean()
+			bins[2*noBins - i] = -bins[i]
+	
+	bins[0] = 0
+	bins[-1] = 0
 
-	plt.plot(np.arange(0, bins.shape[0]), bins)
+	sp = np.fft.fft(bins)
+	freq = np.fft.fftfreq(noBins*2)
+	print sp.real
+	print freq
+
+	#plt.plot(np.arange(0, bins.shape[0]), bins)
+	plt.plot(freq, sp.real)
 	#plt.scatter(xCoordinates, yCoordinates)
 
 
