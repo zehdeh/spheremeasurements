@@ -10,6 +10,14 @@ from src.utils import Arrow3D
 from src.fitting import fitPlane
 from scipy.spatial import distance
 
+def MTF(x):
+	#y = np.diff(x)
+
+	#y = np.append(x, np.zeros(100))
+	Y = np.fft.fft(x)
+
+	return Y#[:len(Y) // 2]
+
 def getRotationMatrix(angle, axis):
 	sina = math.sin(angle)
 	cosa = math.cos(angle)
@@ -22,6 +30,107 @@ def getRotationMatrix(angle, axis):
 	M = np.identity(4)
 	M[:3, :3] = R
 	return M
+
+def getPlaneIntersection(n1, n2, c1, c2):
+	u = np.cross(n1,n2)
+	maxc = np.argmax(np.fabs(n1))
+
+	d1 = -n1.dot(c1)
+	d2 = -n2.dot(c2)
+
+	iP = np.zeros(3)
+
+	if maxc == 0:
+		iP[1] = (d2*n1[2] - d1*n2[2]) / u[0]
+		iP[2] = (d1*n2[1] - d2*n1[1]) / u[0]
+	elif maxc == 1:
+		iP[0] = (d1*n2[2] - d2*n1[2]) / u[1]
+		iP[2] = (d2*n1[0] - d1*n2[0]) / u[1]
+	else:
+		iP[0] = (d2*n1[1] - d1*n2[1]) / u[2]
+		iP[1] = (d1*n2[0] - d2*n1[0]) / u[2]
+	
+	return iP, iP+1000*u
+
+def plotProjection(v, vProjected, n1, n2, plane1, plane2, c1, c2, centerPoint, crossProduct, upVector, xVector, ip, perp1, perp2):
+	fig = plt.figure()
+	ax = fig.add_subplot(111, projection='3d')
+
+	[xx, yy] = np.meshgrid(range(-80,20),range(-50,50))
+	z = (-plane1[0]*xx - plane1[1]*yy - plane1[3])/plane1[2]
+	#ax.plot_surface(xx,yy,z)
+
+	p0 = c1
+	arrow = Arrow3D(\
+	[p0[0],p0[0]+n1[0]*50],\
+	[p0[1],p0[1]+n1[1]*50],\
+	[p0[2],p0[2]+n1[2]*50],\
+	mutation_scale=20,\
+	arrowstyle="-|>")
+	ax.add_artist(arrow)
+
+	z = (-plane2[0]*xx - plane2[1]*yy - plane2[3])/plane2[2]
+	#ax.plot_surface(xx,yy,z,color='r')
+
+	p0 = c2
+	arrow = Arrow3D(\
+	[p0[0],p0[0]+n2[0]*50],\
+	[p0[1],p0[1]+n2[1]*50],\
+	[p0[2],p0[2]+n2[2]*50],\
+	mutation_scale=20,\
+	arrowstyle="-|>")
+	ax.add_artist(arrow)
+
+	p0 = ip
+	arrow = Arrow3D(\
+	[p0[0],p0[0]+crossProduct[0]*50],\
+	[p0[1],p0[1]+crossProduct[1]*50],\
+	[p0[2],p0[2]+crossProduct[2]*50],\
+	mutation_scale=20,\
+	arrowstyle="-|>")
+	ax.add_artist(arrow)
+
+	arrow = Arrow3D(\
+	[p0[0],p0[0]+upVector[0]*50],\
+	[p0[1],p0[1]+upVector[1]*50],\
+	[p0[2],p0[2]+upVector[2]*50],\
+	mutation_scale=20,\
+	arrowstyle="-|>")
+	ax.add_artist(arrow)
+
+	arrow = Arrow3D(\
+	[p0[0],p0[0]+xVector[0]*50],\
+	[p0[1],p0[1]+xVector[1]*50],\
+	[p0[2],p0[2]+xVector[2]*50],\
+	mutation_scale=20,\
+	arrowstyle="-|>")
+	ax.add_artist(arrow)
+
+	arrow = Arrow3D(\
+	[p0[0],p0[0]+perp1[0]*50],\
+	[p0[1],p0[1]+perp1[1]*50],\
+	[p0[2],p0[2]+perp1[2]*50],\
+	color='r',\
+	mutation_scale=20,\
+	arrowstyle="-|>")
+	ax.add_artist(arrow)
+
+	arrow = Arrow3D(\
+	[p0[0],p0[0]+perp2[0]*50],\
+	[p0[1],p0[1]+perp2[1]*50],\
+	[p0[2],p0[2]+perp2[2]*50],\
+	color='r',\
+	mutation_scale=20,\
+	arrowstyle="-|>")
+	ax.add_artist(arrow)
+
+	ax.scatter(v.T[0],v.T[1],v.T[2], color='b', marker='.')
+	#ax.scatter(vProjected.T[0],vProjected.T[1],vProjected.T[2], color='yellow', marker='o')
+	ax.scatter(ip[0],ip[1],ip[2], color='black', marker='o')
+	plt.xlabel('x')
+	plt.ylabel('y')
+	
+	plt.show()
 
 if __name__ == '__main__':
 	if len(sys.argv) < 2:
@@ -38,220 +147,136 @@ if __name__ == '__main__':
 	verticesLeft = vertices[indicesLeft]
 	verticesRight = vertices[indicesRight]
 
-	verticesLeftCenter = np.mean(verticesLeft, axis=0).tolist() + [1]
-	verticesRightCenter = np.mean(verticesRight, axis=0).tolist() + [1]
+	verticesLeftCenter = np.mean(verticesLeft, axis=0)
+	verticesRightCenter = np.mean(verticesRight, axis=0)
 	
-	plane1 = fitPlane(verticesLeft.T, verticesLeftCenter)
-	plane2 = fitPlane(verticesRight.T, verticesRightCenter)
+	plane1 = fitPlane(verticesLeft.T, verticesLeftCenter.tolist() + [1])
+	plane2 = fitPlane(verticesRight.T, verticesRightCenter.tolist() + [1])
 
-	fig = plt.figure()
-	#ax = fig.add_subplot(111, projection='3d')
-
-	[xx, yy] = np.meshgrid(range(100),range(100))
-	z = (-plane1[0]*xx - plane1[1]*yy - plane1[3])/plane1[2]
-	#ax.plot_surface(xx,yy,z)
-
-	p0 = verticesLeftCenter
 	normal1 = plane1[0:3]/np.linalg.norm(plane1[0:3])
-	arrow = Arrow3D(\
-	[p0[0],p0[0]+normal1[0]*100],\
-	[p0[1],p0[1]+normal1[1]*100],\
-	[p0[2],p0[2]+normal1[2]*100])
-	#ax.add_artist(arrow)
-
-	z = (-plane2[0]*xx - plane2[1]*yy - plane2[3])/plane2[2]
-	#ax.plot_surface(xx,yy,z,color='r')
-
-	p0 = verticesRightCenter
 	normal2 = plane2[0:3]/np.linalg.norm(plane2[0:3])
-	arrow = Arrow3D(\
-	[p0[0],p0[0]+normal2[0]*100],\
-	[p0[1],p0[1]+normal2[1]*100],\
-	[p0[2],p0[2]+normal2[2]*100])
-	#ax.add_artist(arrow)
+
+
+	intersectionPoint1,ip2 = getPlaneIntersection(normal1, normal2, verticesLeftCenter[0:3], verticesRightCenter[0:3])
 
 	crossProduct = np.cross(normal1,normal2)
 	crossProduct = crossProduct/np.linalg.norm(crossProduct)
 
-	p0 = centerPoint
-	arrow = Arrow3D(\
-	[p0[0],p0[0]+crossProduct[0]*100],\
-	[p0[1],p0[1]+crossProduct[1]*100],\
-	[p0[2],p0[2]+crossProduct[2]*100])
-	#ax.add_artist(arrow)
-
 	upVector = normal1 + normal2
 	upVector = upVector/np.linalg.norm(upVector)
-	arrow = Arrow3D(\
-	[p0[0],p0[0]+upVector[0]*100],\
-	[p0[1],p0[1]+upVector[1]*100],\
-	[p0[2],p0[2]+upVector[2]*100])
-	#ax.add_artist(arrow)
 
 	xVector = np.cross(upVector, crossProduct)
 	xVector = xVector/np.linalg.norm(xVector)
-	arrow = Arrow3D(\
-	[p0[0],p0[0]+xVector[0]*100],\
-	[p0[1],p0[1]+xVector[1]*100],\
-	[p0[2],p0[2]+xVector[2]*100])
-	#ax.add_artist(arrow)
-
-	v = vertices - centerPoint
-	dist = v.dot(crossProduct)
-	vertices = vertices - dist[...,None]*crossProduct
-
-
-	xCoordinates = xVector.dot(vertices.T - centerPoint[...,None])
-	yCoordinates = upVector.dot(vertices.T - centerPoint[...,None])
-
-	xCoordinates += math.fabs(xCoordinates.min())
-
 
 	distances = distance.pdist(vertices)
 	distances = distance.squareform(distances)
 	np.fill_diagonal(distances, np.inf)
-	minimalDistance = distances.min()
+	nyquistRate = distances.min()
 
-	xSortedIndices = np.argsort(xCoordinates)
-	yPeak = np.argsort(yCoordinates)[-1]
-	leftLow = yCoordinates[xSortedIndices][:yPeak].min()
-	rightLow = yCoordinates[xSortedIndices][yPeak:].min()
-	yCutOff = max(leftLow, rightLow)
-	yCoordinates += math.fabs(yCutOff)
+	verticesUnprojected = vertices
+	v = vertices - centerPoint
+	dist = v.dot(crossProduct)
+	vertices = vertices - dist[...,None]*crossProduct
+
+	intersectionPoint1 = intersectionPoint1 - ((intersectionPoint1 - centerPoint).dot(crossProduct))*crossProduct
+
+	perp1 = np.cross(normal1, crossProduct)
+	perp2 = -np.cross(normal2, crossProduct)
+
+	
+	plotProjection(verticesUnprojected, vertices, normal1, normal2, plane1, plane2,\
+	verticesLeftCenter, verticesRightCenter, centerPoint,\
+	crossProduct, upVector, xVector, intersectionPoint1, perp1, perp2)
 
 
-	#includedIndices = np.where(yCoordinates >= 0)
+	xCoordinates = xVector.dot(vertices.T - centerPoint[...,None])
+	yCoordinates = upVector.dot(vertices.T - centerPoint[...,None])
+	intersectionPoint = [xVector.dot(intersectionPoint1 - centerPoint), upVector.dot(intersectionPoint1 - centerPoint)]
+	perp1 = [xVector.dot(perp1), upVector.dot(perp1)]
+	perp2 = [xVector.dot(perp2), upVector.dot(perp2)]
 
-	#xCoordinates = xCoordinates[includedIndices]
-	#yCoordinates = yCoordinates[includedIndices]
+	perp1 = perp1/np.linalg.norm(perp1)
+	perp2 = perp2/np.linalg.norm(perp2)
 
+	angularFactor1 = 1/np.array([1,0]).dot(perp1)*np.linalg.norm(perp1)
+	angularFactor2 = 1/np.array([-1,0]).dot(perp2)*np.linalg.norm(perp2)
 
-
+	xShift = math.fabs(xCoordinates.min())
+	xCoordinates += xShift
+	intersectionPoint[0] += xShift
 
 	xSpread = xCoordinates.max()
-	noBinsUnadjusted = xSpread / (minimalDistance/2)
+	noBins = int(pow(2, math.floor(math.log(xSpread / nyquistRate) / math.log(2))))
 
-	N = xCoordinates.shape[0]
-	noBins = int(N/20.5)
+	perfectProfile1 = np.array([intersectionPoint + (nyquistRate/2)*angularFactor1*perp1 + i*nyquistRate*angularFactor1*perp1 for i in range(0,noBins/2)]).T
+	perfectProfile2 = np.array([intersectionPoint - (nyquistRate/2)*angularFactor2*perp2 + i*nyquistRate*angularFactor2*perp2 for i in range((noBins/2),0,-1)]).T
 
-	xTruePeak = xCoordinates[np.argsort(yCoordinates)[-10]].mean()
-	print xTruePeak
+	binsPerfectProfile = np.hstack((perfectProfile2[1], perfectProfile1[1]))
+	print binsPerfectProfile.shape
+	xTruePeak = intersectionPoint[0]
 
-	bins = np.zeros(noBins*2)
-	binSize = xSpread / noBins
-	for i in range(noBins):
-		xMin = max(0, (i-1)*binSize)
-		xMax = i*binSize
-		yInBin = yCoordinates[np.all([xMin < xCoordinates,xCoordinates < xMax], axis=0)]
-		if yInBin.shape[0] > 0:
-			bins[i] = yInBin.mean()
-			bins[2*noBins - i] = -bins[i]
+	binsMeasuredProfile = np.zeros(noBins)
+	binSize = nyquistRate
+	plt.plot([xTruePeak-(noBins/2 - 1)*binSize, xTruePeak-(noBins/2 - 1)*binSize], [yCoordinates.min(),intersectionPoint[1]], color='black')
+	plt.plot([xTruePeak+(noBins/2 - 1)*binSize, xTruePeak+(noBins/2 - 1)*binSize], [yCoordinates.min(),intersectionPoint[1]], color='black')
+	for i in range(0, noBins/2):
+		xMinLeft = xTruePeak - (i+1)*binSize
+		xMaxLeft = xTruePeak - i*binSize
+		yInBinLeft = yCoordinates[np.all([xMinLeft < xCoordinates,xCoordinates < xMaxLeft], axis=0)]
+		if len(yInBinLeft) > 0:
+			binsMeasuredProfile[noBins/2 - i] = yInBinLeft.mean()
+
+		xMinRight = xTruePeak + i*binSize
+		xMaxRight = xTruePeak + (i+1)*binSize
+		yInBinRight = yCoordinates[np.all([xMinRight < xCoordinates,xCoordinates < xMaxRight], axis=0)]
+		if len(yInBinRight) > 0:
+			binsMeasuredProfile[noBins / 2 + i] = yInBinRight.mean()
 	
-	bins[0] = 0
-	bins[-1] = 0
+	for i in range(noBins):
+		if binsMeasuredProfile[i] == 0 and i+1 < noBins:
+			binsMeasuredProfile[i] = (binsMeasuredProfile[i-1] + binsMeasuredProfile[i+1])/2
+	
+	xShift = min(binsMeasuredProfile)
+	binsMeasuredProfile = binsMeasuredProfile - xShift
+	binsPerfectProfile = binsPerfectProfile - xShift
 
-	sp = np.fft.fft(bins)
-	freq = np.fft.fftfreq(noBins*2)
-	print sp.real
-	print freq
+	binsMeasuredProfile[0] = 0
+	binsMeasuredProfile[-1] = 0
+	binsPerfectProfile[0] = 0
+	binsPerfectProfile[-1] = 0
+	
+	j = np.arange(0,noBins)
+	wj = 1 - ((j - noBins/2.)/(noBins/2.))**8
+	binsMeasuredProfile = binsMeasuredProfile*wj
+	binsPerfectProfile = binsPerfectProfile*wj
+	
+	binsMeasuredProfile = np.append(binsMeasuredProfile, np.zeros(noBins))
+	binsPerfectProfile = np.append(binsPerfectProfile, np.zeros(noBins))
+	for i in range(noBins):
+		binsMeasuredProfile[noBins*2 - i - 1] = -binsMeasuredProfile[i]
+		binsPerfectProfile[noBins*2 - i - 1] = -binsPerfectProfile[i]
 
-	#plt.plot(np.arange(0, bins.shape[0]), bins)
-	plt.plot(freq, sp.real)
-	#plt.scatter(xCoordinates, yCoordinates)
+	Ymeasured = MTF(binsMeasuredProfile/max(binsMeasuredProfile))
+	Yperfect = MTF(binsPerfectProfile/max(binsPerfectProfile))
+	print Ymeasured.shape
 
+	plt.scatter(xCoordinates, yCoordinates)
+	plt.scatter(intersectionPoint[0], intersectionPoint[1], color='r')
+	plt.scatter(perfectProfile1[0], perfectProfile1[1], color='r')
+	plt.scatter(perfectProfile2[0], perfectProfile2[1], color='r')
+	plt.show()
+	fig = plt.figure()
+
+	#plt.plot(np.arange(0, binsMeasuredProfile.shape[0]), binsMeasuredProfile)
+	#plt.plot(np.arange(0, binsPerfectProfile.shape[0]), binsPerfectProfile, linestyle='--')
+	plt.semilogx(np.fft.fftfreq(Ymeasured.shape[0]), np.absolute(Ymeasured))
+	plt.semilogx(np.fft.fftfreq(Yperfect.shape[0]), np.absolute(Yperfect), linestyle='--')
 
 	#ax.scatter(vertices.T[0],vertices.T[1],vertices.T[2], color='b', marker='.')
+	#ax.scatter(ip1[0],ip1[1],ip1[2], color='r', marker='.')
 
 	#ax.scatter(verticesLeft.T[0],verticesLeft.T[1],verticesLeft.T[2], color='b', marker='.')
 	#ax.scatter(verticesRight.T[0],verticesRight.T[1],verticesRight.T[2], color='r', marker='.')
 
 	plt.show()
 
-'''
-	centerPoint = np.mean(vertices, axis=0)
-
-	noRows = vertices.shape[0]
-	p = (np.ones((noRows,1)))
-	AB = np.hstack([vertices - centerPoint, p])
-	uu, dd, vv = np.linalg.svd(AB)
-	B = vv[1,:]/np.linalg.norm(vv[1,0:3])
-
-	normal = B[0:3]
-
-	p0 = centerPoint
-
-	arrow1 = Arrow3D(\
-	[p0[0], p0[0]+normal[0]*100],\
-	[p0[1], p0[1]+normal[1]*100],\
-	[p0[2], p0[2]+normal[2]*100])
-
-	verticesDirections = vertices - centerPoint
-	distances = verticesDirections.dot(normal)[...,None]
-	#vertices -= distances*normal
-
-	rotationAxis = np.cross([0,0,1], normal)
-	rotationAngle = np.arccos(np.dot([0,0,1], normal))
-	R = getRotationMatrix(rotationAngle, rotationAxis)
-	app = np.ones(vertices.shape[0])
-	#vertices = np.vstack([vertices.T, app]).T
-	#vertices = R.dot(vertices.T).T
-	#vertices[:,2] = 0
-
-	centerPoint = np.mean(vertices, axis=0)
-
-	noRows = vertices.shape[0]
-	p = (np.ones((noRows,1)))
-	AB = np.hstack([vertices - centerPoint])
-	uu, dd, vv = np.linalg.svd(AB)
-	B = vv[1,:]/np.linalg.norm(vv[1,0:3])
-
-	normal = B[0:3]
-	p0 = centerPoint
-
-	rotationAxis = np.cross([0,-1,0], normal)
-	rotationAngle = np.arccos(np.dot([0,-1,0], normal))
-	R = getRotationMatrix(rotationAngle, rotationAxis)
-	#vertices = R.dot(vertices.T)[0:2].T
-	#vertices = vertices[vertices[:,0].argsort()].T
-	#maxY = max(vertices[1,-1], vertices[1,0])
-	#vertices = vertices.T[vertices[1] >= maxY]
-
-
-
-	#arrow2 = Arrow3D(\
-	#[p0[0], p0[0]+n2[0]*100],\
-	#[p0[1], p0[1]+n2[1]*100],\
-	#[p0[2], p0[2]+n2[2]*100])
-
-	fig = plt.figure()
-	ax = fig.add_subplot(111, projection='3d')
-	#ax = fig.add_subplot(111)
-	#ax.plot_surface(xx, yy, z1)
-	#ax.plot_surface(xx, yy, z2)
-	#ax.add_artist(arrow)
-	#ax.add_artist(arrow2)
-
-	ax.scatter(vertices.T[0],vertices.T[1],vertices.T[2], color='b', marker='.')
-	#ax.scatter(vertices.T[0],vertices.T[1], color='b', marker='.')
-	#ax.plot(vertices.T[0], vertices.T[1])
-
-	#ax.scatter(centerPoint1.T[0],centerPoint1.T[1],centerPoint1.T[2], color='g', marker='o')
-	#ax.scatter(centerPoint2.T[0],centerPoint2.T[1],centerPoint2.T[2], color='g', marker='o')
-	ax.set_xlabel('X Label')
-	ax.set_ylabel('Y Label')
-	#ax.set_zlabel('Z Label')
-'''
-
-'''
-	# Create cubic bounding box to simulate equal aspect ratio
-	max_range = np.array([vertices.T[0].max()-vertices.T[0].min(), vertices.T[1].max()-vertices.T[1].min(), vertices.T[2].max()-vertices.T[2].min()]).max()
-	Xb = 0.5*max_range*np.mgrid[-1:2:2,-1:2:2,-1:2:2][0].flatten() + 0.5*(vertices.T[0].max()+vertices.T[0].min())
-	Yb = 0.5*max_range*np.mgrid[-1:2:2,-1:2:2,-1:2:2][1].flatten() + 0.5*(vertices.T[1].max()+vertices.T[1].min())
-	Zb = 0.5*max_range*np.mgrid[-1:2:2,-1:2:2,-1:2:2][2].flatten() + 0.5*(vertices.T[2].max()+vertices.T[2].min())
-	# Comment or uncomment following both lines to test the fake bounding box:
-	for xb, yb, zb in zip(Xb, Yb, Zb):
-		ax.plot([xb], [yb], [zb], 'w')
-
-	
-	plt.show()
-'''
