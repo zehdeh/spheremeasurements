@@ -269,8 +269,8 @@ if __name__ == '__main__':
 
 	#plt.plot(np.arange(0, binsMeasuredProfile.shape[0]), binsMeasuredProfile)
 	#plt.plot(np.arange(0, binsPerfectProfile.shape[0]), binsPerfectProfile, linestyle='--')
-	plt.semilogx(np.fft.fftfreq(Ymeasured.shape[0]), np.absolute(Ymeasured))
-	plt.semilogx(np.fft.fftfreq(Yperfect.shape[0]), np.absolute(Yperfect), linestyle='--')
+	plt.plot(np.fft.fftfreq(Ymeasured.shape[0]), np.absolute(Ymeasured))
+	plt.plot(np.fft.fftfreq(Yperfect.shape[0]), np.absolute(Yperfect), linestyle='--')
 
 	#ax.scatter(vertices.T[0],vertices.T[1],vertices.T[2], color='b', marker='.')
 	#ax.scatter(ip1[0],ip1[1],ip1[2], color='r', marker='.')

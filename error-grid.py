@@ -197,8 +197,8 @@ class MainWindow(VTKMainWindow):
 		cubeAxesActor = vtk.vtkCubeAxesActor()
 		cubeAxesActor.SetBounds(self.volume.GetBounds())
 
-		cubeAxesActor.SetFlyMode(vtk.VTK_FLY_FURTHEST_TRIAD)
-		cubeAxesActor.SetGridLineLocation(vtk.VTK_GRID_LINES_FURTHEST)
+		#cubeAxesActor.SetFlyMode(vtk.VTK_FLY_FURTHEST_TRIAD)
+		#cubeAxesActor.SetGridLineLocation(vtk.VTK_GRID_LINES_FURTHEST)
 		cubeAxesActor.DrawXGridlinesOn()
 		cubeAxesActor.DrawYGridlinesOn()
 		cubeAxesActor.DrawZGridlinesOn()
@@ -302,7 +302,7 @@ if __name__ == '__main__':
 		boxFilter[:,:,:] = (1./float(sizeX**3))
 		print 'Applying convolution'
 		print boxFilter
-		totalErrorMatrix = convolve(totalErrorMatrix, boxFilter)
+		#totalErrorMatrix = convolve(totalErrorMatrix, boxFilter)
 		print 'Finished applying convolution'
 		print totalErrorMatrix.mean()
 
