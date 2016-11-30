@@ -171,7 +171,8 @@ if __name__ == '__main__':
 	distances = distance.pdist(vertices)
 	distances = distance.squareform(distances)
 	np.fill_diagonal(distances, np.inf)
-	nyquistRate = distances.min()
+	nyquistRate = 1/(2*distances.min(axis=0).mean())
+	print nyquistRate
 
 	verticesUnprojected = vertices
 	v = vertices - centerPoint
@@ -212,11 +213,13 @@ if __name__ == '__main__':
 	perfectProfile2 = np.array([intersectionPoint - (nyquistRate/2)*angularFactor2*perp2 + i*nyquistRate*angularFactor2*perp2 for i in range((noBins/2),0,-1)]).T
 
 	binsPerfectProfile = np.hstack((perfectProfile2[1], perfectProfile1[1]))
-	print binsPerfectProfile.shape
 	xTruePeak = intersectionPoint[0]
 
 	binsMeasuredProfile = np.zeros(noBins)
 	binSize = nyquistRate
+
+	fig = plt.figure(1)
+	plt.subplot(211)
 	plt.plot([xTruePeak-(noBins/2 - 1)*binSize, xTruePeak-(noBins/2 - 1)*binSize], [yCoordinates.min(),intersectionPoint[1]], color='black')
 	plt.plot([xTruePeak+(noBins/2 - 1)*binSize, xTruePeak+(noBins/2 - 1)*binSize], [yCoordinates.min(),intersectionPoint[1]], color='black')
 	for i in range(0, noBins/2):
@@ -246,7 +249,7 @@ if __name__ == '__main__':
 	binsPerfectProfile[-1] = 0
 	
 	j = np.arange(0,noBins)
-	wj = 1 - ((j - noBins/2.)/(noBins/2.))**8
+	wj = 1 - ((j - noBins/2.)/(noBins/2.))**2
 	binsMeasuredProfile = binsMeasuredProfile*wj
 	binsPerfectProfile = binsPerfectProfile*wj
 	
@@ -256,27 +259,41 @@ if __name__ == '__main__':
 		binsMeasuredProfile[noBins*2 - i - 1] = -binsMeasuredProfile[i]
 		binsPerfectProfile[noBins*2 - i - 1] = -binsPerfectProfile[i]
 
-	Ymeasured = MTF(binsMeasuredProfile/max(binsMeasuredProfile))
-	Yperfect = MTF(binsPerfectProfile/max(binsPerfectProfile))
-	print Ymeasured.shape
+	Ymeasured = np.fft.fft(binsMeasuredProfile)
+	Yperfect = np.fft.fft(binsPerfectProfile)
 
 	plt.scatter(xCoordinates, yCoordinates)
 	plt.scatter(intersectionPoint[0], intersectionPoint[1], color='r')
 	plt.scatter(perfectProfile1[0], perfectProfile1[1], color='r')
 	plt.scatter(perfectProfile2[0], perfectProfile2[1], color='r')
+
+	plt.subplot(212)
+	plt.plot(np.arange(0,binsMeasuredProfile.shape[0]), binsMeasuredProfile)
+	plt.plot(np.arange(0,binsPerfectProfile.shape[0]), binsPerfectProfile, linestyle='--')
 	plt.show()
+
+
+
 	fig = plt.figure()
 
-	#plt.plot(np.arange(0, binsMeasuredProfile.shape[0]), binsMeasuredProfile)
-	#plt.plot(np.arange(0, binsPerfectProfile.shape[0]), binsPerfectProfile, linestyle='--')
-	plt.plot(np.fft.fftfreq(Ymeasured.shape[0]), np.absolute(Ymeasured))
-	plt.plot(np.fft.fftfreq(Yperfect.shape[0]), np.absolute(Yperfect), linestyle='--')
+	H = (Ymeasured.imag[1::2]/Yperfect.imag[1::2])
+	frequencies = np.fft.fftfreq(H.shape[0],d=nyquistRate)
 
-	#ax.scatter(vertices.T[0],vertices.T[1],vertices.T[2], color='b', marker='.')
-	#ax.scatter(ip1[0],ip1[1],ip1[2], color='r', marker='.')
+	freqIdxAboveZero = frequencies >= 0
+	frequencies = frequencies[freqIdxAboveZero]
+	H = H[freqIdxAboveZero]
+	#plt.plot(np.split(np.fft.fftfreq(H.size),2)[0], np.log(abs(np.split(H,2)[0])))
+	#plt.plot(np.arange(0,Ymeasured[::2].shape[0]), H)
+	plt.plot(frequencies, H)
 
-	#ax.scatter(verticesLeft.T[0],verticesLeft.T[1],verticesLeft.T[2], color='b', marker='.')
-	#ax.scatter(verticesRight.T[0],verticesRight.T[1],verticesRight.T[2], color='r', marker='.')
+	#plt.plot(np.arange(0,Ymeasured.shape[0]), Ymeasured)
+	#plt.plot(np.arange(0,Yperfect.shape[0]), Yperfect, linestyle='--')
+
+
+	#plt.plot(np.arange(0, Ymeasured[::2].shape[0]), np.fabs(Ymeasured[::2].real))
+	#plt.plot(np.arange(0, Yperfect[::2].shape[0]), np.fabs(Yperfect[::2].real), linestyle='--')
+	#plt.plot(np.fft.fftfreq(Ymeasured.shape[0], d=nyquistRate/2), abs(Ymeasured))
+	#plt.plot(np.fft.fftfreq(Yperfect.shape[0], d=nyquistRate/2), abs(Yperfect), linestyle='--')
 
 	plt.show()
 

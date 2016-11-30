@@ -297,13 +297,13 @@ if __name__ == '__main__':
 
 		totalErrorMatrix[np.nonzero(nMatrix)] = totalErrorMatrix[np.nonzero(nMatrix)] / totalErrorMatrix.max()
 
-		sizeX = 20
+		sizeX = 3
 		boxFilter = np.zeros((sizeX,sizeX,sizeX))
 		boxFilter[:,:,:] = (1./float(sizeX**3))
-		#print 'Applying convolution'
+		print 'Applying convolution'
 		#print boxFilter
-		#totalErrorMatrix = convolve(totalErrorMatrix, boxFilter)
-		#print 'Finished applying convolution'
+		totalErrorMatrix = convolve(totalErrorMatrix, boxFilter)
+		print 'Finished applying convolution'
 		#print totalErrorMatrix.mean()
 
 		totalErrorMatrix = totalErrorMatrix / np.linalg.norm(totalErrorMatrix)
