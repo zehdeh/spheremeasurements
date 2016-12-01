@@ -12,10 +12,9 @@ from src.OBJIO import loadOBJ
 from src.fitting import fitSphere
 import src.spherical_harmonics as sh
 from src.mesh import Mesh
-from src.voronoi import getVoronoiArea
+from src.vertexarea import getVertexAreas
 from scipy.optimize import leastsq
 from scipy.linalg import lstsq
-from pymesh import form_mesh
 
 from cycler import cycler
 from mpl_toolkits.mplot3d import Axes3D
@@ -40,9 +39,10 @@ def processSphere(filePath):
 
 		sphericalCoordinates = sh.getSphericalCoordinates(vertices, centerPoint)
 		print 'Calculating areas'
-		mesh = form_mesh(vertices, faces)
-		mesh.add_attribute('vertex_area')
-		vertexAreas = mesh.get_attribute('vertex_area')
+
+		vertexAreas = getVertexAreas(faces, vertices)
+
+		print 'Finished calculating areas'
 
 		finalYs, coefficients = sh.simple_transform(sphericalCoordinates, Lmax, vertexAreas)
 		np.save(cacheFileName, finalYs)
