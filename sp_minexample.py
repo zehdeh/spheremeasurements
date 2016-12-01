@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 from math import acos,atan2
 from src.OBJIO import loadOBJ, getBounds
 from src.fitting import fitSphere
-from pymesh import form_mesh
+from src.vertexarea import getVertexAreas
 
 Lmax = 25
 coeffs = np.zeros(Lmax + 1)
@@ -19,9 +19,7 @@ centerPoint, radius = fitSphere(vertices, [0,0,0,1],150, bounds)
 vertices = vertices - centerPoint
 #vertices = vertices / vertices.max()
 vertices = vertices / np.linalg.norm(vertices, axis=1,ord=2)[...,None]
-mesh = form_mesh(vertices, faces)
-mesh.add_attribute('vertex_area')
-vertexAreas = mesh.get_attribute('vertex_area')
+vertexAreas = getVertexAreas(faces, vertices)
 
 totalArea = np.sum(vertexAreas)
 print totalArea

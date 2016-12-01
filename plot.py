@@ -10,7 +10,6 @@ from src.OBJIO import loadOBJ, loadOBJviaVTK, getVTKMesh
 import matplotlib.pyplot as plt
 from pymetis import part_graph
 from opendr.topology import get_vert_connectivity
-import pymesh
  
 class CurvaturesDemo():
 	def CurvaturesDemo(self):
@@ -25,13 +24,6 @@ class CurvaturesDemo():
 
 		print 'Fitting error (min / max / mean / total): ' + str(errors.min()) + ' / ' + str(np.mean(errors)) + ' / ' + str(errors.max()) + ' / ' + str(np.sum(errors))
 
-		#mesh = pymesh.form_mesh(vertices,faces)
-		#mesh.add_attribute('vertex_normal')
-		#mesh.set_attribute('vertex_normal', normals)
-		#mesh.add_attribute('vertex_mean_curvature')
-		#curv3 = mesh.get_attribute('vertex_mean_curvature')
-				
-		#print 'Curvature method2 (min / max / mean / total): ' + str(np.min(curv3)) + ' / ' + str(np.max(curv3)) + ' / ' + str(np.mean(curv3)) + ' / ' + str(np.sum(curv3))
 
 		reader = vtk.vtkOBJReader()
 		reader.SetFileName(sys.argv[1])

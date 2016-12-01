@@ -3,7 +3,7 @@
 import sys
 import os
 
-from pymesh import form_mesh
+from src.vertexarea import getVertexAreas
 
 from src.OBJIO import loadOBJ, getBounds
 from src.fitting import fitSphere
@@ -30,9 +30,7 @@ if __name__ == '__main__':
 	centerPoint, radius = fitSphere(vertices, p0, 150, bounds)
 
 	sphericalCoordinates = sh.getSphericalCoordinates(vertices, centerPoint)
-	mesh = form_mesh(vertices, faces)
-	mesh.add_attribute('vertex_area')
-	vertexAreas = mesh.get_attribute('vertex_area')
+	vertexAreas = getVertexAreas(faces, vertices)
 
 	Lmax = int(sys.argv[2])
 

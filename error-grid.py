@@ -21,7 +21,6 @@ from src.mesh import Mesh
 from src.ui import VTKMainWindow, QVTKRenderWindowInteractorWheelfix
 from opendr.camera import ProjectPoints
 from src.calibration import getStereoCamerasFromCalibration, StereoCamera
-import pymesh
 from src.utils import cartesianProduct
 from scipy.ndimage.filters import convolve
 
@@ -265,9 +264,6 @@ if __name__ == '__main__':
 				centerPoints.append(cp)
 
 				#errors = fittingErrorSphere(cp.tolist()+[radius],vertices) - radius
-				#mesh = pymesh.form_mesh(vertices,faces)
-				#mesh.add_attribute('vertex_mean_curvature')
-				#errors = mesh.get_attribute('vertex_mean_curvature')
 				errors = calculateMeanCurvature(polyData)
 
 				errorMatrix = np.zeros((gridSize[0], gridSize[1], gridSize[2]), dtype=np.float)
