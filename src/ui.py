@@ -2,6 +2,7 @@ import vtk
 from math import sqrt
 from PyQt5 import QtGui, QtCore, QtWidgets
 from vtk.qt.QVTKRenderWindowInteractor import QVTKRenderWindowInteractor
+from src.utils import rodrigues
 import cv2
 
 import numpy as np
@@ -82,7 +83,10 @@ class VTKMainWindow(QtWidgets.QMainWindow):
 		vtkCamera = vtk.vtkCamera()
 		vtkCamera.SetPosition(camPosition[0], camPosition[1], camPosition[2])
 
+		print 'Comparison:'
 		rot, J = cv2.Rodrigues(camera.R)
+		print rot
+		print rodrigues(camera.R)
 		theta = sqrt(rot[0]**2 + rot[1]**2 + rot[2]**2)
 		v = rot/theta
 
@@ -98,9 +102,9 @@ class VTKMainWindow(QtWidgets.QMainWindow):
 		planesArray = [0 for i in range(24)]
 
 		vtkCamera.GetFrustumPlanes(camera.w/camera.h, planesArray)
-		print 'planes:'
-		print np.min(planesArray)
-		print np.max(planesArray)
+		#print 'planes:'
+		#print np.min(planesArray)
+		#print np.max(planesArray)
 
 		planes = vtk.vtkPlanes()
 		planes.SetFrustumPlanes(planesArray)
@@ -125,9 +129,9 @@ class VTKMainWindow(QtWidgets.QMainWindow):
 		actor.SetMapper(mapper)
 		actor.GetProperty().SetColor(0.4,0.4,0.4)
 		actor.GetProperty().SetOpacity(0.5)
-		print 'Bounds:'
-		print np.min(actor.GetBounds())
-		print np.max(actor.GetBounds())
+		#print 'Bounds:'
+		#print np.min(actor.GetBounds())
+		#print np.max(actor.GetBounds())
 
 		'''
 		print actor.GetXRange()

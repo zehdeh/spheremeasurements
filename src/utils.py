@@ -1,9 +1,65 @@
-from math import sin,cos
+from math import sin,cos,sqrt,acos,fabs
 from matplotlib.patches import FancyArrowPatch
 from mpl_toolkits.mplot3d import proj3d
 from src.fitting import distance
 import numpy as np
 import scipy
+
+def rodrigues(src):
+	dst = np.zeros(3)
+	matJ = np.zeros((3,9))
+
+	matR = np.zeros((3,3))
+	matU = np.zeros((3,3))
+	matV = np.zeros((3,3))
+	matW = np.zeros(3)
+
+	matR = src
+	matU,matW,matV = np.linalg.svd(matR)
+	matR = matU.dot(matV.T)
+
+	R = matR.ravel()
+	rx = R[7] - R[5]
+	ry = R[2] - R[6]
+	rz = R[3] - R[1]
+
+	s = sqrt((rx*rx + ry*ry + rz*rz)*0.25)
+	c = (R[0] + R[4] + R[8] - 1)*0.5
+	c = 1. if c > 1. else (-1. if c < -1. else c)
+	theta = acos(c)
+
+	if s < 1e-5:
+		if c > 0:
+			rx = 0
+			ry = 0
+			rz = 0
+		else:
+			t = (R[0] + 1)*0.5
+			rx = sqrt(max(t,0))
+			t = (R[4] + 1)*0.5
+			ry = sqrt(max(t,0))*(-1. if R[1] < 0 else 1.)
+			t = (R[8] + 1)*0.5
+			rz = sqrt(max(t,0))*(-1. if R[2] < 0 else 1.)
+			if fabs(rx) < fabs(ry) and fabs(rx) < fabs(rz) and (R[5] > 0) != (ry*rz > 0):
+				rz = -rz
+			theta /= sqrt(rx*rx + ry*ry + rz*rz)
+			rx *= theta
+			ry *= theta
+			rz *= theta
+	else:
+		vth = 1./(2*s)
+		vth *= theta
+
+		rx *= vth
+		ry *= vth
+		rz *= vth
+	
+	dst[0] = rx
+	dst[1] = ry
+	dst[2] = rz
+
+	return dst
+
 
 def cartesianProduct(arrays, out=None):
 	arrays = [np.asarray(x) for x in arrays]
