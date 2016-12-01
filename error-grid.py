@@ -19,7 +19,6 @@ from src.fitting import fitSphere, fittingErrorSphere, calculateMeanCurvature
 from src.thirdparty.body.loaders.scanner_frame import Pod
 from src.mesh import Mesh
 from src.ui import VTKMainWindow, QVTKRenderWindowInteractorWheelfix
-from opendr.camera import ProjectPoints
 from src.calibration import getStereoCamerasFromCalibration, StereoCamera
 from src.utils import cartesianProduct
 from scipy.ndimage.filters import convolve
