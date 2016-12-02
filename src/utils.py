@@ -16,6 +16,10 @@ def rodrigues(src):
 
 	matR = src
 	matU,matW,matV = np.linalg.svd(matR)
+	#print 'U:'
+	#print matU
+	#print 'V:'
+	#print matV
 	matR = matU.dot(matV.T)
 
 	R = matR.ravel()

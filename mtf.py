@@ -171,8 +171,11 @@ if __name__ == '__main__':
 	distances = distance.pdist(vertices)
 	distances = distance.squareform(distances)
 	np.fill_diagonal(distances, np.inf)
-	nyquistRate = 1/(2*distances.min(axis=0).mean())
+	nyquistRate = distances.min(axis=0).mean()
+	nyquistFrequency = 1/(2*nyquistRate)
 	print nyquistRate
+	print nyquistFrequency
+	print nyquistFrequency/4
 
 	verticesUnprojected = vertices
 	v = vertices - centerPoint
@@ -207,16 +210,16 @@ if __name__ == '__main__':
 	intersectionPoint[0] += xShift
 
 	xSpread = xCoordinates.max()
-	noBins = int(pow(2, math.floor(math.log(xSpread / nyquistRate) / math.log(2))))
+	binSize = 5*nyquistFrequency
+	noBins = int(pow(2, math.floor(math.log(xSpread / binSize) / math.log(2))))
 
-	perfectProfile1 = np.array([intersectionPoint + (nyquistRate/2)*angularFactor1*perp1 + i*nyquistRate*angularFactor1*perp1 for i in range(0,noBins/2)]).T
-	perfectProfile2 = np.array([intersectionPoint - (nyquistRate/2)*angularFactor2*perp2 + i*nyquistRate*angularFactor2*perp2 for i in range((noBins/2),0,-1)]).T
+	perfectProfile1 = np.array([intersectionPoint + (binSize/2)*angularFactor1*perp1 + i*binSize*angularFactor1*perp1 for i in range(0,noBins/2)]).T
+	perfectProfile2 = np.array([intersectionPoint - (binSize/2)*angularFactor2*perp2 + i*binSize*angularFactor2*perp2 for i in range((noBins/2),0,-1)]).T
 
 	binsPerfectProfile = np.hstack((perfectProfile2[1], perfectProfile1[1]))
 	xTruePeak = intersectionPoint[0]
 
 	binsMeasuredProfile = np.zeros(noBins)
-	binSize = nyquistRate
 
 	fig = plt.figure(1)
 	plt.subplot(211)
@@ -277,13 +280,16 @@ if __name__ == '__main__':
 	fig = plt.figure()
 
 	H = (Ymeasured.imag[1::2]/Yperfect.imag[1::2])
-	frequencies = np.fft.fftfreq(H.shape[0],d=nyquistRate)
+	frequencies = np.fft.fftfreq(H.shape[0],d=binSize)
 
 	freqIdxAboveZero = frequencies >= 0
 	frequencies = frequencies[freqIdxAboveZero]
 	H = H[freqIdxAboveZero]
 	#plt.plot(np.split(np.fft.fftfreq(H.size),2)[0], np.log(abs(np.split(H,2)[0])))
 	#plt.plot(np.arange(0,Ymeasured[::2].shape[0]), H)
+	plt.xlim([0,nyquistFrequency*1.2])
+	plt.ylim([0,1.1])
+	plt.plot([nyquistFrequency,nyquistFrequency], [H.min(),H.max()])
 	plt.plot(frequencies, H)
 
 	#plt.plot(np.arange(0,Ymeasured.shape[0]), Ymeasured)

@@ -83,28 +83,32 @@ class VTKMainWindow(QtWidgets.QMainWindow):
 		vtkCamera = vtk.vtkCamera()
 		vtkCamera.SetPosition(camPosition[0], camPosition[1], camPosition[2])
 
-		print 'Comparison:'
+		#print 'Rotation matrix:'
+		#print camera.R
+		#print 'Comparison:'
 		rot, J = cv2.Rodrigues(camera.R)
-		print rot
-		print rodrigues(camera.R)
+		#print rot
+		#print rodrigues(camera.R)
+		#rot = rodrigues(camera.R)
 		theta = sqrt(rot[0]**2 + rot[1]**2 + rot[2]**2)
 		v = rot/theta
 
 		vtkCamera.SetFocalPoint(0,0,0)
 		#vtkCamera.SetDistance(camera.focalLength)
-		vtkCamera.SetThickness(500)
 
 		transform = vtk.vtkTransform()
 		transform.RotateWXYZ(theta, v[0], v[1], v[2])
 		#vtkCamera.SetUserTransform(transform)
 
+		vtkCamera.SetThickness(500)
+
 
 		planesArray = [0 for i in range(24)]
 
 		vtkCamera.GetFrustumPlanes(camera.w/camera.h, planesArray)
-		#print 'planes:'
-		#print np.min(planesArray)
-		#print np.max(planesArray)
+		print 'planes:'
+		print np.min(planesArray)
+		print np.max(planesArray)
 
 		planes = vtk.vtkPlanes()
 		planes.SetFrustumPlanes(planesArray)
@@ -129,9 +133,9 @@ class VTKMainWindow(QtWidgets.QMainWindow):
 		actor.SetMapper(mapper)
 		actor.GetProperty().SetColor(0.4,0.4,0.4)
 		actor.GetProperty().SetOpacity(0.5)
-		#print 'Bounds:'
-		#print np.min(actor.GetBounds())
-		#print np.max(actor.GetBounds())
+		print 'Bounds:'
+		print np.min(actor.GetBounds())
+		print np.max(actor.GetBounds())
 
 		'''
 		print actor.GetXRange()
