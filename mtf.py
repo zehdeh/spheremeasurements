@@ -175,7 +175,6 @@ if __name__ == '__main__':
 	nyquistFrequency = 1/(2*nyquistRate)
 	print nyquistRate
 	print nyquistFrequency
-	print nyquistFrequency/4
 
 	verticesUnprojected = vertices
 	v = vertices - centerPoint
@@ -210,7 +209,7 @@ if __name__ == '__main__':
 	intersectionPoint[0] += xShift
 
 	xSpread = xCoordinates.max()
-	binSize = 5*nyquistFrequency
+	binSize = nyquistRate
 	noBins = int(pow(2, math.floor(math.log(xSpread / binSize) / math.log(2))))
 
 	perfectProfile1 = np.array([intersectionPoint + (binSize/2)*angularFactor1*perp1 + i*binSize*angularFactor1*perp1 for i in range(0,noBins/2)]).T
@@ -252,7 +251,7 @@ if __name__ == '__main__':
 	binsPerfectProfile[-1] = 0
 	
 	j = np.arange(0,noBins)
-	wj = 1 - ((j - noBins/2.)/(noBins/2.))**2
+	wj = 1 - ((j - noBins/2.)/(noBins/2.))**4
 	binsMeasuredProfile = binsMeasuredProfile*wj
 	binsPerfectProfile = binsPerfectProfile*wj
 	
