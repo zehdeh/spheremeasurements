@@ -2,6 +2,8 @@
 
 import sys
 import os
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
 
 from src.vertexarea import getVertexAreas
 
@@ -38,6 +40,19 @@ if __name__ == '__main__':
 	finalYs, coefficients = sh.simple_transform(sphericalCoordinates, Lmax, vertexAreas)
 
 	reconstructedRadii = sh.back_transform(sphericalCoordinates, coefficients, Lmax, vertexAreas)
+
+	coords = sh.getCartesianCoordinates(sphericalCoordinates[0], sphericalCoordinates[1], reconstructedRadii, centerPoint)
+
+	fig = plt.figure()
+
+	ax = fig.add_subplot(111, projection='3d')
+
+	ax.scatter(coords.T[0],coords.T[1],coords.T[2], color='b', marker='.')
+
+	ax.set_xlabel('X Label')
+	ax.set_ylabel('Y Label')
+	ax.set_zlabel('Z Label')
+	plt.show()
 
 	print finalYs
 	print reconstructedRadii
