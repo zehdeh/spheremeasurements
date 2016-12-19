@@ -10,6 +10,9 @@ from src.OBJIO import loadOBJ, loadOBJviaVTK, getVTKMesh
 import matplotlib.pyplot as plt
 from pymetis import part_graph
 from opendr.topology import get_vert_connectivity
+
+
+radiusNominal = 150
  
 class CurvaturesDemo():
 	def CurvaturesDemo(self):
@@ -18,9 +21,10 @@ class CurvaturesDemo():
 		#polyData = getVTKMesh(vertices, faces, normals)
 
 		bounds = Mesh(vertices.T, faces, normals).getBounds()
-		p0 = [bounds[0][0],bounds[1][0],bounds[2][0],150]
-		cp, radius = fitSphere(vertices,p0,75, bounds)
-		errors = fittingErrorSphere(cp.tolist() + [radius], vertices) - 150
+		p0 = [bounds[0][0],bounds[1][0],bounds[2][0],radiusNominal]
+		cp, radius = fitSphere(vertices,p0,radiusNominal, bounds)
+		errors = fittingErrorSphere(cp.tolist() + [radius], vertices) - radiusNominal
+		print 'Approximated radius: ' + str(radius)
 
 		print 'Fitting error (min / max / mean / total): ' + str(errors.min()) + ' / ' + str(np.mean(errors)) + ' / ' + str(errors.max()) + ' / ' + str(np.sum(errors))
 
@@ -46,7 +50,7 @@ class CurvaturesDemo():
 		scalars.SetNumberOfComponents(1)
 
 		for errorVal in errors:
-			scalars.InsertNextTupleValue([errorVal])
+			scalars.InsertNextTuple([errorVal])
 
 		mean = np.mean(errors)
 		std = np.std(errors)

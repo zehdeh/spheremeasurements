@@ -27,6 +27,8 @@ def processSphere(filePath):
 	print 'Processing ' + os.path.split(filePath)[-1][:-4]
 	Lmax = int(sys.argv[2])
 
+	radiusNominal = 80
+
 	cacheFileName = filePath[:-4] + '_cached_' + str(Lmax)
 	if os.path.isfile(cacheFileName + '.npy'):
 		finalYs = np.load(cacheFileName + '.npy')
@@ -34,8 +36,8 @@ def processSphere(filePath):
 		vertices, faces, normals  = loadOBJ(filePath)
 
 		bounds = Mesh(vertices.T, faces, normals).getBounds()
-		p0 = [bounds[0][0],bounds[1][0],bounds[2][0],150]
-		centerPoint, radius = fitSphere(vertices, p0, 150, bounds)
+		p0 = [bounds[0][0],bounds[1][0],bounds[2][0],radiusNominal]
+		centerPoint, radius = fitSphere(vertices, p0, radiusNominal, bounds)
 
 		sphericalCoordinates = sh.getSphericalCoordinates(vertices, centerPoint)
 		print 'Calculating areas'
