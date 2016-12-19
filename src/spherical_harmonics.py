@@ -47,17 +47,15 @@ def simple_transform(sphericalCoordinates, Lmax, vertexAreas):
 	Y_N = getSH(Lmax, phi, theta)
 
 	#coefficients = np.zeros(phi.shape[0])
-	print 'test'
-	for i in range((Lmax + 1)**2):
-		print i
-		coefficients[i] = np.sum([radii[j]*Y_N[j,i]*vertexAreas[j] for j in range(phi.shape[0])])
+	#for i in range((Lmax + 1)**2):
+	#	print i
+	#	coefficients[i] = np.sum([radii[j]*Y_N[j,i]*vertexAreas[j] for j in range(phi.shape[0])])
 
 	#for l in range(Lmax+1):
 	#	for m in range(-l,l+1):
 	#		coefficients[l+l+m] = np.sum([sph_harm(m,l, phi[i], theta[i]).real * r * vertexAreas[i] for i,r in enumerate(radii)])
 
-	#vertexAreas = vertexAreas/np.linalg.norm(vertexAreas)
-	#coefficients = Y_N.T.dot(np.diag(vertexAreas)).dot(radii)
+	coefficients = Y_N.T.dot(np.diag(vertexAreas)).dot(radii)
 
 	for l in range(Lmax + 1):
 		ys[l] = np.linalg.norm(coefficients[l**2:(l**2 + 2*l + 1)], ord=2)
