@@ -131,7 +131,7 @@ def processMesh(fileName, folderPath):
 		condition = lambda x: np.linalg.norm(sphereCenter - x, axis=1) < 155
 		vertices, faces, normals = removeVerticesByCondition(condition, vertices, faces, normals)
 
-		vertices, faces, normals = removeSmallIsolatedComponents(vertices, faces, normals)
+		#vertices, faces, normals = removeSmallIsolatedComponents(vertices, faces, normals)
 
 		if sys.argv[2].endswith('.obj'):
 			writeOBJ(sys.argv[2], vertices, faces, normals)
