@@ -51,11 +51,13 @@ def simple_transform(sphericalCoordinates, Lmax, vertexAreas):
 	#	print i
 	#	coefficients[i] = np.sum([radii[j]*Y_N[j,i]*vertexAreas[j] for j in range(phi.shape[0])])
 
-	#for l in range(Lmax+1):
-	#	for m in range(-l,l+1):
-	#		coefficients[l+l+m] = np.sum([sph_harm(m,l, phi[i], theta[i]).real * r * vertexAreas[i] for i,r in enumerate(radii)])
+	for l in range(Lmax+1):
+		for m in range(-l,l+1):
+			coefficients[l+l+m] = (1./(l*2+1))*np.sum([sph_harm(m,l, phi[i], theta[i]).real * r * vertexAreas[i] for i,r in enumerate(radii)])
+			#coefficients[l+l+m] = np.sum([sph_harm(m,l, phi[i], theta[i]).real * r * vertexAreas[i] for i,r in enumerate(radii)])
 
-	coefficients = Y_N.T.dot(np.diag(vertexAreas)).dot(radii)
+	#coefficients = Y_N.T.dot(np.diag(vertexAreas)).dot(radii)
+	print coefficients
 
 	for l in range(Lmax + 1):
 		ys[l] = np.linalg.norm(coefficients[l**2:(l**2 + 2*l + 1)], ord=2)

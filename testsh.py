@@ -1,5 +1,7 @@
 #! /usr/bin/python
 
+USE_CACHE = False
+
 import os
 import sys
 import timeit
@@ -30,14 +32,12 @@ def processSphere(filePath):
 	radiusNominal = 80
 
 	cacheFileName = filePath[:-4] + '_cached_' + str(Lmax)
-	if os.path.isfile(cacheFileName + '.npy'):
+	if os.path.isfile(cacheFileName + '.npy') and USE_CACHE:
 		finalYs = np.load(cacheFileName + '.npy')
 	else:
 		vertices, faces, normals  = loadOBJ(filePath)
 
-		bounds = Mesh(vertices.T, faces, normals).getBounds()
-		p0 = [bounds[0][0],bounds[1][0],bounds[2][0],radiusNominal]
-		centerPoint, radius = fitSphere(vertices, p0, radiusNominal, bounds)
+		centerPoint, radius = fitSphere(vertices, radiusNominal)
 
 		sphericalCoordinates = sh.getSphericalCoordinates(vertices, centerPoint)
 		print 'Calculating areas'

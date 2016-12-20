@@ -127,10 +127,10 @@ def processMesh(fileName, folderPath):
 		#vertices, faces = removeVerticesByCondition(condition, vertices, faces)
 		#offset = centerModel(vertices)
 
-		nominalRadius = 80
+		radiusNominal = 80
 
-		sphereCenter = houghTransformation(vertices, faces, normals, nominalRadius)
-		condition = lambda x: np.linalg.norm(sphereCenter - x, axis=1) < (nominalRadius + 5)
+		sphereCenter = houghTransformation(vertices, faces, normals, radiusNominal)
+		condition = lambda x: np.linalg.norm(sphereCenter - x, axis=1) < (radiusNominal + 5)
 		vertices, faces, normals = removeVerticesByCondition(condition, vertices, faces, normals)
 
 		#vertices, faces, normals = removeSmallIsolatedComponents(vertices, faces, normals)

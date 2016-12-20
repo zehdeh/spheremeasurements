@@ -29,7 +29,7 @@ if __name__ == '__main__':
 	vertices, faces, normals = loadOBJ(fileName)
 	bounds = getBounds(vertices.T)
 	p0 = [bounds[0][0],bounds[1][0],bounds[2][0],150]
-	centerPoint, radius = fitSphere(vertices, p0, 150, bounds)
+	centerPoint, radius = fitSphere(vertices, 150)
 
 	sphericalCoordinates = sh.getSphericalCoordinates(vertices, centerPoint)
 	vertexAreas = getVertexAreas(faces, vertices)

@@ -9,27 +9,24 @@ import numpy as np
 from src.reporting import writeReport
 from src.measure import Measure, getMeasures
 from src.utils import scanLineFit
+from src.shapes import Sphere
 
 if __name__ == '__main__':
 	
-	if len(sys.argv) < 3:
-		print 'Please provide as an argument the directory where the OBJ-files are located and the shape to be used'
+	if len(sys.argv) < 2:
+		print 'Please provide as an argument the directory where the OBJ-files are located and the radius to be used'
 		sys.exit(1)
 
-	module = importlib.import_module('src.shapes')
-	class_ = getattr(module, sys.argv[2])
-	
 	shapes = []
 
 	for fileName in os.listdir(sys.argv[1]):
 		if fileName.endswith('.obj'):
 			filePath = sys.argv[1] + '/' + fileName
 			print 'Loading mesh ' + fileName
-			shapes.append(class_(filePath, *sys.argv[3:]))
+			shapes.append(Sphere(filePath, *sys.argv[2:]))
 
 	
-	#measures = getMeasures(Sphere)
-	measures = getMeasures(class_)
+	measures = getMeasures(Sphere)
 
 	centerPoints = [s.centerPoint for s in shapes]
 	mean, unit_v, projectedPoints, pointDistances = scanLineFit(centerPoints)
