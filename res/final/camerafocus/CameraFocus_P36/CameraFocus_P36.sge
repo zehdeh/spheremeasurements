@@ -1,0 +1,4 @@
+#!/bin/bash
+#$ -S /bin/sh
+source /etc/environment
+$DVRD_SHARE/app/bin/mstereo.sh CameraFocus_P36 /dvrd/data/SingleParamExperiments_Thesis2016_Fabian/CameraFocus_P36/images . /dvrd/calibrations/20161219172120574 /dvrd/app/cfg/mstereo_default.ini 1 $SGE_TASK_ID
