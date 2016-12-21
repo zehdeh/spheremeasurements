@@ -13,8 +13,9 @@ if __name__ == '__main__':
 	fig = plt.figure()
 	ax = fig.add_subplot(111, projection='3d')
 
-	bounds = getBounds(vertices.T)
-	centerPoint, radius = fitSphere(vertices)
+	radiusNominal = int(sys.argv[2])
+
+	centerPoint, radius = fitSphere(vertices, radiusNominal)
 
 	ax.scatter(vertices.T[0],vertices.T[1],vertices.T[2], color='b', marker='.')
 
@@ -24,4 +25,4 @@ if __name__ == '__main__':
 	ax.set_zlabel('Z Label')
 	plt.show()
 
-
+	print centerPoint

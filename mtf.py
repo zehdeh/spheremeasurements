@@ -171,7 +171,7 @@ if __name__ == '__main__':
 	distances = distance.pdist(vertices)
 	distances = distance.squareform(distances)
 	np.fill_diagonal(distances, np.inf)
-	nyquistRate = distances.min(axis=0).min()/4
+	nyquistRate = distances.min(axis=0).mean()
 	nyquistFrequency = 1/(2*nyquistRate)
 
 	verticesUnprojected = vertices
@@ -207,7 +207,7 @@ if __name__ == '__main__':
 	intersectionPoint[0] += xShift
 
 	xSpread = xCoordinates.max()
-	binSize = nyquistRate
+	binSize = nyquistRate/2
 	noBins = int(pow(2, math.floor(math.log(xSpread / binSize) / math.log(2))))
 
 	perfectProfile1 = np.array([intersectionPoint + (binSize/2)*angularFactor1*perp1 + i*binSize*angularFactor1*perp1 for i in range(0,noBins/2)]).T

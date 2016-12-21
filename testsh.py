@@ -29,7 +29,8 @@ def processSphere(filePath):
 	print 'Processing ' + os.path.split(filePath)[-1][:-4]
 	Lmax = int(sys.argv[2])
 
-	radiusNominal = 80
+	#radiusNominal = 80
+	radiusNominal = 150
 
 	cacheFileName = filePath[:-4] + '_cached_' + str(Lmax)
 	if os.path.isfile(cacheFileName + '.npy') and USE_CACHE:

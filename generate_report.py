@@ -23,7 +23,7 @@ if __name__ == '__main__':
 		if fileName.endswith('.obj'):
 			filePath = sys.argv[1] + '/' + fileName
 			print 'Loading mesh ' + fileName
-			shapes.append(Sphere(filePath, *sys.argv[2:]))
+			shapes.append(Sphere(filePath, float(sys.argv[2])))
 
 	
 	measures = getMeasures(Sphere)

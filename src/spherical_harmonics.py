@@ -2,14 +2,51 @@ USE_CACHE = False
 
 import os
 import numpy as np
+import math
 from scipy.special import sph_harm
 from scipy.optimize import leastsq
 from scipy.linalg import lstsq
 
-def getSH(Lmax, phi, theta):
+def P(l, m, x):
+	pmm = 1.0
+	if m > 0:
+		somx2 = np.sqrt((1.0 - x) * (1.0 + x))
+		fact = 1.0
+		for i in range(1, m+1):
+			pmm *= (-fact)*somx2
+			fact += 2.0
+
+	if l == m:
+		return pmm
+	pmmp1 = x * (2.0 * m + 1.0)*pmm
+	if l == (m + 1):
+		return pmmp1
+
+	pll = 0.0
+	for ll in range(m+2, l+1):
+		pll = ((2.0 * ll - 1.0) * x * pmmp1 - (ll + m - 1.0) * pmm) / (ll - m)
+		pmm = pmmp1
+		pmmp1 = pll
+	
+	return pll
+
+def K(l, m):
+	temp = ((2.0 * l + 1.0) * math.factorial(math.fabs(l - m))) / (4.0*np.pi*math.factorial(math.fabs(l+m)))
+	return math.sqrt(math.fabs(temp))
+
+def SH(l, m, theta, phi):
+	sqrt2 = math.sqrt(2)
+	if m == 0:
+		return K(l, 0) * P(l, m, np.cos(theta))
+	elif m > 0:
+		return sqrt2*K(l,m) * np.cos(m*phi) * P(l, m, np.cos(theta))
+	else:
+		return sqrt2*K(l, -m) * np.sin(-m * phi) * P(l, -m, np.cos(theta))
+
+def getSHMatrix(Lmax, phi, theta):
 	Y_N = np.ones((phi.shape[0],(Lmax+1)**2),dtype=np.float)
 	for l in range(Lmax + 1):
-		Y_N[:,(l)**2:l**2+l*2+1] = np.array([sph_harm(m-l, l, phi, theta).real for m in range(0, 2*l+1)]).T
+		Y_N[:,(l)**2:l**2+l*2+1] = np.array([SH(m-l, l, phi, theta).real for m in range(0, 2*l+1)]).T
 
 	return Y_N
 
@@ -19,7 +56,7 @@ def back_transform(sphericalCoordinates, coefficients, Lmax, vertexAreas):
 	reconstructedRadii = np.zeros((phi.shape[0]))
 	totalArea = np.sum(vertexAreas)
 
-	Y_N = getSH(Lmax, phi, theta)
+	Y_N = getSHMatrix(Lmax, phi, theta)
 
 	vals = list()
 	#reconstructedRadii = Y_N.dot(coefficients)
@@ -44,7 +81,7 @@ def simple_transform(sphericalCoordinates, Lmax, vertexAreas):
 	totalArea = np.sum(vertexAreas)
 
 	#for l in range(Lmax):
-	Y_N = getSH(Lmax, phi, theta)
+	Y_N = getSHMatrix(Lmax, phi, theta)
 
 	#coefficients = np.zeros(phi.shape[0])
 	#for i in range((Lmax + 1)**2):
@@ -53,8 +90,7 @@ def simple_transform(sphericalCoordinates, Lmax, vertexAreas):
 
 	for l in range(Lmax+1):
 		for m in range(-l,l+1):
-			coefficients[l+l+m] = (1./(l*2+1))*np.sum([sph_harm(m,l, phi[i], theta[i]).real * r * vertexAreas[i] for i,r in enumerate(radii)])
-			#coefficients[l+l+m] = np.sum([sph_harm(m,l, phi[i], theta[i]).real * r * vertexAreas[i] for i,r in enumerate(radii)])
+			coefficients[l*(l+1)+m] = np.sum([sph_harm(m,l, phi[i], theta[i]).real * r * vertexAreas[i] for i,r in enumerate(radii)])
 
 	#coefficients = Y_N.T.dot(np.diag(vertexAreas)).dot(radii)
 	print coefficients
