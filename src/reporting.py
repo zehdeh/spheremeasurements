@@ -12,7 +12,7 @@ def writeReport(filePath, measures, results):
 		c = ws.cell(row = 1, column = i+1)
 		c.value = measure.name
 		if measure.color:
-			ws.conditional_formatting.add(_get_column_letter(i) + '2:' + _get_column_letter(i) + str(len(results)+1), rule)
+			ws.conditional_formatting.add(_get_column_letter(i+1) + '2:' + _get_column_letter(i+1) + str(len(results)+1), rule)
 	
 	for i, result in enumerate(results):
 		for j, val in enumerate(result):

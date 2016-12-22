@@ -5,7 +5,7 @@ from opendr.serialization import load_mesh
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 from opendr.geometry import GaussianCurvature
 import vtk
-from src.fitting import distance, calculateMeanCurvature
+from src.fitting import distance, calculateMeanCurvature, fitSphere
 from src.OBJIO import loadOBJviaVTK
 
 
@@ -51,145 +51,28 @@ def ransac(data,fitfun,errorfun,n,k,t,d):
 	else:
 		return bestfit
 
-class Shape(object):
-	__metaclass__ = abc.ABCMeta
-	def __init__(self,filePath):
-		#self._mesh = load_mesh(filePath)
-		#self._vertices = self.mesh.v.T
-		#self._faces = self.mesh.f
+class Sphere(object):
+	def __init__(self, filePath, nominalRadius, fitRadius = True):
 		self._filePath = filePath
 
 		self._vertices, self._faces, self._normals, self.polyData = loadOBJviaVTK(filePath)
 		self._vertices = self._vertices.T
 
 		self.curvature = calculateMeanCurvature(self.polyData)
-		#self.curvature = np.asarray(GaussianCurvature(self._vertices.T, self._faces))
-	@property
-	def mesh(self):
-		return self._mesh
-	@mesh.setter
-	def mesh(self,value):
-		self._mesh = value
+
+		self._nominalRadius = float(nominalRadius)
+		centerPoint, fittedRadius = fitSphere(self._vertices.T, nominalRadius)
+		self._fittedRadius = fittedRadius
+		self._centerPoint = centerPoint
 	@property
 	def faces(self):
 		return self._faces
 	@property
-	def vertices(self):
-		return self._vertices
-	@mesh.setter
-	def vertices(self,value):
-		self._vertices = value
+	def normals(self):
+		return self._normals
 	@property
 	def filePath(self):
 		return self._filePath
-	@filePath.setter
-	def filePath(self,value):
-		self_filePath = value
-	@abc.abstractmethod
-	def totalFittingError(self):
-		return
-	def getCurvature(self):
-		return self.curvature
-	def render(self,color):
-		renderWindow = vtk.vtkRenderWindow()
-		iren = vtk.vtkRenderWindowInteractor()
-		iren.SetRenderWindow(renderWindow)
-
-		renderer = vtk.vtkRenderer()
-		points = vtk.vtkPoints()
-		for v in self._vertices.T:
-			points.InsertNextPoint(v[0], v[1], v[2])
-
-		polygons = vtk.vtkCellArray()
-		for f in self._faces:
-			polygon = vtk.vtkPolygon()
-			polygon.GetPointIds().SetNumberOfIds(3)
-			polygon.GetPointIds().SetId(0, f[0])
-			polygon.GetPointIds().SetId(1, f[1])
-			polygon.GetPointIds().SetId(2, f[2])
-
-			polygons.InsertNextCell(polygon)
-
-		color = color/color.max()
-
-		colors = vtk.vtkFloatArray()
-		colors.SetNumberOfComponents(1)
-		for c in color:
-			colors.InsertNextTupleValue([c])
-
-		ctf = vtk.vtkColorTransferFunction()
-		ctf.SetColorSpaceToDiverging()
-		ctf.AddRGBPoint(0, 1.0, 0.0, 0.0)
-		ctf.AddRGBPoint(0.5, 0.0, 0.0, 1.0)
-		ctf.AddRGBPoint(1.0, 0.0, 1.0, 0.0)
-
-		noOfColors = 500
-		lut = vtk.vtkLookupTable()
-		lut.SetNumberOfTableValues(noOfColors)
-		lut.Build()
-		for i in range(0, noOfColors):
-			rgb = list(ctf.GetColor(i))+[1]
-			lut.SetTableValue(i,rgb)
-
-		polydata = vtk.vtkPolyData()
-		polydata.SetPoints(points)
-		polydata.SetPolys(polygons)
-		polydata.GetPointData().SetScalars(colors)
-
-		mapper = vtk.vtkPolyDataMapper()
-		mapper.SetInputData(polydata)
-		mapper.SetColorModeToMapScalars()
-		mapper.SetLookupTable(lut)
-
-		actor = vtk.vtkActor()
-		actor.SetMapper(mapper)
-
-		renderer.AddActor(actor)
-		renderWindow.AddRenderer(renderer)
-
-		iren.Initialize()
-		renderWindow.Render()
-		iren.Start()
-
-class Plane(Shape):
-	def __init__(self,filePath):
-		super(Plane,self).__init__(filePath)
-
-		self.model = np.asarray(self.fitPlane())
-	@property
-	def vertices(self):
-		return self._vertices
-	def pointDistance(self, point, vertices):
-		plane_xyz = point[0:3]
-		distance = (plane_xyz*vertices.T).sum(axis=1) + point[3]
-		return distance / np.linalg.norm(plane_xyz)
-	def fitPlane(self, doRansac = False):
-		p0 = [0.1,0.1,0.1,0.1]
-		errorfun = lambda p,vertices: self.pointDistance(p,vertices)
-		residuals = lambda p,signals,vertices: self.pointDistance(p,vertices)
-		fitfun = lambda data: leastsq(residuals, p0, (None,self._vertices))[0]
-		if doRansac:
-			res = ransac(self._vertices.T, fitfun, errorfun, int(0.1*len(self._vertices.T)), 100, 0.01, int(0.5*len(self._vertices.T)))
-		else:
-			res = fitfun(self._vertices)
-		return res
-	def totalFittingError(self):
-		return self.pointDistance(self.model, self._vertices).sum()
-	def planeDeviation(self):
-		maxDeviation = np.max(self.pointDistance(self.model, self._vertices))
-		minDeviation = np.min(self.pointDistance(self.model, self._vertices))
-		return abs(maxDeviation-minDeviation)
-	def render(self,error):
-		super(Plane,self).render(error)
-
-class Sphere(Shape):
-	def __init__(self, filePath, nominalRadius, fitRadius = True):
-		Shape.__init__(self,filePath)
-
-		self._nominalRadius = float(nominalRadius)
-		fittedRadius, centerPoint = self.fitSphere(False, fitRadius)
-		self._fittedRadius = fittedRadius
-		self._centerPoint = centerPoint
 	@property
 	def vertices(self):
 		return self._vertices
@@ -251,5 +134,3 @@ class Sphere(Shape):
 		centerPoint = centerPoint[0:3]
 
 		return fittedRadius,centerPoint
-	def render(self,error):
-		super(Sphere,self).render(error)

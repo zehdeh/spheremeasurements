@@ -12,7 +12,6 @@ from pymetis import part_graph
 from opendr.topology import get_vert_connectivity
 
 
-radiusNominal = 150
  
 class CurvaturesDemo():
 	def CurvaturesDemo(self):
@@ -20,13 +19,13 @@ class CurvaturesDemo():
 		vertices, faces, normals, polyData = loadOBJviaVTK(sys.argv[1])
 		#polyData = getVTKMesh(vertices, faces, normals)
 
-		bounds = Mesh(vertices.T, faces, normals).getBounds()
-		p0 = [bounds[0][0],bounds[1][0],bounds[2][0],radiusNominal]
-		cp, radius = fitSphere(vertices,p0,radiusNominal, bounds)
+		radiusNominal = float(sys.argv[2])
+
+		cp, radius = fitSphere(vertices, radiusNominal)
 		errors = fittingErrorSphere(cp.tolist() + [radius], vertices) - radiusNominal
 		print 'Approximated radius: ' + str(radius)
 
-		print 'Fitting error (min / max / mean / total): ' + str(errors.min()) + ' / ' + str(np.mean(errors)) + ' / ' + str(errors.max()) + ' / ' + str(np.sum(errors))
+		print 'Fitting error (min / max / mean): ' + str(errors.min()) + ' / ' + str(errors.max()) + ' / ' + str(np.mean(errors))
 
 
 		reader = vtk.vtkOBJReader()

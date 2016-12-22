@@ -1,7 +1,9 @@
-from shapes import Sphere, Plane
+from shapes import Sphere
 from utils import measureRadialDeviation
 import numpy as np
 from src.fitting import calculateGaussianCurvature, calculateMeanCurvature
+from src.spherical_harmonics import getSphericalCoordinates, getCartesianCoordinates
+from src.OBJIO import getVTKMesh
 
 class Measure:
 	def __init__(self, name, fun, color=False):
@@ -28,6 +30,15 @@ def convertFocusDeviationLabel(label):
 		return int(label[1:]) * -1
 	return int(label)
 
+def calculateIdealCurvature(vertices, faces, normals, centerPoint, adaptedRadius):
+	phi, theta, r = getSphericalCoordinates(vertices, centerPoint)
+	r[:] = adaptedRadius
+
+	vertices = getCartesianCoordinates(phi, theta, r, centerPoint)
+	polyData = getVTKMesh(vertices, faces, normals)
+	
+	return np.mean(calculateMeanCurvature(polyData))
+
 def getMeasures(shape):
 	measures = []
 
@@ -40,70 +51,50 @@ def getMeasures(shape):
 	relativeFittingError = Measure('Relative fitting error', 
 		lambda x: x.totalFittingError() / x.vertices.shape[1], True)
 
-	if shape is Sphere:
-		#focusDistance = Measure('Focus plane distance', lambda x: int(x.filePath.split('_')[-1][:3]))
-		#measures.append(focusDistance)
+	#focusDistance = Measure('Focus plane distance', lambda x: int(x.filePath.split('_')[-1][:3]))
+	#measures.append(focusDistance)
 
-		#focusDeviation = Measure('Focus plane deviation', lambda x: convertFocusDeviationLabel(x.filePath.split('_')[-3]))
-		#measures.append(focusDeviation)
+	#focusDeviation = Measure('Focus plane deviation', lambda x: convertFocusDeviationLabel(x.filePath.split('_')[-3]))
+	#measures.append(focusDeviation)
 
-		fittedRadius = Measure('Fitted radius', lambda x: x.fittedRadius)
-		measures.append(fittedRadius)
+	fittedRadius = Measure('Fitted radius', lambda x: x.fittedRadius)
+	measures.append(fittedRadius)
 
-		priorRadius = Measure('Prior radius', lambda x: x.nominalRadius)
-		measures.append(priorRadius)
+	priorRadius = Measure('Prior radius', lambda x: x.nominalRadius)
+	measures.append(priorRadius)
 
-		priorRadius = Measure('Radius difference', lambda x: x.fittedRadius - x.nominalRadius, True)
-		measures.append(priorRadius)
+	priorRadius = Measure('Radius difference', lambda x: x.fittedRadius - x.nominalRadius, True)
+	measures.append(priorRadius)
 
-		fittingError = Measure('Fitting error total',
-			lambda x: x.totalFittingError())
-		measures.append(fittingError)
+	fittingError = Measure('Fitting error total',
+		lambda x: x.totalFittingError(), True)
+	measures.append(fittingError)
 
-		measures.append(relativeFittingError)
+	measures.append(relativeFittingError)
 
-		radialDeviation = Measure('Radial deviation (total)', 
-			lambda x: measureRadialDeviation(x.vertices, x.centerPoint, x.fittedRadius)[2], True)
-		measures.append(radialDeviation)
-		data = []
+	radialDeviation = Measure('Radial deviation (total)', 
+		lambda x: measureRadialDeviation(x.vertices, x.centerPoint, x.fittedRadius)[2], True)
+	measures.append(radialDeviation)
+	data = []
 
-		avgCurvature = Measure('Mean Curvature avg',
-			lambda x: np.mean(calculateMeanCurvature(x.polyData)), True)
-		measures.append(avgCurvature)
+	idealCurvature = Measure('Ideal Curvature avg',
+		lambda x: np.mean(calculateMeanCurvature(x.polyData)) - calculateIdealCurvature(x.vertices.T, x.faces, x.normals, x.centerPoint, x.fittedRadius),True)
+	measures.append(idealCurvature)
 
-		stdCurvature = Measure('Mean Curvature std',
-			lambda x: np.std(calculateMeanCurvature(x.polyData)), True)
-		measures.append(stdCurvature)
+	avgCurvature = Measure('Mean Curvature avg',
+		lambda x: np.mean(calculateMeanCurvature(x.polyData)), True)
+	measures.append(avgCurvature)
 
-		avgCurvature = Measure('Gaussian Curvature avg',
-			lambda x: np.mean(calculateGaussianCurvature(x.polyData)), True)
-		measures.append(avgCurvature)
+	stdCurvature = Measure('Mean Curvature std',
+		lambda x: np.std(calculateMeanCurvature(x.polyData)), True)
+	measures.append(stdCurvature)
 
-		stdCurvature = Measure('Gaussian Curvature std',
-			lambda x: np.std(calculateGaussianCurvature(x.polyData)), True)
-		measures.append(stdCurvature)
+	#avgCurvature = Measure('Gaussian Curvature avg',
+	#	lambda x: np.mean(calculateGaussianCurvature(x.polyData)), True)
+	#measures.append(avgCurvature)
 
-		relAvgCurvature = Measure('Relative curvature avg',
-			lambda x: np.mean(x.getCurvature() / x.vertices.shape[1]), True)
-		measures.append(relAvgCurvature)
-	if shape is Plane:
-		fittingError = Measure('Fitting error', 
-			lambda x: x.totalFittingError(), True)
-		measures.append(fittingError)
-
-		fittingError = Measure('Plane std deviation',
-			lambda x: x.planeDeviation(), True)
-		measures.append(fittingError)
-
-		measures.append(relativeFittingError)
-
-		avgCurvature = Measure('Curvature avg',
-			lambda x: np.mean(x.getCurvature()), True)
-		measures.append(avgCurvature)
-
-		stdCurvature = Measure('Curvature std',
-			lambda x: np.std(x.getCurvature()), True)
-		measures.append(stdCurvature)
-
+	#stdCurvature = Measure('Gaussian Curvature std',
+	#	lambda x: np.std(calculateGaussianCurvature(x.polyData)), True)
+	#measures.append(stdCurvature)
 
 	return measures

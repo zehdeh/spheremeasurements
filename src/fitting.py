@@ -24,10 +24,14 @@ def fitSphere(vertices, nominalRadius, fitRadius=True):
 		errorfun = lambda p,vertices: fittingErrorSphere(p,vertices) - p[3]
 	else:
 		errorfun = lambda p,vertices: fittingErrorSphere(p,vertices) - nominalRadius
+	
+	res,flag = leastsq(errorfun, p0, (vertices,))
+	centerPoint = res[0:3]
+	radius = res[3]
 
-	res = least_squares(errorfun, p0, bounds=([bounds[0][0], bounds[1][0], bounds[2][0], -np.inf], [bounds[0][1], bounds[1][1], bounds[2][1], np.inf]), args=(vertices,))
-	centerPoint = res.x[0:3]
-	radius = res.x[3]
+	#res = least_squares(errorfun, p0, bounds=([bounds[0][0], bounds[1][0], bounds[2][0], -np.inf], [bounds[0][1], bounds[1][1], bounds[2][1], np.inf]), args=(vertices,))
+	#centerPoint = res.x[0:3]
+	#radius = res.x[3]
 
 	return centerPoint, radius
 
