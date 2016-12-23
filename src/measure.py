@@ -37,7 +37,7 @@ def calculateIdealCurvature(vertices, faces, normals, centerPoint, adaptedRadius
 	vertices = getCartesianCoordinates(phi, theta, r, centerPoint)
 	polyData = getVTKMesh(vertices, faces, normals)
 	
-	return np.mean(calculateMeanCurvature(polyData))
+	return np.std(calculateMeanCurvature(polyData))
 
 def getMeasures(shape):
 	measures = []
