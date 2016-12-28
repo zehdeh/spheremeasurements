@@ -61,7 +61,7 @@ class Sphere(object):
 		self.curvature = calculateMeanCurvature(self.polyData)
 
 		self._nominalRadius = float(nominalRadius)
-		centerPoint, fittedRadius = fitSphere(self._vertices.T, nominalRadius)
+		centerPoint, fittedRadius = fitSphere(self._vertices.T, nominalRadius, False)
 		self._fittedRadius = fittedRadius
 		self._centerPoint = centerPoint
 	@property
@@ -106,31 +106,3 @@ class Sphere(object):
 	def totalFittingError(self):
 		return np.sum(np.abs(self._fittedRadius - distance(self._vertices,self._centerPoint)))
 		#return np.sum(np.abs(radiusErrorFunction(self.centerPoint.tolist() + [self.fittedRadius], self._vertices)))/len(self._vertices.T)
-	def fitSphere(self, doRansac = False, fitRadius = True):
-		#vertices = generateSphere(300, 35)
-		pointBounds = self.getPointBounds()
-		if fitRadius:
-			errorfun = lambda p,vertices: self.fittingError(p,vertices) - p[3]
-		else:
-			errorfun = lambda p,vertices: self.fittingError(p,vertices) - self._nominalRadius
-
-		centerPointGuess = [pointBounds[0][0],pointBounds[1][0],pointBounds[2][0],self._nominalRadius]
-		#centerPointGuess = [-124.63678821,-283.53124005,-334.92304383, 1]
-		#res = least_squares(errfunc, centerPointGuess, bounds=([pointBounds[0][0],pointBounds[1][0],pointBounds[2][0],1],
-		#[pointBounds[0][1],pointBounds[1][1],pointBounds[2][1],np.inf]), args=(vertices,))
-		fitfun = lambda data: least_squares(errorfun, centerPointGuess, bounds=(-np.inf, np.inf), args=(data,)).x
-		if doRansac:
-			res = ransac(self._vertices.T, fitfun, errorfun, int(0.1*len(self._vertices.T)), 100, 0.01, int(0.5*len(self._vertices.T)))
-		else:
-			res = fitfun(self._vertices.T)
-
-		centerPoint = res
-
-		if fitRadius:
-			fittedRadius = centerPoint[3]
-		else:
-			fittedRadius = self._nominalRadius
-
-		centerPoint = centerPoint[0:3]
-
-		return fittedRadius,centerPoint

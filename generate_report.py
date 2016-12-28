@@ -10,6 +10,8 @@ from src.reporting import writeReport
 from src.measure import Measure, getMeasures
 from src.utils import scanLineFit
 from src.shapes import Sphere
+from src.fitting import distance
+from src.calibration import getStereoCamerasFromCalibration, StereoCamera
 
 if __name__ == '__main__':
 	
@@ -24,14 +26,26 @@ if __name__ == '__main__':
 			filePath = sys.argv[1] + '/' + fileName
 			print 'Loading mesh ' + fileName
 			shapes.append(Sphere(filePath, float(sys.argv[2])))
+	
+	if len(shapes) == 0:
+		print 'No meshes found!'
+		sys.exit(0)
 
 	
 	measures = getMeasures(Sphere)
 
 	centerPoints = [s.centerPoint for s in shapes]
-	mean, unit_v, projectedPoints, pointDistances = scanLineFit(centerPoints)
 
-	measures.append(Measure('Distance from cam', lambda x: (x.centerPoint - mean).dot(unit_v)))
+	cameraFocusCalibrationPath = 'calibrations/20161219172120574/'
+	stereoCameras = getStereoCamerasFromCalibration(cameraFocusCalibrationPath)
+	cameraPosition = (stereoCameras[7].A.position + stereoCameras[7].B.position) / 2
+
+	baseLine = distance(stereoCameras[7].A.position, stereoCameras[7].B.position)
+
+	#mean, unit_v, projectedPoints, pointDistances = scanLineFit(centerPoints)
+
+	measures.append(Measure('Distance from cam', lambda x: distance(x.centerPoint,cameraPosition)))
+	#measures.append(Measure('Theoretical depth error', lambda x: (distance(x.centerPoint,cameraPosition))**2 / (baseLine* stereoCameras[7].A.focalLength)))
 
 	results = []
 	for i, shape in enumerate(shapes):
@@ -39,7 +53,6 @@ if __name__ == '__main__':
 		for j,measurement in enumerate(measures):
 			result.append(measurement.execute(shape))
 		results.append(result)
-
 
 	
 	writeReport('reportTest.xlsx', measures, results)
