@@ -1,5 +1,6 @@
 import numpy as np
 import math
+from timeit import default_timer as timer
 
 def getFaceArea(face, vertices):
 	v = vertices[face]
@@ -13,8 +14,8 @@ def getFaceArea(face, vertices):
 	return np.sqrt(s*np.prod(s-t))
 
 def getVertexAreas(faces, vertices):
-	faceAreas = np.array([getFaceArea(f, vertices) for f in faces])
+	faceAreas = np.array([getFaceArea(f, vertices) for f in faces])/3
 
-	vertexAreas = np.array([np.sum(faceAreas[np.argwhere(np.any(np.reshape(i == faces.ravel(), (-1,3)), axis=1))]/3) for i,v in enumerate(vertices)])
-	
+	vertexAreas = np.array([np.sum(faceAreas[np.argwhere(np.any(np.reshape(i == faces.ravel(), (-1,3)), axis=1))]) for i,v in enumerate(vertices)])
+
 	return vertexAreas
