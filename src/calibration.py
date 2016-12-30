@@ -2,6 +2,11 @@ import os
 from src.thirdparty.body.loaders.scanner_frame import Pod
 from opendr.camera import ProjectPoints
 
+def cameraDistance(camPos1, camPos2, position):
+	import numpy as np
+	dist = np.linalg.norm(np.cross((position - camPos1),(position - camPos2))) / np.linalg.norm(camPos2 - camPos1)
+	return dist
+
 class StereoCamera(object):
 	def __init__(self):
 		self.A = None

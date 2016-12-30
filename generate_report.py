@@ -11,11 +11,11 @@ from src.measure import Measure, getMeasures
 from src.utils import scanLineFit
 from src.shapes import Sphere
 from src.fitting import distance
-from src.calibration import getStereoCamerasFromCalibration, StereoCamera
+from src.calibration import getStereoCamerasFromCalibration, StereoCamera, cameraDistance
 
 if __name__ == '__main__':
 	
-	if len(sys.argv) < 2:
+	if len(sys.argv) < 3:
 		print 'Please provide as an argument the directory where the OBJ-files are located and the radius to be used'
 		sys.exit(1)
 
@@ -34,17 +34,14 @@ if __name__ == '__main__':
 	
 	measures = getMeasures(Sphere)
 
-	centerPoints = [s.centerPoint for s in shapes]
-
 	cameraFocusCalibrationPath = 'calibrations/20161219172120574/'
 	stereoCameras = getStereoCamerasFromCalibration(cameraFocusCalibrationPath)
 	cameraPosition = (stereoCameras[7].A.position + stereoCameras[7].B.position) / 2
 
 	baseLine = distance(stereoCameras[7].A.position, stereoCameras[7].B.position)
 
-	#mean, unit_v, projectedPoints, pointDistances = scanLineFit(centerPoints)
-
-	measures.append(Measure('Distance from cam', lambda x: distance(x.centerPoint,cameraPosition)))
+	#measures.append(Measure('Distance from cam', lambda x: distance(x.centerPoint,cameraPosition)))
+	measures.append(Measure('Distance from cam', lambda x: cameraDistance(stereoCameras[7].A.position, stereoCameras[7].B.position, x.centerPoint)))
 	#measures.append(Measure('Theoretical depth error', lambda x: (distance(x.centerPoint,cameraPosition))**2 / (baseLine* stereoCameras[7].A.focalLength)))
 
 	results = []
