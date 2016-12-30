@@ -6,7 +6,7 @@ from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 from opendr.geometry import GaussianCurvature
 import vtk
 from src.fitting import distance, calculateMeanCurvature, fitSphere
-from src.OBJIO import loadOBJviaVTK
+from src.OBJIO import loadOBJviaVTK, loadOBJ, getVTKMesh
 
 
 def randomPartition(n, nData):
@@ -56,12 +56,13 @@ class Sphere(object):
 		self._filePath = filePath
 
 		self._vertices, self._faces, self._normals, self.polyData = loadOBJviaVTK(filePath)
-		self._vertices = self._vertices.T
+		#self._vertices, self._faces, self._normals = loadOBJ(filePath)
+		#self.polyData = getVTKMesh(self._vertices, self._faces, self._normals)
 
 		self.curvature = calculateMeanCurvature(self.polyData)
 
 		self._nominalRadius = float(nominalRadius)
-		centerPoint, fittedRadius = fitSphere(self._vertices.T, nominalRadius, False)
+		centerPoint, fittedRadius = fitSphere(self._vertices, nominalRadius, False)
 		self._fittedRadius = fittedRadius
 		self._centerPoint = centerPoint
 	@property
@@ -104,5 +105,5 @@ class Sphere(object):
 		x,y,z = vertices.T
 		return distance([x0,y0,z0],[x,y,z])
 	def totalFittingError(self):
-		return np.sum(np.abs(self._fittedRadius - distance(self._vertices,self._centerPoint)))
+		return np.sum(np.fabs(self._fittedRadius - distance(self._vertices,self._centerPoint)))
 		#return np.sum(np.abs(radiusErrorFunction(self.centerPoint.tolist() + [self.fittedRadius], self._vertices)))/len(self._vertices.T)
