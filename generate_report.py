@@ -40,8 +40,8 @@ if __name__ == '__main__':
 
 	baseLine = distance(stereoCameras[7].A.position, stereoCameras[7].B.position)
 
-	#measures.append(Measure('Distance from cam', lambda x: distance(x.centerPoint,cameraPosition)))
-	measures.append(Measure('Distance from cam', lambda x: cameraDistance(stereoCameras[7].A.position, stereoCameras[7].B.position, x.centerPoint)))
+	measures.append(Measure('Distance from cam', lambda x: distance(x.centerPoint,cameraPosition)))
+	#measures.append(Measure('Distance from cam', lambda x: cameraDistance(stereoCameras[7].A.position, stereoCameras[7].B.position, x.centerPoint)))
 	#measures.append(Measure('Theoretical depth error', lambda x: (distance(x.centerPoint,cameraPosition))**2 / (baseLine* stereoCameras[7].A.focalLength)))
 
 	results = []
