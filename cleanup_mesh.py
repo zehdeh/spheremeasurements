@@ -130,10 +130,10 @@ def processMesh(fileName, folderPath):
 		radiusNominal = 80.065605
 
 		sphereCenter = houghTransformation(vertices, faces, normals, radiusNominal)
-		condition = lambda x: np.linalg.norm(sphereCenter - x, axis=1) < (radiusNominal + 5)
+		condition = lambda x: np.linalg.norm(sphereCenter - x, axis=1) < (radiusNominal + 2)
 		vertices, faces, normals = removeVerticesByCondition(condition, vertices, faces, normals)
 
-		#vertices, faces, normals = removeSmallIsolatedComponents(vertices, faces, normals)
+		vertices, faces, normals = removeSmallIsolatedComponents(vertices, faces, normals)
 
 		if sys.argv[2].endswith('.obj'):
 			writeOBJ(sys.argv[2], vertices, faces, normals)
