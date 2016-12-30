@@ -1,0 +1,378 @@
+bundle adjustment version 2.0.1.0
+Command line as invoked:
+  Z:\dvrd\app\bin\bundle.exe -f /home/dvrd/calibrations/20161219172120574/bundle.ini
+Command line options after -f substitution:
+  -f /home/dvrd/calibrations/20161219172120574/bundle.ini -cd /home/dvrd/calibrations/20161219172120574 -debug log.txt -gcSD 0.05 -fixscaling -tka 07_A.tka -tka 07_B.tka -tkp 20161219172131628/000078/07_A.tkp -tkp 20161219172131628/000078/07_B.tkp -var_euclidean -transform var euclidean 20161219172131628-000081.et3 -tkp 20161219172131628/000081/07_A.tkp -tkp 20161219172131628/000081/07_B.tkp -var_euclidean -transform var euclidean 20161219172131628-000090.et3 -tkp 20161219172131628/000090/07_A.tkp -tkp 20161219172131628/000090/07_B.tkp -var_euclidean -transform var euclidean 20161219172131628-000096.et3 -tkp 20161219172131628/000096/07_A.tkp -tkp 20161219172131628/000096/07_B.tkp -var_euclidean -transform var euclidean 20161219172131628-000128.et3 -tkp 20161219172131628/000128/07_A.tkp -tkp 20161219172131628/000128/07_B.tkp -var_euclidean -transform var euclidean 20161219172131628-000132.et3 -tkp 20161219172131628/000132/07_A.tkp -tkp 20161219172131628/000132/07_B.tkp -var_euclidean -transform var euclidean 20161219172131628-000154.et3 -tkp 20161219172131628/000154/07_A.tkp -tkp 20161219172131628/000154/07_B.tkp -var_euclidean -transform var euclidean 20161219172131628-000161.et3 -tkp 20161219172131628/000161/07_A.tkp -tkp 20161219172131628/000161/07_B.tkp
+------------------------------
+CalcPointsAndResiduals: eval number 0
+Params = -221.163 -449.451 1157.04 0 0 0 1000 3.01731 0 800 600 -478.594 -435.656 1105.72 0 0 0 1000 2.3885 0 800 600 68.4823 76.9045 -121.887 0 0 0 90.2509 180.313 -283.697 0 0 0 23.2159 73.0398 -188.807 0 0 0 75.4533 96.944 -181.177 0 0 0 98.1674 140.751 -258.357 0 0 0 -18.2667 44.4907 -95.1425 0 0 0 54.092 187.861 -227.353 0 0 0
+SumSqWeightedErr = 1.00465e+008
+RMS = 89.6792; other stats: N data = 12492; Mean = 3.0825, SD = 89.6297, Max = 444.215, Min = -301.788
+CalcPointsAndResiduals: eval number 1
+Params = -221.163 -449.451 1157.04 0 0 0 1000 3.01731 0 800 600 -478.594 -435.656 1105.72 0 0 0 1000 2.3885 0 800 600 68.4823 76.9045 -121.887 0 0 0 90.2509 180.313 -283.697 0 0 0 23.2159 73.0398 -188.807 0 0 0 75.4533 96.944 -181.177 0 0 0 98.1674 140.751 -258.357 0 0 0 -18.2667 44.4907 -95.1425 0 0 0 54.092 187.861 -227.353 0 0 0
+SumSqWeightedErr = 1.00465e+008
+RMS = 89.6792; other stats: N data = 12492; Mean = 3.0825, SD = 89.6297, Max = 444.215, Min = -301.788
+CalcPointsAndResiduals: eval number 2
+CalcPointsAndResiduals: eval number 3
+CalcPointsAndResiduals: eval number 4
+CalcPointsAndResiduals: eval number 5
+CalcPointsAndResiduals: eval number 6
+CalcPointsAndResiduals: eval number 7
+CalcPointsAndResiduals: eval number 8
+CalcPointsAndResiduals: eval number 9
+CalcPointsAndResiduals: eval number 10
+CalcPointsAndResiduals: eval number 11
+CalcPointsAndResiduals: eval number 12
+CalcPointsAndResiduals: eval number 13
+CalcPointsAndResiduals: eval number 14
+CalcPointsAndResiduals: eval number 15
+CalcPointsAndResiduals: eval number 16
+CalcPointsAndResiduals: eval number 17
+CalcPointsAndResiduals: eval number 18
+CalcPointsAndResiduals: eval number 19
+CalcPointsAndResiduals: eval number 20
+CalcPointsAndResiduals: eval number 21
+CalcPointsAndResiduals: eval number 22
+CalcPointsAndResiduals: eval number 23
+CalcPointsAndResiduals: eval number 24
+CalcPointsAndResiduals: eval number 25
+CalcPointsAndResiduals: eval number 26
+CalcPointsAndResiduals: eval number 27
+CalcPointsAndResiduals: eval number 28
+CalcPointsAndResiduals: eval number 29
+CalcPointsAndResiduals: eval number 30
+CalcPointsAndResiduals: eval number 31
+CalcPointsAndResiduals: eval number 32
+CalcPointsAndResiduals: eval number 33
+CalcPointsAndResiduals: eval number 34
+CalcPointsAndResiduals: eval number 35
+CalcPointsAndResiduals: eval number 36
+CalcPointsAndResiduals: eval number 37
+CalcPointsAndResiduals: eval number 38
+CalcPointsAndResiduals: eval number 39
+CalcPointsAndResiduals: eval number 40
+CalcPointsAndResiduals: eval number 41
+CalcPointsAndResiduals: eval number 42
+CalcPointsAndResiduals: eval number 43
+CalcPointsAndResiduals: eval number 44
+CalcPointsAndResiduals: eval number 45
+CalcPointsAndResiduals: eval number 46
+CalcPointsAndResiduals: eval number 47
+CalcPointsAndResiduals: eval number 48
+CalcPointsAndResiduals: eval number 49
+CalcPointsAndResiduals: eval number 50
+CalcPointsAndResiduals: eval number 51
+CalcPointsAndResiduals: eval number 52
+CalcPointsAndResiduals: eval number 53
+CalcPointsAndResiduals: eval number 54
+CalcPointsAndResiduals: eval number 55
+CalcPointsAndResiduals: eval number 56
+CalcPointsAndResiduals: eval number 57
+CalcPointsAndResiduals: eval number 58
+CalcPointsAndResiduals: eval number 59
+CalcPointsAndResiduals: eval number 60
+CalcPointsAndResiduals: eval number 61
+CalcPointsAndResiduals: eval number 62
+CalcPointsAndResiduals: eval number 63
+CalcPointsAndResiduals: eval number 64
+CalcPointsAndResiduals: eval number 65
+CalcPointsAndResiduals: eval number 66
+Params = -221.163 -449.451 1157.04 0 0 0 1000 3.01731 0 800 600 -478.594 -435.656 1105.72 0 0 0 1000 2.3885 0 800 600 68.4823 76.9045 -121.887 0 0 0 90.2509 180.313 -283.697 0 0 0 23.2159 73.0398 -188.807 0 0 0 75.4533 96.944 -181.177 0 0 0 98.1674 140.751 -258.357 0 0 0 -18.2667 44.4907 -95.1425 0 0 0 54.092 187.861 -227.353 0 0 0
+checkpointing ...
+CalcPointsAndResiduals: eval number 67
+Params = -221.004 -450.334 1162.72 -9.37725 1.71622 -1.02304 1003.21 2.51022 0.384297 806.785 631.284 -474.573 -431.596 1100.16 -8.58002 -6.38106 -5.82547 993.182 2.52299 0.486303 781.427 630.698 68 76.4156 -121.196 -0.0383464 0.117697 -0.118977 100.747 194.452 -316.556 -1.85575 1.65651 1.4441 30.4298 82.6962 -211.21 -0.875448 1.17686 1.18379 75.9034 97.91 -183.929 -0.425275 1.59211 -1.38687 98.1945 141.212 -260.256 -0.94469 1.43639 -1.61293 -18.2304 44.4553 -95.6552 -0.583967 1.70951 0.256286 55.9717 190.598 -234.41 -1.32377 2.00739 0.57569
+SumSqWeightedErr = 845692
+RMS = 8.22792; other stats: N data = 12492; Mean = -0.110943, SD = 8.2275, Max = 38.024, Min = -42.9253
+CalcPointsAndResiduals: eval number 68
+Params = -221.004 -450.334 1162.72 -9.37725 1.71622 -1.02304 1003.21 2.51022 0.384297 806.785 631.284 -474.573 -431.596 1100.16 -8.58002 -6.38106 -5.82547 993.182 2.52299 0.486303 781.427 630.698 68 76.4156 -121.196 -0.0383464 0.117697 -0.118977 100.747 194.452 -316.556 -1.85575 1.65651 1.4441 30.4298 82.6962 -211.21 -0.875448 1.17686 1.18379 75.9034 97.91 -183.929 -0.425275 1.59211 -1.38687 98.1945 141.212 -260.256 -0.94469 1.43639 -1.61293 -18.2304 44.4553 -95.6552 -0.583967 1.70951 0.256286 55.9717 190.598 -234.41 -1.32377 2.00739 0.57569
+SumSqWeightedErr = 845692
+RMS = 8.22792; other stats: N data = 12492; Mean = -0.110943, SD = 8.2275, Max = 38.024, Min = -42.9253
+CalcPointsAndResiduals: eval number 69
+CalcPointsAndResiduals: eval number 70
+CalcPointsAndResiduals: eval number 71
+CalcPointsAndResiduals: eval number 72
+CalcPointsAndResiduals: eval number 73
+CalcPointsAndResiduals: eval number 74
+CalcPointsAndResiduals: eval number 75
+CalcPointsAndResiduals: eval number 76
+CalcPointsAndResiduals: eval number 77
+CalcPointsAndResiduals: eval number 78
+CalcPointsAndResiduals: eval number 79
+CalcPointsAndResiduals: eval number 80
+CalcPointsAndResiduals: eval number 81
+CalcPointsAndResiduals: eval number 82
+CalcPointsAndResiduals: eval number 83
+CalcPointsAndResiduals: eval number 84
+CalcPointsAndResiduals: eval number 85
+CalcPointsAndResiduals: eval number 86
+CalcPointsAndResiduals: eval number 87
+CalcPointsAndResiduals: eval number 88
+CalcPointsAndResiduals: eval number 89
+CalcPointsAndResiduals: eval number 90
+CalcPointsAndResiduals: eval number 91
+CalcPointsAndResiduals: eval number 92
+CalcPointsAndResiduals: eval number 93
+CalcPointsAndResiduals: eval number 94
+CalcPointsAndResiduals: eval number 95
+CalcPointsAndResiduals: eval number 96
+CalcPointsAndResiduals: eval number 97
+CalcPointsAndResiduals: eval number 98
+CalcPointsAndResiduals: eval number 99
+CalcPointsAndResiduals: eval number 100
+CalcPointsAndResiduals: eval number 101
+CalcPointsAndResiduals: eval number 102
+CalcPointsAndResiduals: eval number 103
+CalcPointsAndResiduals: eval number 104
+CalcPointsAndResiduals: eval number 105
+CalcPointsAndResiduals: eval number 106
+CalcPointsAndResiduals: eval number 107
+CalcPointsAndResiduals: eval number 108
+CalcPointsAndResiduals: eval number 109
+CalcPointsAndResiduals: eval number 110
+CalcPointsAndResiduals: eval number 111
+CalcPointsAndResiduals: eval number 112
+CalcPointsAndResiduals: eval number 113
+CalcPointsAndResiduals: eval number 114
+CalcPointsAndResiduals: eval number 115
+CalcPointsAndResiduals: eval number 116
+CalcPointsAndResiduals: eval number 117
+CalcPointsAndResiduals: eval number 118
+CalcPointsAndResiduals: eval number 119
+CalcPointsAndResiduals: eval number 120
+CalcPointsAndResiduals: eval number 121
+CalcPointsAndResiduals: eval number 122
+CalcPointsAndResiduals: eval number 123
+CalcPointsAndResiduals: eval number 124
+CalcPointsAndResiduals: eval number 125
+CalcPointsAndResiduals: eval number 126
+CalcPointsAndResiduals: eval number 127
+CalcPointsAndResiduals: eval number 128
+CalcPointsAndResiduals: eval number 129
+CalcPointsAndResiduals: eval number 130
+CalcPointsAndResiduals: eval number 131
+CalcPointsAndResiduals: eval number 132
+CalcPointsAndResiduals: eval number 133
+Params = -221.121 -450.414 1162.63 -8.83996 1.72132 -0.933406 1003.23 2.5392 0.339515 806.596 629.539 -474.724 -431.781 1100.3 -9.33192 -6.41602 -6.12583 993.374 2.54126 0.398746 780.998 632.613 68.0198 76.4384 -121.219 0.0155808 0.189737 -0.0799195 100.827 194.564 -316.788 -1.794 1.53781 1.39239 30.4651 82.7431 -211.304 -0.845008 0.995642 1.14313 75.9296 97.9426 -183.964 -0.243347 1.65043 -1.27121 98.2334 141.259 -260.305 -0.752692 1.48338 -1.50644 -18.2146 44.4708 -95.6729 -0.492524 1.56465 0.218438 56.0063 190.636 -234.46 -1.17736 1.83716 0.502786
+SumSqWeightedErr = 13553.6
+RMS = 1.04162; other stats: N data = 12492; Mean = -0.00103577, SD = 1.04166, Max = 14.6228, Min = -12.1693
+CalcPointsAndResiduals: eval number 134
+Params = -221.121 -450.414 1162.63 -8.83996 1.72132 -0.933406 1003.23 2.5392 0.339515 806.596 629.539 -474.724 -431.781 1100.3 -9.33192 -6.41602 -6.12583 993.374 2.54126 0.398746 780.998 632.613 68.0198 76.4384 -121.219 0.0155808 0.189737 -0.0799195 100.827 194.564 -316.788 -1.794 1.53781 1.39239 30.4651 82.7431 -211.304 -0.845008 0.995642 1.14313 75.9296 97.9426 -183.964 -0.243347 1.65043 -1.27121 98.2334 141.259 -260.305 -0.752692 1.48338 -1.50644 -18.2146 44.4708 -95.6729 -0.492524 1.56465 0.218438 56.0063 190.636 -234.46 -1.17736 1.83716 0.502786
+SumSqWeightedErr = 13553.6
+RMS = 1.04162; other stats: N data = 12492; Mean = -0.00103577, SD = 1.04166, Max = 14.6228, Min = -12.1693
+CalcPointsAndResiduals: eval number 135
+CalcPointsAndResiduals: eval number 136
+CalcPointsAndResiduals: eval number 137
+CalcPointsAndResiduals: eval number 138
+CalcPointsAndResiduals: eval number 139
+CalcPointsAndResiduals: eval number 140
+CalcPointsAndResiduals: eval number 141
+CalcPointsAndResiduals: eval number 142
+CalcPointsAndResiduals: eval number 143
+CalcPointsAndResiduals: eval number 144
+CalcPointsAndResiduals: eval number 145
+CalcPointsAndResiduals: eval number 146
+CalcPointsAndResiduals: eval number 147
+CalcPointsAndResiduals: eval number 148
+CalcPointsAndResiduals: eval number 149
+CalcPointsAndResiduals: eval number 150
+CalcPointsAndResiduals: eval number 151
+CalcPointsAndResiduals: eval number 152
+CalcPointsAndResiduals: eval number 153
+CalcPointsAndResiduals: eval number 154
+CalcPointsAndResiduals: eval number 155
+CalcPointsAndResiduals: eval number 156
+CalcPointsAndResiduals: eval number 157
+CalcPointsAndResiduals: eval number 158
+CalcPointsAndResiduals: eval number 159
+CalcPointsAndResiduals: eval number 160
+CalcPointsAndResiduals: eval number 161
+CalcPointsAndResiduals: eval number 162
+CalcPointsAndResiduals: eval number 163
+CalcPointsAndResiduals: eval number 164
+CalcPointsAndResiduals: eval number 165
+CalcPointsAndResiduals: eval number 166
+CalcPointsAndResiduals: eval number 167
+CalcPointsAndResiduals: eval number 168
+CalcPointsAndResiduals: eval number 169
+CalcPointsAndResiduals: eval number 170
+CalcPointsAndResiduals: eval number 171
+CalcPointsAndResiduals: eval number 172
+CalcPointsAndResiduals: eval number 173
+CalcPointsAndResiduals: eval number 174
+CalcPointsAndResiduals: eval number 175
+CalcPointsAndResiduals: eval number 176
+CalcPointsAndResiduals: eval number 177
+CalcPointsAndResiduals: eval number 178
+CalcPointsAndResiduals: eval number 179
+CalcPointsAndResiduals: eval number 180
+CalcPointsAndResiduals: eval number 181
+CalcPointsAndResiduals: eval number 182
+CalcPointsAndResiduals: eval number 183
+CalcPointsAndResiduals: eval number 184
+CalcPointsAndResiduals: eval number 185
+CalcPointsAndResiduals: eval number 186
+CalcPointsAndResiduals: eval number 187
+CalcPointsAndResiduals: eval number 188
+CalcPointsAndResiduals: eval number 189
+CalcPointsAndResiduals: eval number 190
+CalcPointsAndResiduals: eval number 191
+CalcPointsAndResiduals: eval number 192
+CalcPointsAndResiduals: eval number 193
+CalcPointsAndResiduals: eval number 194
+CalcPointsAndResiduals: eval number 195
+CalcPointsAndResiduals: eval number 196
+CalcPointsAndResiduals: eval number 197
+CalcPointsAndResiduals: eval number 198
+CalcPointsAndResiduals: eval number 199
+Params = -221.26 -450.413 1162.43 -8.89362 1.17672 -1.21819 1003.13 2.54525 0.337709 804.4 629.574 -474.865 -431.832 1100.2 -9.40171 -7.01973 -6.4455 993.335 2.54821 0.395973 778.647 632.751 68.0388 76.4471 -121.214 0.0522239 0.157553 -0.073126 100.878 194.585 -316.782 -1.75613 1.43608 1.35375 30.4964 82.7534 -211.301 -0.817256 0.89514 1.1172 75.9578 97.9529 -183.96 -0.225333 1.64384 -1.17916 98.2737 141.275 -260.299 -0.728326 1.47042 -1.41042 -18.2013 44.4751 -95.6712 -0.416412 1.45216 0.221559 56.044 190.652 -234.453 -1.10324 1.72117 0.4934
+SumSqWeightedErr = 13510.8
+RMS = 1.03998; other stats: N data = 12492; Mean = -0.00047268, SD = 1.04002, Max = 14.615, Min = -12.1786
+CalcPointsAndResiduals: eval number 200
+Params = -221.26 -450.413 1162.43 -8.89362 1.17672 -1.21819 1003.13 2.54525 0.337709 804.4 629.574 -474.865 -431.832 1100.2 -9.40171 -7.01973 -6.4455 993.335 2.54821 0.395973 778.647 632.751 68.0388 76.4471 -121.214 0.0522239 0.157553 -0.073126 100.878 194.585 -316.782 -1.75613 1.43608 1.35375 30.4964 82.7534 -211.301 -0.817256 0.89514 1.1172 75.9578 97.9529 -183.96 -0.225333 1.64384 -1.17916 98.2737 141.275 -260.299 -0.728326 1.47042 -1.41042 -18.2013 44.4751 -95.6712 -0.416412 1.45216 0.221559 56.044 190.652 -234.453 -1.10324 1.72117 0.4934
+SumSqWeightedErr = 13510.8
+RMS = 1.03998; other stats: N data = 12492; Mean = -0.00047268, SD = 1.04002, Max = 14.615, Min = -12.1786
+CalcPointsAndResiduals: eval number 201
+CalcPointsAndResiduals: eval number 202
+CalcPointsAndResiduals: eval number 203
+CalcPointsAndResiduals: eval number 204
+CalcPointsAndResiduals: eval number 205
+CalcPointsAndResiduals: eval number 206
+CalcPointsAndResiduals: eval number 207
+CalcPointsAndResiduals: eval number 208
+CalcPointsAndResiduals: eval number 209
+CalcPointsAndResiduals: eval number 210
+CalcPointsAndResiduals: eval number 211
+CalcPointsAndResiduals: eval number 212
+CalcPointsAndResiduals: eval number 213
+CalcPointsAndResiduals: eval number 214
+CalcPointsAndResiduals: eval number 215
+CalcPointsAndResiduals: eval number 216
+CalcPointsAndResiduals: eval number 217
+CalcPointsAndResiduals: eval number 218
+CalcPointsAndResiduals: eval number 219
+CalcPointsAndResiduals: eval number 220
+CalcPointsAndResiduals: eval number 221
+CalcPointsAndResiduals: eval number 222
+CalcPointsAndResiduals: eval number 223
+CalcPointsAndResiduals: eval number 224
+CalcPointsAndResiduals: eval number 225
+CalcPointsAndResiduals: eval number 226
+CalcPointsAndResiduals: eval number 227
+CalcPointsAndResiduals: eval number 228
+CalcPointsAndResiduals: eval number 229
+CalcPointsAndResiduals: eval number 230
+CalcPointsAndResiduals: eval number 231
+CalcPointsAndResiduals: eval number 232
+CalcPointsAndResiduals: eval number 233
+CalcPointsAndResiduals: eval number 234
+CalcPointsAndResiduals: eval number 235
+CalcPointsAndResiduals: eval number 236
+CalcPointsAndResiduals: eval number 237
+CalcPointsAndResiduals: eval number 238
+CalcPointsAndResiduals: eval number 239
+CalcPointsAndResiduals: eval number 240
+CalcPointsAndResiduals: eval number 241
+CalcPointsAndResiduals: eval number 242
+CalcPointsAndResiduals: eval number 243
+CalcPointsAndResiduals: eval number 244
+CalcPointsAndResiduals: eval number 245
+CalcPointsAndResiduals: eval number 246
+CalcPointsAndResiduals: eval number 247
+CalcPointsAndResiduals: eval number 248
+CalcPointsAndResiduals: eval number 249
+CalcPointsAndResiduals: eval number 250
+CalcPointsAndResiduals: eval number 251
+CalcPointsAndResiduals: eval number 252
+CalcPointsAndResiduals: eval number 253
+CalcPointsAndResiduals: eval number 254
+CalcPointsAndResiduals: eval number 255
+CalcPointsAndResiduals: eval number 256
+CalcPointsAndResiduals: eval number 257
+CalcPointsAndResiduals: eval number 258
+CalcPointsAndResiduals: eval number 259
+CalcPointsAndResiduals: eval number 260
+CalcPointsAndResiduals: eval number 261
+CalcPointsAndResiduals: eval number 262
+CalcPointsAndResiduals: eval number 263
+CalcPointsAndResiduals: eval number 264
+CalcPointsAndResiduals: eval number 265
+Params = -221.289 -450.409 1162.38 -8.89529 1.05829 -1.27797 1003.11 2.54687 0.337208 803.925 629.559 -474.895 -431.838 1100.17 -9.40407 -7.1502 -6.51019 993.324 2.54939 0.395404 778.142 632.749 68.0428 76.4486 -121.213 0.057403 0.150247 -0.0726475 100.889 194.588 -316.78 -1.74968 1.41321 1.34721 30.5031 82.755 -211.3 -0.813018 0.872866 1.11372 75.9638 97.9546 -183.959 -0.224895 1.64212 -1.16061 98.2823 141.278 -260.298 -0.726194 1.46745 -1.3906 -18.1986 44.4757 -95.6705 -0.401688 1.42881 0.22465 56.0521 190.654 -234.451 -1.08941 1.69634 0.493863
+SumSqWeightedErr = 13509.1
+RMS = 1.03991; other stats: N data = 12492; Mean = -0.000650561, SD = 1.03995, Max = 14.6142, Min = -12.1835
+CalcPointsAndResiduals: eval number 266
+Params = -221.289 -450.409 1162.38 -8.89529 1.05829 -1.27797 1003.11 2.54687 0.337208 803.925 629.559 -474.895 -431.838 1100.17 -9.40407 -7.1502 -6.51019 993.324 2.54939 0.395404 778.142 632.749 68.0428 76.4486 -121.213 0.057403 0.150247 -0.0726475 100.889 194.588 -316.78 -1.74968 1.41321 1.34721 30.5031 82.755 -211.3 -0.813018 0.872866 1.11372 75.9638 97.9546 -183.959 -0.224895 1.64212 -1.16061 98.2823 141.278 -260.298 -0.726194 1.46745 -1.3906 -18.1986 44.4757 -95.6705 -0.401688 1.42881 0.22465 56.0521 190.654 -234.451 -1.08941 1.69634 0.493863
+SumSqWeightedErr = 13509.1
+RMS = 1.03991; other stats: N data = 12492; Mean = -0.000650561, SD = 1.03995, Max = 14.6142, Min = -12.1835
+CalcPointsAndResiduals: eval number 267
+CalcPointsAndResiduals: eval number 268
+CalcPointsAndResiduals: eval number 269
+CalcPointsAndResiduals: eval number 270
+CalcPointsAndResiduals: eval number 271
+CalcPointsAndResiduals: eval number 272
+CalcPointsAndResiduals: eval number 273
+CalcPointsAndResiduals: eval number 274
+CalcPointsAndResiduals: eval number 275
+CalcPointsAndResiduals: eval number 276
+CalcPointsAndResiduals: eval number 277
+CalcPointsAndResiduals: eval number 278
+CalcPointsAndResiduals: eval number 279
+CalcPointsAndResiduals: eval number 280
+CalcPointsAndResiduals: eval number 281
+CalcPointsAndResiduals: eval number 282
+CalcPointsAndResiduals: eval number 283
+CalcPointsAndResiduals: eval number 284
+CalcPointsAndResiduals: eval number 285
+CalcPointsAndResiduals: eval number 286
+CalcPointsAndResiduals: eval number 287
+CalcPointsAndResiduals: eval number 288
+CalcPointsAndResiduals: eval number 289
+CalcPointsAndResiduals: eval number 290
+CalcPointsAndResiduals: eval number 291
+CalcPointsAndResiduals: eval number 292
+CalcPointsAndResiduals: eval number 293
+CalcPointsAndResiduals: eval number 294
+CalcPointsAndResiduals: eval number 295
+CalcPointsAndResiduals: eval number 296
+CalcPointsAndResiduals: eval number 297
+CalcPointsAndResiduals: eval number 298
+CalcPointsAndResiduals: eval number 299
+CalcPointsAndResiduals: eval number 300
+CalcPointsAndResiduals: eval number 301
+CalcPointsAndResiduals: eval number 302
+CalcPointsAndResiduals: eval number 303
+CalcPointsAndResiduals: eval number 304
+CalcPointsAndResiduals: eval number 305
+CalcPointsAndResiduals: eval number 306
+CalcPointsAndResiduals: eval number 307
+CalcPointsAndResiduals: eval number 308
+CalcPointsAndResiduals: eval number 309
+CalcPointsAndResiduals: eval number 310
+CalcPointsAndResiduals: eval number 311
+CalcPointsAndResiduals: eval number 312
+CalcPointsAndResiduals: eval number 313
+CalcPointsAndResiduals: eval number 314
+CalcPointsAndResiduals: eval number 315
+CalcPointsAndResiduals: eval number 316
+CalcPointsAndResiduals: eval number 317
+CalcPointsAndResiduals: eval number 318
+CalcPointsAndResiduals: eval number 319
+CalcPointsAndResiduals: eval number 320
+CalcPointsAndResiduals: eval number 321
+CalcPointsAndResiduals: eval number 322
+CalcPointsAndResiduals: eval number 323
+CalcPointsAndResiduals: eval number 324
+CalcPointsAndResiduals: eval number 325
+CalcPointsAndResiduals: eval number 326
+CalcPointsAndResiduals: eval number 327
+CalcPointsAndResiduals: eval number 328
+CalcPointsAndResiduals: eval number 329
+CalcPointsAndResiduals: eval number 330
+CalcPointsAndResiduals: eval number 331
+Params = -221.295 -450.408 1162.38 -8.89562 1.03765 -1.28839 1003.11 2.54715 0.337132 803.842 629.557 -474.9 -431.84 1100.17 -9.40462 -7.17289 -6.52152 993.323 2.54961 0.395293 778.055 632.749 68.0436 76.4488 -121.213 0.0581466 0.149018 -0.0726103 100.89 194.589 -316.78 -1.74867 1.40916 1.3462 30.5043 82.7553 -211.3 -0.812387 0.868943 1.11325 75.9648 97.9549 -183.958 -0.224929 1.64184 -1.15745 98.2838 141.278 -260.298 -0.725935 1.46696 -1.38722 -18.1981 44.4757 -95.6704 -0.399182 1.42481 0.225319 56.0535 190.655 -234.451 -1.0871 1.69206 0.494089
+SumSqWeightedErr = 13509.1
+RMS = 1.03991; other stats: N data = 12492; Mean = -0.000689158, SD = 1.03996, Max = 14.614, Min = -12.1842
+CalcPointsAndResiduals: eval number 332
+Params = -221.289 -450.409 1162.38 -8.89529 1.05829 -1.27797 1003.11 2.54687 0.337208 803.925 629.559 -474.895 -431.838 1100.17 -9.40407 -7.1502 -6.51019 993.324 2.54939 0.395404 778.142 632.749 68.0428 76.4486 -121.213 0.057403 0.150247 -0.0726475 100.889 194.588 -316.78 -1.74968 1.41321 1.34721 30.5031 82.755 -211.3 -0.813018 0.872866 1.11372 75.9638 97.9546 -183.959 -0.224895 1.64212 -1.16061 98.2823 141.278 -260.298 -0.726194 1.46745 -1.3906 -18.1986 44.4757 -95.6705 -0.401688 1.42881 0.22465 56.0521 190.654 -234.451 -1.08941 1.69634 0.493863
+checkpointing ...
+lmder returned code 1
+lmder used 6 calls to the error function, and 5 evals of the Jacobian
