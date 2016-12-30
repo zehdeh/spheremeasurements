@@ -2,7 +2,7 @@ from shapes import Sphere
 from utils import measureRadialDeviation
 import numpy as np
 import math
-from src.fitting import fittingErrorSphere, calculateGaussianCurvature, calculateMeanCurvature
+from src.fitting import fittingErrorSphere, calculateGaussianCurvature, calculateMeanCurvature, distance
 from src.spherical_harmonics import getSphericalCoordinates, getCartesianCoordinates
 from src.OBJIO import getVTKMesh
 
@@ -37,14 +37,14 @@ def getMeasures(shape):
 	fileName = Measure('File', lambda x: x.filePath)
 	measures.append(fileName)
 
-	numVertices = Measure('Number of vertices', lambda x: len(x.vertices.T))
+	numVertices = Measure('Number of vertices', lambda x: len(x.vertices))
 	measures.append(numVertices)
 
 	relativeFittingError = Measure('Relative fitting error',
-		lambda x: x.totalFittingError() / x.vertices.shape[1], True)
+		lambda x: np.sum(np.fabs(x.nominalRadius - distance(x.vertices, x.centerPoint))) / x.vertices.shape[0], True)
 
-	relativeFittingErrorStd = Measure('Relative fitting error std',
-		lambda x: np.std(fittingErrorSphere(x.centerPoint.tolist() + [x.fittedRadius],x.vertices.T)), True)
+	relativeFittingErrorStd = Measure('RFE std',
+		lambda x: np.std(np.fabs(x.nominalRadius - distance(x.vertices, x.centerPoint))), True)
 
 	#focusDistance = Measure('Focus plane distance', lambda x: int(x.filePath.split('_')[-1][:3]))
 	#measures.append(focusDistance)
@@ -58,18 +58,15 @@ def getMeasures(shape):
 	priorRadius = Measure('Prior radius', lambda x: x.nominalRadius)
 	measures.append(priorRadius)
 
-	priorRadius = Measure('Radius difference', lambda x: x.fittedRadius - x.nominalRadius, True)
-	measures.append(priorRadius)
-
-	fittingError = Measure('Fitting error total',
-		lambda x: x.totalFittingError(), True)
-	measures.append(fittingError)
+	#fittingError = Measure('Fitting error total',
+	#	lambda x: x.totalFittingError(), True)
+	#measures.append(fittingError)
 
 	measures.append(relativeFittingError)
 	measures.append(relativeFittingErrorStd)
 
 	radialDeviation = Measure('Radial deviation (total)', 
-		lambda x: measureRadialDeviation(x.vertices, x.centerPoint, x.fittedRadius)[2], True)
+		lambda x: np.fabs(np.max(np.fabs(x.nominalRadius - distance(x.vertices, x.centerPoint))) - np.min(np.fabs(x.nominalRadius - distance(x.vertices, x.centerPoint)))), True)
 	measures.append(radialDeviation)
 	data = []
 
