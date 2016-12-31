@@ -25,7 +25,7 @@ from scipy.ndimage.filters import convolve
 
 
 class MainWindow(VTKMainWindow):
-	def __init__(self, stereoCameras, centerPoints, errorMatrix, vectorField, gridSize, gridScale, parent = None):
+	def __init__(self, stereoCameras, centerPoints, errorMatrix, vectorField, confidenceMatrix, gridSize, gridScale, parent = None):
 		VTKMainWindow.__init__(self, stereoCameras, vtk.vtkRenderer(), parent)
 
 		tabWidget = QtWidgets.QTabWidget();
@@ -34,6 +34,7 @@ class MainWindow(VTKMainWindow):
 		self.centerPoints = centerPoints
 		self.errorMatrix = errorMatrix
 		self.vectorField = vectorField
+		self.confidenceMatrix = confidenceMatrix
 		self.errorGridViewer.GetRenderWindow().AddRenderer(self.mainVTKRenderer)
 		self.setupErrorGrid(stereoCameras, self.mainVTKRenderer, gridSize, gridScale)
 		tabWidget.addTab(self.errorGridViewer, 'Camera Visibility')
@@ -80,6 +81,7 @@ class MainWindow(VTKMainWindow):
 
 		alphaValues = np.abs(colorValues)
 		#alphaValues = np.fabs(colorValues)
+		#alphaValues = self.confidenceMatrix
 		'''
 		for cp in self.centerPoints:
 			x = cp[0] + gridSize[0]*gridScale[0]/2
@@ -160,11 +162,10 @@ class MainWindow(VTKMainWindow):
 		self.vectorActor.SetOrigin(gridSize[0]/2., gridSize[1]/2.,gridSize[2]/2.)
 
 		alphaChannelFunc = vtk.vtkPiecewiseFunction()
-		alphaChannelFunc.AddPoint(0.003, 0.0)
-		alphaChannelFunc.AddPoint(0.11, 0.8)
+		alphaChannelFunc.AddPoint(0.0, 0.0)
+		alphaChannelFunc.AddPoint(0.8, 1.0)
 
 		colorFunc = vtk.vtkColorTransferFunction()
-		#colorFunc.AddRGBPoint(-1.0, 0.230, 0.299, 0.754)
 		colorFunc.AddRGBPoint(0.0, 1.0, 1.0, 1.0)
 		colorFunc.AddRGBPoint(0.01, 0.706, 0.016, 0.150)
 
@@ -240,12 +241,13 @@ if __name__ == '__main__':
 	scannerVolumeSize = [3000,3000,3000]
 	gridScale = [scannerVolumeSize[0] / gridSize[0], scannerVolumeSize[1] / gridSize[1], scannerVolumeSize[2] / gridSize[2]]
 
-	#matrixFileName = folderPath + '/meanCurvature' + '_' + str(gridSize[0]) + '_' + str(gridSize[1]) + '_' + str(gridSize[2])
-	vectorFileName = folderPath + '/vectorField' + '_' + str(gridSize[0]) + '_' + str(gridSize[1]) + '_' + str(gridSize[2])
-	matrixFileName = folderPath + '/fittingError' + '_' + str(gridSize[0]) + '_' + str(gridSize[1]) + '_' + str(gridSize[2])
-	if os.path.isfile(matrixFileName + '.npy') and USE_CACHE:
-		totalErrorMatrix = np.load(matrixFileName + '.npy')
-		totalVectorField = np.load(vectorFileName + '.npy')
+	vectorCacheFileName = folderPath + '/vectorField' + '_' + str(gridSize[0]) + '_' + str(gridSize[1]) + '_' + str(gridSize[2])
+	errorCacheFileName = folderPath + '/fittingError' + '_' + str(gridSize[0]) + '_' + str(gridSize[1]) + '_' + str(gridSize[2])
+	nMatrixCacheFileName = folderPath + '/nMatrix' + '_' + str(gridSize[0]) + '_' + str(gridSize[1]) + '_' + str(gridSize[2])
+	if os.path.isfile(errorCacheFileName + '.npy') and USE_CACHE:
+		nMatrix = np.load(nMatrixCacheFileName + '.npy')
+		totalErrorMatrix = np.load(errorCacheFileName + '.npy')
+		totalVectorField = np.load(vectorCacheFileName + '.npy')
 	else:
 		totalErrorMatrix = np.zeros((gridSize[0], gridSize[1], gridSize[2]), dtype=np.float)
 		totalVectorField = np.zeros((gridSize[0], gridSize[1], gridSize[2]), dtype=(np.float,3))
@@ -289,23 +291,32 @@ if __name__ == '__main__':
 		totalErrorMatrix[np.nonzero(nMatrix)] = totalErrorMatrix[np.nonzero(nMatrix)] / nMatrix[np.nonzero(nMatrix)]
 		totalVectorField[np.nonzero(nMatrix)] = totalVectorField[np.nonzero(nMatrix)] / nMatrix[np.nonzero(nMatrix)][...,None]
 
-		totalErrorMatrix[np.nonzero(nMatrix)] = totalErrorMatrix[np.nonzero(nMatrix)] / totalErrorMatrix.max()
 
-		sizeX = 3
-		boxFilter = np.zeros((sizeX,sizeX,sizeX))
-		boxFilter[:,:,:] = (1./float(sizeX**3))
-		print 'Applying convolution'
-		#print boxFilter
-		#totalErrorMatrix = convolve(totalErrorMatrix, boxFilter)
-		print 'Finished applying convolution'
-		#print totalErrorMatrix.mean()
 
-		totalErrorMatrix = totalErrorMatrix / np.linalg.norm(totalErrorMatrix)
+		#totalErrorMatrix = totalErrorMatrix / np.linalg.norm(totalErrorMatrix)
 		#totalErrorMatrix = totalErrorMatrix / totalErrorMatrix.max()
 
-		np.save(matrixFileName, totalErrorMatrix)
-		np.save(vectorFileName, totalVectorField)
-		#print totalVectorField[:,:,:].shape
+		np.save(errorCacheFileName, totalErrorMatrix)
+		np.save(vectorCacheFileName, totalVectorField)
+		np.save(nMatrixCacheFileName, nMatrix)
+
+	print 'Applying convolution'
+	originalErrorMatrix = totalErrorMatrix
+	confidenceMatrix = np.zeros((gridSize[0], gridSize[1], gridSize[2]), dtype=np.float)
+	confidenceMatrix[np.nonzero(nMatrix)] = 1
+	for i in range(0):
+		sizeX = 3+i
+		boxFilter = np.zeros((sizeX,sizeX,sizeX))
+		boxFilter[:,:,:] = (1./float(sizeX**3))
+		totalErrorMatrix = convolve(totalErrorMatrix, boxFilter)
+		confidenceMatrix = convolve(confidenceMatrix, boxFilter)
+		totalErrorMatrix[np.nonzero(nMatrix)] = originalErrorMatrix[np.nonzero(nMatrix)]
+
+	#confidenceMatrix[np.nonzero(nMatrix)] = 1
+	confidenceMatrix = confidenceMatrix/confidenceMatrix.max()
+	print 'Finished applying convolution'
+
+	totalErrorMatrix[np.nonzero(nMatrix)] = totalErrorMatrix[np.nonzero(nMatrix)] / totalErrorMatrix.max()
 
 	calibrationFolderPath = sys.argv[2]
 	stereoCameras = getStereoCamerasFromCalibration(calibrationFolderPath)
@@ -313,5 +324,5 @@ if __name__ == '__main__':
 	for l,stereoCamera in stereoCameras.iteritems():
 		stereoCamera.visibilityMatrix = np.zeros((gridSize[0], gridSize[1], gridSize[2]), dtype=np.uint8)
 	
-	window = MainWindow(stereoCameras, centerPoints, totalErrorMatrix, totalVectorField, gridSize, gridScale)
+	window = MainWindow(stereoCameras, centerPoints, totalErrorMatrix, totalVectorField, confidenceMatrix, gridSize, gridScale)
 	sys.exit(app.exec_())
