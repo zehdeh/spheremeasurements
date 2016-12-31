@@ -51,53 +51,50 @@ if __name__ == '__main__':
 	polyCoefficients = np.polyfit(dist, fittingErrors, 3)
 	fittedPolynomial = np.poly1d(polyCoefficients)
 
-	fig = plt.figure(1)
+	#fig = plt.figure(1)
 
-	plt.plot(dist, fittingErrors)
-	plt.plot(dist, fittedPolynomial(dist), color='r')
-	plt.show()
+	#plt.plot(dist, fittingErrors)
+	#plt.plot(dist, fittedPolynomial(dist), color='r')
+	#plt.show()
 	originalScale = dist
 
 	cameraFolderName = 'res/final/onecam_fullvolume/cleanedup'
 
-	cameraFocusCalibrationPath = 'calibrations/20161219172120574/'
+	cameraFocusCalibrationPath = 'calibrations/20161222142605764/'
 	stereoCameras = getStereoCamerasFromCalibration(cameraFocusCalibrationPath)
-	cameraPosition = (stereoCameras[7].A.position + stereoCameras[7].B.position) / 2
 
-	fittingErrors = []
-	dist = []
+	for cameraNo in stereoCameras:
+		stereoCamera = stereoCameras[cameraNo]
 
-	for fileName in os.listdir(cameraFolderName):
-		if fileName.endswith('.obj'):
-			filePath = os.path.join(cameraFolderName, fileName)
-			vertices, faces, normals = loadOBJ(filePath)
+		cameraPosition = (stereoCamera.A.position + stereoCamera.B.position) / 2
 
-			centerPoint, fittedRadius = fitSphere(vertices, nominalRadius, False)
-			fittingErrors.append(np.sum(np.fabs(nominalRadius - distance(vertices, centerPoint)))/vertices.shape[0])
-			
-			dist.append(float(distance(centerPoint, cameraPosition)))
+		folderName = 'res/final/onecam_fullvolume/' + str(cameraNo).zfill(2) + '/cleanedup/'
+		if not os.path.exists(folderName):
+			print folderName + ' doesn\'t exist! Skipping camera ' + str(cameraNo)
+			continue
 
-	sortedIndices = np.argsort(dist)
-	dist = np.array(dist)[sortedIndices]
-	fittingErrors = np.array(fittingErrors)[sortedIndices]
+		print 'Continuing here!'
 
-	params0 = [0, 0, 0, 0, 0]
-	
-	#params, success = leastsq(fitPoly, params0, args=(fittingErrors,fittedPolynomial, originalScale))
-	#res = least_squares(fitPoly, params0, bounds=([-np.inf,0.001, -np.inf, -np.inf,0], [np.inf, np.inf, np.inf, np.inf,len(fittingErrors) - 32]), args=(fittingErrors,fittedPolynomial, originalScale))
-	#print res
-	#a,b,c,d,e = res.x
+		fittingErrors = []
+		dist = []
 
-	print np.sum((fittingErrors[:32] - fittedPolynomial(originalScale*0.1))**2)
+		for fileName in os.listdir(cameraFolderName):
+			if fileName.endswith('.obj'):
+				filePath = os.path.join(cameraFolderName, fileName)
+				vertices, faces, normals = loadOBJ(filePath)
 
-	b = 1
-	c = -100
-	d = 1
+				centerPoint, fittedRadius = fitSphere(vertices, nominalRadius, False)
+				fittingErrors.append(np.sum(np.fabs(nominalRadius - distance(vertices, centerPoint)))/vertices.shape[0])
+				
+				dist.append(float(distance(centerPoint, cameraPosition)))
 
+		sortedIndices = np.argsort(dist)
+		dist = np.array(dist)[sortedIndices]
+		fittingErrors = np.array(fittingErrors)[sortedIndices]
 
-	fig2 = plt.figure(2)
-	plt.plot(dist, fittingErrors)
-	plt.plot(b*(originalScale - c), fittedPolynomial(b*(originalScale - c)) + d, color='red')
+		fig2 = plt.figure(2)
+		plt.plot(dist, fittingErrors)
+		plt.plot(b*(originalScale - c), fittedPolynomial(b*(originalScale - c)) + d, color='red')
 
 
-	plt.show()
+		plt.show()
