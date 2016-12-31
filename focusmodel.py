@@ -35,6 +35,7 @@ if __name__ == '__main__':
 			fittingErrors.append(np.sum(np.fabs(nominalRadius - distance(vertices.T, centerPoint)))/vertices.shape[0])
 
 			fileName = fileName[:-11]
+			'''
 			distanceStr = fileName[fileName.find('_')+1:]
 			if 'P' in distanceStr:
 				dist.append(int(distanceStr[1:]))
@@ -43,6 +44,8 @@ if __name__ == '__main__':
 			else:
 				dist.append(0)
 			i += 1
+			'''
+			dist.append(float(distance(cameraPosition, centerPoint)))
 	
 	sortedIndices = np.argsort(dist)
 	dist = np.asarray(dist)[sortedIndices]*10
@@ -76,7 +79,6 @@ if __name__ == '__main__':
 		print 'Continuing here!'
 
 		fittingErrors = []
-		meanCurvatureStd = []
 		dist = []
 
 		for fileName in os.listdir(cameraFolderName):
@@ -85,8 +87,6 @@ if __name__ == '__main__':
 				#vertices, faces, normals = loadOBJ(filePath)
 
 				vertices, faces, normals, polyMesh = loadOBJviaVTK(filePath)
-				meanCurvature = calculateMeanCurvature(polyMesh)
-				meanCurvatureStd.append(np.std(meanCurvature))
 
 				centerPoint, fittedRadius = fitSphere(vertices, nominalRadius, False)
 				fittingErrors.append(np.sum(np.fabs(nominalRadius - distance(vertices.T, centerPoint)))/vertices.shape[0])
@@ -96,7 +96,6 @@ if __name__ == '__main__':
 		sortedIndices = np.argsort(dist)
 		dist = np.array(dist)[sortedIndices]
 		fittingErrors = np.array(fittingErrors)[sortedIndices]
-		meanCurvatureStd = np.array(meanCurvatureStd)[sortedIndices]
 
 		polyCoefficients = np.polyfit(dist, fittingErrors, 3)
 		fittedPolynomial = np.poly1d(polyCoefficients)
@@ -104,7 +103,6 @@ if __name__ == '__main__':
 		fig2 = plt.figure(2)
 		plt.plot(dist, fittingErrors)
 		plt.plot(dist, fittedPolynomial(dist))
-		plt.plot(dist, 50*meanCurvatureStd)
 
 
 		plt.show()

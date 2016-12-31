@@ -70,7 +70,7 @@ def getMeasures(shape):
 	measures.append(relativeFittingErrorStd)
 
 	radialDeviation = Measure('Radial deviation (total)', 
-		lambda x: np.fabs(np.max(np.fabs(x.nominalRadius - distance(x.vertices, x.centerPoint))) - np.min(np.fabs(x.nominalRadius - distance(x.vertices.T, x.centerPoint)))), True)
+		lambda x: np.fabs(np.max(np.fabs(x.nominalRadius - distance(x.vertices.T, x.centerPoint))) - np.min(np.fabs(x.nominalRadius - distance(x.vertices.T, x.centerPoint)))), True)
 	measures.append(radialDeviation)
 	data = []
 

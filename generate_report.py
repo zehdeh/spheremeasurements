@@ -34,11 +34,11 @@ if __name__ == '__main__':
 	
 	measures = getMeasures(Sphere)
 
-	cameraFocusCalibrationPath = 'calibrations/20161219172120574/'
+	cameraFocusCalibrationPath = 'calibrations/20161222142605764/'
 	stereoCameras = getStereoCamerasFromCalibration(cameraFocusCalibrationPath)
-	cameraPosition = (stereoCameras[7].A.position + stereoCameras[7].B.position) / 2
+	cameraPosition = (stereoCameras[12].A.position + stereoCameras[12].B.position) / 2
 
-	baseLine = distance(stereoCameras[7].A.position, stereoCameras[7].B.position)
+	baseLine = distance(stereoCameras[12].A.position, stereoCameras[12].B.position)
 
 	measures.append(Measure('Distance from cam', lambda x: distance(x.centerPoint,cameraPosition)))
 	#measures.append(Measure('Distance from cam', lambda x: cameraDistance(stereoCameras[7].A.position, stereoCameras[7].B.position, x.centerPoint)))
