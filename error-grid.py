@@ -1,6 +1,6 @@
 #! /usr/bin/python
 
-USE_CACHE = False
+USE_CACHE = True
 
 import sys
 from math import atan2,sqrt,fabs
@@ -15,7 +15,7 @@ from vtk.qt.QVTKRenderWindowInteractor import QVTKRenderWindowInteractor
 from vtk.util.vtkImageImportFromArray import vtkImageImportFromArray
 from vtk.util.numpy_support import numpy_to_vtk
 from src.OBJIO import loadOBJ, writeOBJ, loadOBJviaVTK
-from src.fitting import fitSphere, fittingErrorSphere, calculateMeanCurvature
+from src.fitting import fitSphere, fittingErrorSphere, calculateMeanCurvature, distance
 from src.thirdparty.body.loaders.scanner_frame import Pod
 from src.mesh import Mesh
 from src.ui import VTKMainWindow, QVTKRenderWindowInteractorWheelfix
@@ -234,15 +234,15 @@ if __name__ == '__main__':
 	files = os.listdir(folderPath)
 	centerPoints = []
 
-	#gridSize = [50,50,50]
+	gridSize = [50,50,50]
 	#gridSize = [100,100,100]
-	gridSize = [200,200,200]
+	#gridSize = [200,200,200]
 	scannerVolumeSize = [3000,3000,3000]
 	gridScale = [scannerVolumeSize[0] / gridSize[0], scannerVolumeSize[1] / gridSize[1], scannerVolumeSize[2] / gridSize[2]]
 
-	matrixFileName = folderPath + '/meanCurvature' + '_' + str(gridSize[0]) + '_' + str(gridSize[1]) + '_' + str(gridSize[2])
+	#matrixFileName = folderPath + '/meanCurvature' + '_' + str(gridSize[0]) + '_' + str(gridSize[1]) + '_' + str(gridSize[2])
 	vectorFileName = folderPath + '/vectorField' + '_' + str(gridSize[0]) + '_' + str(gridSize[1]) + '_' + str(gridSize[2])
-	#matrixFileName = folderPath + '/fittingError' + '_' + str(gridSize[0]) + '_' + str(gridSize[1]) + '_' + str(gridSize[2])
+	matrixFileName = folderPath + '/fittingError' + '_' + str(gridSize[0]) + '_' + str(gridSize[1]) + '_' + str(gridSize[2])
 	if os.path.isfile(matrixFileName + '.npy') and USE_CACHE:
 		totalErrorMatrix = np.load(matrixFileName + '.npy')
 		totalVectorField = np.load(vectorFileName + '.npy')
@@ -256,14 +256,13 @@ if __name__ == '__main__':
 				print 'Processing ' + fileName[0:-4]
 				vertices, faces, normals, polyData = loadOBJviaVTK(os.path.join(folderPath,fileName))
 
-				#print len(faces), len(faces2)
-				bounds = Mesh(vertices.T, faces, normals).getBounds()
-				p0 = [bounds[0][0],bounds[1][0],bounds[2][0],150]
-				cp, radius = fitSphere(vertices,p0,150, bounds)
+				nominalRadius = 80.06505
+				cp, radius = fitSphere(vertices, nominalRadius)
 				centerPoints.append(cp)
 
 				#errors = fittingErrorSphere(cp.tolist()+[radius],vertices) - radius
-				errors = calculateMeanCurvature(polyData)
+				errors = np.fabs(nominalRadius - distance(vertices.T, cp))
+				#errors = calculateMeanCurvature(polyData)
 
 				errorMatrix = np.zeros((gridSize[0], gridSize[1], gridSize[2]), dtype=np.float)
 				vectorField = np.zeros((gridSize[0], gridSize[1], gridSize[2]), dtype=(np.float,3))
@@ -297,7 +296,7 @@ if __name__ == '__main__':
 		boxFilter[:,:,:] = (1./float(sizeX**3))
 		print 'Applying convolution'
 		#print boxFilter
-		totalErrorMatrix = convolve(totalErrorMatrix, boxFilter)
+		#totalErrorMatrix = convolve(totalErrorMatrix, boxFilter)
 		print 'Finished applying convolution'
 		#print totalErrorMatrix.mean()
 
