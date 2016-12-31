@@ -120,7 +120,7 @@ def processMesh(fileName, folderPath):
 		radiusNominal = 80.065605
 
 		sphereCenter = houghTransformation(vertices, faces, normals, radiusNominal)
-		condition = lambda x: np.linalg.norm(sphereCenter - x, axis=1) < (radiusNominal + 2)
+		condition = lambda x: np.linalg.norm(sphereCenter - x, axis=1) < (radiusNominal+radiusNominal*0.025)
 		vertices, faces, normals = removeVerticesByCondition(condition, vertices, faces, normals)
 
 		vertices, faces, normals = removeSmallIsolatedComponents(vertices, faces, normals)
