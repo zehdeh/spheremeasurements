@@ -62,6 +62,9 @@ class Sphere(object):
 		self.curvature = calculateMeanCurvature(self.polyData)
 
 		self._nominalRadius = float(nominalRadius)
+
+		# Replace last parameter to fit radius (True) or not (False)
+		# If = False nominal radius is used
 		centerPoint, fittedRadius = fitSphere(self._vertices, nominalRadius, False)
 		self._fittedRadius = fittedRadius
 		self._centerPoint = centerPoint
