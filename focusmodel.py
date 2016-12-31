@@ -4,8 +4,8 @@ import os
 import sys
 import numpy as np
 import matplotlib.pyplot as plt
-from src.OBJIO import loadOBJ
-from src.fitting import fitSphere, fittingErrorSphere, distance
+from src.OBJIO import loadOBJ, loadOBJviaVTK
+from src.fitting import fitSphere, fittingErrorSphere, distance, calculateMeanCurvature
 from src.calibration import getStereoCamerasFromCalibration, StereoCamera, cameraDistance
 from scipy.optimize import least_squares
 
@@ -32,7 +32,7 @@ if __name__ == '__main__':
 			vertices, faces, normals = loadOBJ(filePath)
 
 			centerPoint, fittedRadius = fitSphere(vertices, nominalRadius, False)
-			fittingErrors.append(np.sum(np.fabs(nominalRadius - distance(vertices, centerPoint)))/vertices.shape[0])
+			fittingErrors.append(np.sum(np.fabs(nominalRadius - distance(vertices.T, centerPoint)))/vertices.shape[0])
 
 			fileName = fileName[:-11]
 			distanceStr = fileName[fileName.find('_')+1:]
@@ -51,11 +51,11 @@ if __name__ == '__main__':
 	polyCoefficients = np.polyfit(dist, fittingErrors, 3)
 	fittedPolynomial = np.poly1d(polyCoefficients)
 
-	#fig = plt.figure(1)
+	fig = plt.figure(1)
 
-	#plt.plot(dist, fittingErrors)
-	#plt.plot(dist, fittedPolynomial(dist), color='r')
-	#plt.show()
+	plt.plot(dist, fittingErrors)
+	plt.plot(dist, fittedPolynomial(dist), color='r')
+	plt.show()
 	originalScale = dist
 
 	cameraFolderName = 'res/final/onecam_fullvolume/cleanedup'
@@ -68,33 +68,43 @@ if __name__ == '__main__':
 
 		cameraPosition = (stereoCamera.A.position + stereoCamera.B.position) / 2
 
-		folderName = 'res/final/onecam_fullvolume/' + str(cameraNo).zfill(2) + '/cleanedup/'
-		if not os.path.exists(folderName):
-			print folderName + ' doesn\'t exist! Skipping camera ' + str(cameraNo)
+		cameraFolderName = 'res/final/onecam_fullvolume/' + str(cameraNo).zfill(2) + '/cleanedup/'
+		if not os.path.exists(cameraFolderName):
+			print cameraFolderName + ' doesn\'t exist! Skipping camera ' + str(cameraNo)
 			continue
 
 		print 'Continuing here!'
 
 		fittingErrors = []
+		meanCurvatureStd = []
 		dist = []
 
 		for fileName in os.listdir(cameraFolderName):
 			if fileName.endswith('.obj'):
 				filePath = os.path.join(cameraFolderName, fileName)
-				vertices, faces, normals = loadOBJ(filePath)
+				#vertices, faces, normals = loadOBJ(filePath)
+
+				vertices, faces, normals, polyMesh = loadOBJviaVTK(filePath)
+				meanCurvature = calculateMeanCurvature(polyMesh)
+				meanCurvatureStd.append(np.std(meanCurvature))
 
 				centerPoint, fittedRadius = fitSphere(vertices, nominalRadius, False)
-				fittingErrors.append(np.sum(np.fabs(nominalRadius - distance(vertices, centerPoint)))/vertices.shape[0])
+				fittingErrors.append(np.sum(np.fabs(nominalRadius - distance(vertices.T, centerPoint)))/vertices.shape[0])
 				
 				dist.append(float(distance(centerPoint, cameraPosition)))
 
 		sortedIndices = np.argsort(dist)
 		dist = np.array(dist)[sortedIndices]
 		fittingErrors = np.array(fittingErrors)[sortedIndices]
+		meanCurvatureStd = np.array(meanCurvatureStd)[sortedIndices]
+
+		polyCoefficients = np.polyfit(dist, fittingErrors, 3)
+		fittedPolynomial = np.poly1d(polyCoefficients)
 
 		fig2 = plt.figure(2)
 		plt.plot(dist, fittingErrors)
-		plt.plot(b*(originalScale - c), fittedPolynomial(b*(originalScale - c)) + d, color='red')
+		plt.plot(dist, fittedPolynomial(dist))
+		plt.plot(dist, 50*meanCurvatureStd)
 
 
 		plt.show()
