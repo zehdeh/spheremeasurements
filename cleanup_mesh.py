@@ -44,7 +44,6 @@ def removeVerticesByCondition(condition, vertices, faces, normals):
 
 	vertices = vertices[indices]
 	normals = normals[indices]
-	#print "Removing invalid faces..."
 	faceHasBadVs = np.all(np.in1d(faces.ravel(), indicesExclude, invert=True).reshape(faces.shape), axis=1)
 	faces = faces[np.where(faceHasBadVs)]
 
@@ -117,15 +116,6 @@ def processMesh(fileName, folderPath):
 		vertices, faces, normals = loadOBJ(folderPath + '/' + fileName)
 
 		vertices, faces, normals = removeIsolatedVertices(vertices, faces, normals)
-		#uv = np.asarray([0,1,0])
-		#uv = uv.T / np.linalg.norm(uv)
-		#plane = uv.tolist() + [-200]
-		#condition = lambda x: pointPlaneDistance(plane, x.T) < 0
-		#centerPoint = np.asarray([270,1460,-200])
-		#centerPoint = np.asarray([0,0,0])
-		#condition = lambda x: np.linalg.norm(centerPoint - x, axis=1) > 1340
-		#vertices, faces = removeVerticesByCondition(condition, vertices, faces)
-		#offset = centerModel(vertices)
 
 		radiusNominal = 80.065605
 
