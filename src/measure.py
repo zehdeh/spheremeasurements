@@ -40,17 +40,21 @@ def getMeasures(shape):
 	numVertices = Measure('Number of vertices', lambda x: len(x.vertices))
 	measures.append(numVertices)
 
-	relativeFittingError = Measure('Relative fitting error',
-		lambda x: np.sum(np.fabs(x.nominalRadius - distance(x.vertices, x.centerPoint))) / x.vertices.shape[0], True)
+	relativeFittingError = Measure('Fitting error mean',
+		lambda x: np.sum(np.fabs(x.fittedRadius - distance(x.vertices.T, x.centerPoint))) / x.vertices.shape[0], True)
 
-	relativeFittingErrorStd = Measure('RFE std',
-		lambda x: np.std(np.fabs(x.nominalRadius - distance(x.vertices, x.centerPoint))), True)
+	relativeFittingErrorStd = Measure('Fitting error std',
+		lambda x: np.std(np.fabs(x.fittedRadius - distance(x.vertices.T, x.centerPoint))), True)
 
 	#focusDistance = Measure('Focus plane distance', lambda x: int(x.filePath.split('_')[-1][:3]))
 	#measures.append(focusDistance)
 
 	#focusDeviation = Measure('Focus plane deviation', lambda x: convertFocusDeviationLabel(x.filePath.split('_')[-3]))
 	#measures.append(focusDeviation)
+
+	averageRadius = Measure('Average radius',
+		lambda x: np.sum(distance(x.vertices.T, x.centerPoint)) / x.vertices.shape[0], True)
+	measures.append(averageRadius)
 
 	fittedRadius = Measure('Fitted radius', lambda x: x.fittedRadius)
 	measures.append(fittedRadius)
@@ -66,7 +70,7 @@ def getMeasures(shape):
 	measures.append(relativeFittingErrorStd)
 
 	radialDeviation = Measure('Radial deviation (total)', 
-		lambda x: np.fabs(np.max(np.fabs(x.nominalRadius - distance(x.vertices, x.centerPoint))) - np.min(np.fabs(x.nominalRadius - distance(x.vertices, x.centerPoint)))), True)
+		lambda x: np.fabs(np.max(np.fabs(x.nominalRadius - distance(x.vertices, x.centerPoint))) - np.min(np.fabs(x.nominalRadius - distance(x.vertices.T, x.centerPoint)))), True)
 	measures.append(radialDeviation)
 	data = []
 
