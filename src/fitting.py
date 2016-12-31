@@ -8,6 +8,8 @@ def getBounds(vertices):
 	return [xbounds,ybounds,zbounds]
 
 def distance(p1,p2):
+	if len(p1) > 3 or len(p2) > 3:
+		raise RuntimeError('Your point has more than 3 components! Do you need to transpose?')
 	return np.sqrt((p2[0]-p1[0])**2 + (p2[1]-p1[1])**2 + (p2[2]-p1[2])**2)
 
 def fittingErrorSphere(center, vertices):
