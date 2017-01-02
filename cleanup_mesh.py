@@ -5,13 +5,11 @@ import os
 import numpy as np
 from math import floor, ceil
 import matplotlib.pyplot as plt
-from src.OBJIO import loadOBJ, writeOBJ, loadOBJviaVTK
+from src.OBJIO import loadOBJ, writeOBJ
 from opendr.topology import get_vert_connectivity
 from scipy.sparse.csgraph import connected_components
 import scipy
 import networkx as nx
-from Queue import Queue
-from threading import Thread
 
 def centerModel(vertices):
 	avgs = [np.mean(x) for x in vertices.T]
