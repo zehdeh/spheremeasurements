@@ -9,8 +9,9 @@ from src.fitting import fitSphere, fittingErrorSphere, distance, calculateMeanCu
 from src.calibration import getStereoCamerasFromCalibration, StereoCamera, cameraDistance
 from scipy.optimize import least_squares
 
-def fitPoly(params, fittingErrors, fittedPoly, originalScale):
-	return (fittingErrors[params[4]:len(originalScale)+params[4]] - params[0]*fittedPoly(params[1]*(originalScale-params[2])) + params[3])
+def fitPolynomial(params, fittingErrors, fittedPolynomial):
+	polyX = np.linspace(params[0], params[1], len(fittingErrors))
+	return np.fabs(fittingErrors - fittedPolynomial(polyX)*params[2])
 
 if __name__ == '__main__':
 	cameraFocusFolderPath = 'res/final/camerafocus/cleanedup/'
@@ -25,6 +26,7 @@ if __name__ == '__main__':
 	i = 0
 	dist = []
 	fittingErrors = []
+	zeroPosition = 0
 	for fileName in os.listdir(cameraFocusFolderPath):
 		if fileName.endswith('.obj'):
 			filePath = os.path.join(cameraFocusFolderPath, fileName)
@@ -35,20 +37,14 @@ if __name__ == '__main__':
 			fittingErrors.append(np.sum(np.fabs(nominalRadius - distance(vertices.T, centerPoint)))/vertices.shape[0])
 
 			fileName = fileName[:-11]
-			'''
-			distanceStr = fileName[fileName.find('_')+1:]
-			if 'P' in distanceStr:
-				dist.append(int(distanceStr[1:]))
-			elif 'M' in distanceStr:
-				dist.append(-int(distanceStr[1:]))
-			else:
-				dist.append(0)
-			i += 1
-			'''
 			dist.append(float(distance(cameraPosition, centerPoint)))
+
+			distanceStr = fileName[fileName.find('_')+1:]
+			if distanceStr == '0':
+				zeroPosition = dist[-1]
 	
 	sortedIndices = np.argsort(dist)
-	dist = np.asarray(dist)[sortedIndices]*10
+	dist = np.asarray(dist)[sortedIndices]
 	fittingErrors = np.asarray(fittingErrors)[sortedIndices]
 
 	polyCoefficients = np.polyfit(dist, fittingErrors, 3)
@@ -97,12 +93,21 @@ if __name__ == '__main__':
 		dist = np.array(dist)[sortedIndices]
 		fittingErrors = np.array(fittingErrors)[sortedIndices]
 
-		polyCoefficients = np.polyfit(dist, fittingErrors, 3)
-		fittedPolynomial = np.poly1d(polyCoefficients)
+		params0 = [originalScale[0], originalScale[-1], 1, 0]
+		res = least_squares(fitPolynomial, params0, bounds=([originalScale[0], originalScale[0], 0, 0], [originalScale[-1], originalScale[-1], 100, 100]),args=(fittingErrors, fittedPolynomial))
+
+		lowerBound, upperBound, yScale, yShift = res.x
+		polyX = np.linspace(lowerBound, upperBound, fittingErrors.shape[0])
+
+		print dist[0]
+		print dist[-1]
+		print lowerBound
+		print upperBound
+		print zeroPosition
 
 		fig2 = plt.figure(2)
 		plt.plot(dist, fittingErrors)
-		plt.plot(dist, fittedPolynomial(dist))
+		plt.plot(dist, fittedPolynomial(polyX)*yScale + yShift)
 
 
 		plt.show()
