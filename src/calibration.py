@@ -1,4 +1,5 @@
 import os
+import numpy as np
 from src.thirdparty.body.loaders.scanner_frame import Pod
 from opendr.camera import ProjectPoints
 
@@ -17,6 +18,26 @@ class StereoCamera(object):
 		self.name = None
 		self.visibilityMatrix = None
 		self.visible = True
+	def generateVisibilityMatrix(self, gridSize, gridScale):
+		self.visibilityMatrix = np.zeros((gridSize[0], gridSize[1], gridSize[2]), dtype=np.uint8)
+
+		for i in range(gridSize[0]):
+			for j in range(gridSize[1]):
+				for k in range(gridSize[2]):
+					x = (i*gridScale[0]) - (gridSize[0]*gridScale[0]/2) + gridScale[0]/2
+					y = (j*gridScale[1]) - (gridSize[1]*gridScale[1]/2) + gridScale[1]/2
+					z = (k*gridScale[2]) - (gridSize[2]*gridScale[2]/2) + gridScale[2]/2
+
+					self.ppointsA.v = [x,y,z]
+					self.ppointsB.v = [x,y,z]
+
+					x1 = self.ppointsA.r[0]
+					y1 = self.ppointsA.r[1]
+					x2 = self.ppointsB.r[0]
+					y2 = self.ppointsB.r[1]
+
+					if x1 < 1600 and x1 >= 0 and x2 < 1600 and x2 > 0 and y1 < 1200 and y1 >= 0 and y2 < 1200 and y2 >= 0:
+						self.visibilityMatrix[k,j,i] = 1
 
 def getStereoCamerasFromCalibration(folderPath):
 	files = os.listdir(folderPath)

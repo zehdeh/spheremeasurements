@@ -62,6 +62,10 @@ if __name__ == '__main__':
 	cameraFocusCalibrationPath = 'calibrations/20161222142605764/'
 	stereoCameras = getStereoCamerasFromCalibration(cameraFocusCalibrationPath)
 
+	gridSize = [50,50,50]
+	scannerVolumeSize = [3000,3000,3000]
+	gridScale = [scannerVolumeSize[0] / gridSize[0], scannerVolumeSize[1] / gridSize[1], scannerVolumeSize[2] / gridSize[2]]
+
 	for cameraNo in stereoCameras:
 		stereoCamera = stereoCameras[cameraNo]
 
@@ -101,13 +105,41 @@ if __name__ == '__main__':
 
 		print dist[0]
 		print dist[-1]
-		print lowerBound
-		print upperBound
-		print zeroPosition
+		print 'lb: ' + str(lowerBound)
+		print 'ub: ' + str(upperBound)
+		print 'estimated x0: ' + str(zeroPosition)
+
+		scale = (dist[-1]-dist[0])/(upperBound - lowerBound)
+		xAbsOffset = (zeroPosition - lowerBound)*scale
+		xAbs = dist[0] + xAbsOffset
+		print 'scale: ' + str(scale)
+		print 'x0a: ' + str(xAbs)
 
 		fig2 = plt.figure(2)
 		plt.plot(dist, fittingErrors)
 		plt.plot(dist, fittedPolynomial(polyX)*yScale + yShift)
-
-
+		plt.plot([xAbs,xAbs], [0,5])
 		plt.show()
+
+		visibilityMatrixFileName = os.path.join(cameraFocusCalibrationPath,\
+		'visibility_' + str(cameraNo).zfill(2))
+		if os.path.isfile(visibilityMatrixFileName + '.npy'):
+			stereoCamera.visibilityMatrix = np.load(visibilityMatrixFileName + '.npy')
+		else:
+			print 'Generating visibility'
+			stereoCamera.generateVisibilityMatrix(gridSize, gridScale)
+			np.save(visibilityMatrixFileName, stereoCamera.visibilityMatrix)
+
+		cameraFocusModel = np.zeros((gridSize[0], gridSize[1], gridSize[2]), dtype=np.float)
+		for i in range(gridSize[0]):
+			for j in range(gridSize[1]):
+				for k in range(gridSize[2]):
+					if stereoCamera.visibilityMatrix[i,j,k] == 1:
+						x = (i*gridScale[0]) - (gridSize[0]*gridScale[0]/2) + gridScale[0]/2
+						y = (j*gridScale[1]) - (gridSize[1]*gridScale[1]/2) + gridScale[1]/2
+						z = (k*gridScale[2]) - (gridSize[2]*gridScale[2]/2) + gridScale[2]/2
+
+						print distance([x,y,z], cameraPosition)
+		#print len(np.nonzero(stereoCamera.visibilityMatrix))
+		#	print i, j, k
+
