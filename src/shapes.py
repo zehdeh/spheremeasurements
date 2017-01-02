@@ -1,13 +1,12 @@
 import abc
+import os
 import numpy as np
 from scipy.optimize import leastsq, least_squares
 from opendr.serialization import load_mesh
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 from opendr.geometry import GaussianCurvature
-import vtk
 from src.fitting import distance, calculateMeanCurvature, fitSphere
 from src.OBJIO import loadOBJviaVTK, loadOBJ, getVTKMesh
-
 
 def randomPartition(n, nData):
 	allIdxs = np.arange(nData)
@@ -53,19 +52,13 @@ def ransac(data,fitfun,errorfun,n,k,t,d):
 
 class Sphere(object):
 	def __init__(self, filePath, nominalRadius, fitRadius = True):
-		self._filePath = filePath
+		self._fileName = os.path.basename(filePath)
+		self._nominalRadius = nominalRadius
 
 		self._vertices, self._faces, self._normals, self.polyData = loadOBJviaVTK(filePath)
-		#self._vertices, self._faces, self._normals = loadOBJ(filePath)
-		#self.polyData = getVTKMesh(self._vertices, self._faces, self._normals)
-
 		self.curvature = calculateMeanCurvature(self.polyData)
 
-		self._nominalRadius = float(nominalRadius)
-
-		# Replace last parameter to fit radius (True) or not (False)
-		# If = False nominal radius is used
-		centerPoint, fittedRadius = fitSphere(self._vertices, nominalRadius, False)
+		centerPoint, fittedRadius = fitSphere(self._vertices, nominalRadius, fitRadius)
 		self._fittedRadius = fittedRadius
 		self._centerPoint = centerPoint
 	@property
@@ -75,8 +68,8 @@ class Sphere(object):
 	def normals(self):
 		return self._normals
 	@property
-	def filePath(self):
-		return self._filePath
+	def fileName(self):
+		return self._fileName
 	@property
 	def vertices(self):
 		return self._vertices

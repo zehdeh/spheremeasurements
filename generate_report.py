@@ -6,50 +6,68 @@ import time
 import importlib
 import opendr
 import numpy as np
+import argparse
+import os
 from src.reporting import writeReport
 from src.measure import Measure, getMeasures
-from src.utils import scanLineFit
 from src.shapes import Sphere
-from src.fitting import distance
-from src.calibration import getStereoCamerasFromCalibration, StereoCamera, cameraDistance
+
+def checkDir(directory):
+	if not os.path.isdir(directory):
+		raise argparse.ArgumentTypeError("readable_dir:{0} is not a valid path".format(directory))
+	return directory
 
 if __name__ == '__main__':
+	parser = argparse.ArgumentParser(description='Generates a spreadsheet')
+	parser.add_argument("folder", help="The folder with the OBJ files", type=checkDir)
+	parser.add_argument("radius", help="The nominal radius to be used", type=float)
+	parser.add_argument("--fit-radius", help="Fit the radius instead of using the nominal value", action='store_true', default=False)
+	parser.add_argument("-o", "--output", help="The name of the file that is to be written", type=str, default='report')
+	parser.add_argument("--csv", help="Generate a raw CSV file instead of an excel sheet", action='store_true', default=False)
+	parser.add_argument("--calibration", help="If you are interested in camera distance, provide a calibration folder", type=checkDir)
+	parser.add_argument("--camera", help="The camera to be used for distance measurement", type=int)
+	parser.add_argument("--extract-num", help="Extract the number included in the filename", action='store_true')
+	parser.add_argument("--verbose", help="Show debug information", action='store_true')
+
+	args = parser.parse_args()
 	
-	if len(sys.argv) < 3:
-		print 'Please provide as an argument the directory where the OBJ-files are located and the radius to be used'
-		sys.exit(1)
-
-	shapes = []
-
-	for fileName in os.listdir(sys.argv[1]):
+	spheres = []
+	for fileName in os.listdir(args.folder):
 		if fileName.endswith('.obj'):
 			filePath = sys.argv[1] + '/' + fileName
-			print 'Loading mesh ' + fileName
-			shapes.append(Sphere(filePath, float(sys.argv[2])))
+			if args.verbose:
+				print 'Loading file ' + fileName
+			spheres.append(Sphere(filePath, args.radius, args.fit_radius))
 	
-	if len(shapes) == 0:
+	if len(spheres) == 0:
 		print 'No meshes found!'
 		sys.exit(0)
 
-	
-	measures = getMeasures(Sphere)
+	measures = getMeasures(args.calibration, args.camera, args.extract_num)
 
-	cameraFocusCalibrationPath = 'calibrations/20161222142605764/'
-	stereoCameras = getStereoCamerasFromCalibration(cameraFocusCalibrationPath)
-	cameraPosition = (stereoCameras[12].A.position + stereoCameras[12].B.position) / 2
-
-	baseLine = distance(stereoCameras[12].A.position, stereoCameras[12].B.position)
-
-	measures.append(Measure('Distance from cam', lambda x: distance(x.centerPoint,cameraPosition)))
-	#measures.append(Measure('Distance from cam', lambda x: cameraDistance(stereoCameras[7].A.position, stereoCameras[7].B.position, x.centerPoint)))
-	#measures.append(Measure('Theoretical depth error', lambda x: (distance(x.centerPoint,cameraPosition))**2 / (baseLine* stereoCameras[7].A.focalLength)))
-
-	results = []
-	for i, shape in enumerate(shapes):
-		result = []
+	sortColumn = -1
+	results = np.zeros((len(spheres),len(measures)))
+	for i, sphere in enumerate(spheres):
 		for j,measurement in enumerate(measures):
-			result.append(measurement.execute(shape))
-		results.append(result)
+			results[i,j] = measurement.execute(sphere)
+			if measurement.sort:
+				sortColumn = j
 
+	if sortColumn != -1:
+		sortedIndices = np.argsort(results.T[j])
+		results = results[sortedIndices]
+
+		spheres = [spheres[i] for i in sortedIndices]
+	results = results.tolist()
+		
+	for i, sphere in enumerate(spheres):
+		results[i] = [sphere.fileName] + results[i]
 	
-	writeReport('reportTest.xlsx', measures, results)
+	if args.output == 'report':
+		outputName = args.output + '.xlsx' if not args.csv else args.output + '.csv'
+	else:
+		outputName = args.output
+
+	if args.verbose:
+		print 'Writing to ' + os.path.abspath(outputName)
+	writeReport(outputName, measures, results, args.csv)
