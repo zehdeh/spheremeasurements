@@ -49,7 +49,7 @@ def getMeasures(calibration, cameraNo, extract_num):
 	measures = []
 
 	if extract_num:
-		extracted = Measure('Extracted', lambda x: extractNum(x.fileName), formatInteger=True)
+		extracted = Measure('Extracted', lambda x: extractNum(x.fileName), formatInteger=True, sort=True)
 		measures.append(extracted)
 
 	numVertices = Measure('Number of vertices', lambda x: len(x.vertices))
