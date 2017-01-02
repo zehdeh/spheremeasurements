@@ -54,7 +54,7 @@ if __name__ == '__main__':
 				sortColumn = j
 
 	if sortColumn != -1:
-		sortedIndices = np.argsort(results.T[j])
+		sortedIndices = np.argsort(results.T[sortColumn])
 		results = results[sortedIndices]
 
 		spheres = [spheres[i] for i in sortedIndices]
