@@ -23,9 +23,9 @@ class CurvaturesDemo():
 
 		cp, radius = fitSphere(vertices, radiusNominal)
 		errors = fittingErrorSphere(cp.tolist() + [radius], vertices) - radiusNominal
-		print 'Approximated radius: ' + str(radius)
+		#print 'Approximated radius: ' + str(radius)
 
-		print 'Fitting error (min / max / mean): ' + str(errors.min()) + ' / ' + str(errors.max()) + ' / ' + str(np.mean(errors))
+		#print 'Fitting error (min / max / mean): ' + str(errors.min()) + ' / ' + str(errors.max()) + ' / ' + str(np.mean(errors))
 
 
 		reader = vtk.vtkOBJReader()
@@ -69,7 +69,7 @@ class CurvaturesDemo():
 			partsvtk.InsertNextTuple([p])
 
 		polydata.GetPointData().SetScalars(scalars)
-		polydata2.GetPointData().SetScalars(partsvtk)
+		#polydata2.GetPointData().SetScalars(partsvtk)
 
 		# Now we have the sources, lets put them into a list.
 		sources = list()
@@ -96,16 +96,18 @@ class CurvaturesDemo():
 				curvatures[idx].SetCurvatureTypeToMean()
 				curvatures[idx].Update()
 				npcurv2 =  numpy_support.vtk_to_numpy(curvatures[idx].GetOutput().GetPointData().GetScalars())
+				for curv in npcurv2:
+					print curv
 
 				mean = np.mean(npcurv2)
 				std = np.std(npcurv2)
-				print 'Curvature (min / max / mean / total): ' + str(np.min(npcurv2)) + ' / ' + str(np.max(npcurv2)) + ' / ' + str(np.mean(npcurv2)) + ' / ' + str(np.sum(npcurv2))
+				#print 'Curvature (min / max / mean / total): ' + str(np.min(npcurv2)) + ' / ' + str(np.max(npcurv2)) + ' / ' + str(np.mean(npcurv2)) + ' / ' + str(np.sum(npcurv2))
 
 				min2 = mean - std
 				max2 = mean + std
 		fig = plt.figure()
 		xa = np.arange(-0.1, 0.1,0.001)
-		plt.hist(npcurv1, bins=xa)
+		#plt.hist(npcurv1, bins=xa)
 		plt.hist(npcurv2, bins=xa)
 		plt.gca().set_yscale('log')
 		plt.show()
@@ -164,6 +166,10 @@ class CurvaturesDemo():
 
 			actors.append(vtk.vtkActor())
 			actors[idx].SetMapper(mappers[idx])
+			if idx == 3:
+				actors[idx].GetProperty().SetEdgeVisibility(1)
+				actors[idx].GetProperty().SetEdgeColor(0.5, 0.5, 0.5);
+				actors[idx].GetProperty().SetLineWidth(0.5)
 
 			textmappers.append(vtk.vtkTextMapper())
 			textmappers[idx].SetInput(names[idx])
@@ -212,7 +218,7 @@ class CurvaturesDemo():
 				renderers[idx].AddActor(actors[idx])
 				renderers[idx].AddActor(textactors[idx])
 				renderers[idx].AddActor(scalarbars[idx])
-				renderers[idx].SetBackground(0.4,0.4,0.4)
+				renderers[idx].SetBackground(1.0,1.0,1.0)
 
 		interactor = vtk.vtkRenderWindowInteractor()
 		interactor.SetRenderWindow(renderWindow)
