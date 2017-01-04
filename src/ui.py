@@ -18,7 +18,7 @@ class QVTKRenderWindowInteractorWheelfix(QVTKRenderWindowInteractor):
 			self._Iren.MouseWheelBackwardEvent()
 
 class MainWindow(QtWidgets.QMainWindow):
-	def __init__(self, stereoCameras, gridSize, gridScale, errorMatrix, vectorField, confidenceMatrix):
+	def __init__(self, stereoCameras, gridSize, gridScale, errorMatrix, vectorField, confidenceMatrix, verbose=False):
 		QtWidgets.QMainWindow.__init__(self,parent=None)
 
 		self._gridSize = gridSize
@@ -27,6 +27,8 @@ class MainWindow(QtWidgets.QMainWindow):
 		self._errorMatrix = errorMatrix
 		self._vectorField = vectorField
 		self._confidenceMatrix = confidenceMatrix
+
+		self._verbose = verbose
 
 		self._mainVTKRenderer = vtk.vtkRenderer()
 		self._wireframeGridActor = None
@@ -67,7 +69,6 @@ class MainWindow(QtWidgets.QMainWindow):
 
 		camPositions = vtk.vtkPoints()
 		for i,stereoCamera in self._stereoCameras.iteritems():
-			print stereoCamera.name
 			self.addCamera(self._mainVTKRenderer,stereoCamera.A)
 			self.addCamera(self._mainVTKRenderer,stereoCamera.B)
 			self.addCamera(self._mainVTKRenderer,stereoCamera.C)
@@ -90,7 +91,7 @@ class MainWindow(QtWidgets.QMainWindow):
 		labelActor = vtk.vtkActor2D()
 		labelActor.SetMapper(labelMapper)
 
-		#self._mainVTKRenderer.AddActor(labelActor)
+		self._mainVTKRenderer.AddActor(labelActor)
 	def setupVolume(self):
 
 		alphaChannelFunc = vtk.vtkPiecewiseFunction()
@@ -99,17 +100,25 @@ class MainWindow(QtWidgets.QMainWindow):
 
 		mean = self._errorMatrix[np.nonzero(self._errorMatrix)].mean()
 		std = self._errorMatrix[np.nonzero(self._errorMatrix)].std()
-		upperBound = mean + std-0.02
+		upperBound = mean + std-0.015
 		lowerBound = 0
-		print upperBound
+		if self._verbose:
+			print 'Color range (' + str(lowerBound) +',' + str(upperBound) + ')'
 
 		colorFunc = vtk.vtkColorTransferFunction()
 		colorFunc.AddRGBPoint(lowerBound, 0.0, 0.0, 1.0)
-		colorFunc.AddRGBPoint((upperBound - lowerBound)/2, 0.0, 1.0, 0.0)
+		colorFunc.AddRGBPoint((upperBound - lowerBound)/2, 1.0, 1.0, 1.0)
 		colorFunc.AddRGBPoint(upperBound, 1.0, 0.0, 0.0)
 
 		scalarBar = vtk.vtkScalarBarActor()
 		scalarBar.SetLookupTable(colorFunc)
+		scalarBar.GetLabelTextProperty().ItalicOff()
+		scalarBar.GetLabelTextProperty().BoldOff()
+		scalarBar.SetNumberOfLabels(3)
+		scalarBar.AnnotationTextScalingOff()
+		scalarBar.SetMaximumWidthInPixels(100)
+		scalarBar.SetPosition(0.9, 0.15)
+
 
 		volumeProperty = vtk.vtkVolumeProperty()
 		volumeProperty.IndependentComponentsOff()
@@ -128,7 +137,7 @@ class MainWindow(QtWidgets.QMainWindow):
 		self.volume.SetProperty(volumeProperty)
 
 		self._mainVTKRenderer.AddVolume(self.volume)
-		#self._mainVTKRenderer.AddActor(scalarBar)
+		self._mainVTKRenderer.AddActor(scalarBar)
 
 	def switchDisplayMode(self,btn,mode):
 		if btn.isChecked():
@@ -180,7 +189,9 @@ class MainWindow(QtWidgets.QMainWindow):
 		polyData.SetPoints(points)
 		polyData.GetPointData().SetNormals(normalsArray)
 
-		arrowSource = vtk.vtkLineSource()
+		arrowSource = vtk.vtkArrowSource()
+		arrowSource.SetShaftResolution(3)
+		arrowSource.SetTipResolution(3)
 
 		glyph3D = vtk.vtkGlyph3D()
 		glyph3D.SetSourceConnection(arrowSource.GetOutputPort())
@@ -198,6 +209,7 @@ class MainWindow(QtWidgets.QMainWindow):
 		self.vectorActor.SetMapper(vectorMapper)
 		self.vectorActor.SetScale(self._gridScale[0], self._gridScale[1], self._gridScale[2])
 		self.vectorActor.SetOrigin(self._gridSize[0]/2., self._gridSize[1]/2.,self._gridSize[2]/2.)
+		self.vectorActor.GetProperty().SetRepresentationToWireframe()
 
 		self._mainVTKRenderer.AddActor(self.vectorActor)
 
@@ -305,31 +317,22 @@ class MainWindow(QtWidgets.QMainWindow):
 		planes = vtk.vtkPlanes()
 		planes.SetFrustumPlanes(planesArray)
 
-		frustum = vtk.vtkFrustumSource()
-		frustum.SetPlanes(planes)
-		#print frustum.GetOutput().GetBounds()
-		'''
-		cube = vtk.vtkCubeSource()
-		cube.SetXLength(100)
-		cube.SetYLength(100)
-		cube.SetZLength(100)
-		'''
+		outOfBounds = True
+		while outOfBounds:
+			frustum = vtk.vtkFrustumSource()
+			frustum.SetPlanes(planes)
 
-		mapper = vtk.vtkPolyDataMapper()
-		#mapper.SetInputConnection(cube.GetOutputPort())
-		mapper.SetInputConnection(frustum.GetOutputPort())
+			mapper = vtk.vtkPolyDataMapper()
+			mapper.SetInputConnection(frustum.GetOutputPort())
 
-		#transform = vtk.vtkPerspectiveTransform()
-		#transform.SetupCamera(camPosition[0], camPosition[1], camPosition[2], 0, 0, 0, 0, 1, 0)
+			#transform = vtk.vtkPerspectiveTransform()
+			#transform.SetupCamera(camPosition[0], camPosition[1], camPosition[2], 0, 0, 0, 0, 1, 0)
 
-		actor = vtk.vtkActor()
-		actor.SetMapper(mapper)
-		actor.GetProperty().SetColor(0.4,0.4,0.4)
-		actor.GetProperty().SetOpacity(0.5)
-		if -3000 > np.min(actor.GetBounds()) or 3000 < np.max(actor.GetBounds()):
-			print 'Warning: camera dropped because it was out of bounds'
-			print frustum.GetOutput().GetBounds()
-			return
+			actor = vtk.vtkActor()
+			actor.SetMapper(mapper)
+			actor.GetProperty().SetColor(0.4,0.4,0.4)
+			actor.GetProperty().SetOpacity(0.5)
+			outOfBounds = -3000 > np.min(actor.GetBounds()) or 3000 < np.max(actor.GetBounds())
 
 		#actor.SetUserMatrix(transform.GetMatrix())
 		#actor.SetPosition(camPosition[0], camPosition[1], camPosition[2])
@@ -351,28 +354,27 @@ class MainWindow(QtWidgets.QMainWindow):
 
 	def setupWireframeGrid(self, floorGrid=False):
 		grid = vtk.vtkRectilinearGrid()
- 
+
+		xArray = numpy_to_vtk(np.arange(self._gridSize[0])*self._gridScale[0], array_type=vtk.VTK_INT)
+		zArray = numpy_to_vtk(np.arange(self._gridSize[2])*self._gridScale[2], array_type=vtk.VTK_INT)
 		if floorGrid:
 			grid.SetDimensions(self._gridSize[0],1,self._gridSize[2]);
 	 
-			xArray = numpy_to_vtk(np.arange(self._gridSize[0])*self._gridScale[0], array_type=vtk.VTK_INT)
-			zArray = numpy_to_vtk(np.arange(self._gridSize[2])*self._gridScale[2], array_type=vtk.VTK_INT)
 
 			grid.SetXCoordinates(xArray);
 			grid.SetZCoordinates(zArray);
-		else:
-			grid.SetDimensions(self._gridSize[0],self._gridSize[1],self._gridSize[2]);
 
-			xArray = numpy_to_vtk(np.arange(self._gridSize[0])*self._gridScale[0], array_type=vtk.VTK_INT)
+		else:
 			yArray = numpy_to_vtk(np.arange(self._gridSize[1])*self._gridScale[1], array_type=vtk.VTK_INT)
-			zArray = numpy_to_vtk(np.arange(self._gridSize[2])*self._gridScale[2], array_type=vtk.VTK_INT)
+
+			grid.SetDimensions(self._gridSize[0],self._gridSize[1],self._gridSize[2]);
 
 			grid.SetXCoordinates(xArray);
 			grid.SetYCoordinates(yArray);
 			grid.SetZCoordinates(zArray);
 
-		rmapper = vtk.vtkDataSetMapper()
-		rmapper.SetInputData(grid)
+		mapper = vtk.vtkDataSetMapper()
+		mapper.SetInputData(grid)
 
 		self._wireframeGridActor = vtk.vtkActor()
 		self._wireframeGridActor.GetProperty().SetRepresentationToWireframe()
@@ -382,6 +384,6 @@ class MainWindow(QtWidgets.QMainWindow):
 			self._wireframeGridActor.SetPosition(-self._gridScale[0]*self._gridSize[0]/2,-self._gridScale[1]*self._gridSize[1]/2,-self._gridScale[2]*self._gridSize[1]/2)
 		self._wireframeGridActor.GetProperty().SetOpacity(0.5)
 		self._wireframeGridActor.GetProperty().SetColor(0.5,0.5,0.5)
-		self._wireframeGridActor.SetMapper(rmapper)
+		self._wireframeGridActor.SetMapper(mapper)
 
 		self._mainVTKRenderer.AddActor(self._wireframeGridActor)
