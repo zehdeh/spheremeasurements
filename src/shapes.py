@@ -55,7 +55,8 @@ class Sphere(object):
 		self._fileName = os.path.basename(filePath)
 		self._nominalRadius = nominalRadius
 
-		self._vertices, self._faces, self._normals, self.polyData, self._reader = loadOBJviaVTK(filePath)
+		self._vertices, self._faces, self._normals = loadOBJ(filePath)
+		self.polyData = getVTKMesh(self._vertices, self._faces, self._normals)
 		self._curvature = None
 
 		centerPoint, fittedRadius = fitSphere(self._vertices, nominalRadius, fitRadius)
@@ -70,7 +71,7 @@ class Sphere(object):
 	@property
 	def curvature(self):
 		if self._curvature is None:
-			self._curvature = calculateMeanCurvature(self.polyData, self._reader)
+			self._curvature = calculateMeanCurvature(self.polyData)
 		return self._curvature
 	@property
 	def fileName(self):
