@@ -1,12 +1,8 @@
-import abc
 import os
 import numpy as np
-from scipy.optimize import leastsq, least_squares
 from opendr.serialization import load_mesh
-from mpl_toolkits.mplot3d.art3d import Poly3DCollection
-from opendr.geometry import GaussianCurvature
 from src.fitting import distance, calculateMeanCurvature, fitSphere
-from src.OBJIO import loadOBJviaVTK, loadOBJ, getVTKMesh
+from src.OBJIO import loadOBJ, getVTKMesh
 
 def randomPartition(n, nData):
 	allIdxs = np.arange(nData)
