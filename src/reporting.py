@@ -2,6 +2,7 @@ from openpyxl import Workbook
 from openpyxl.formatting.rule import ColorScaleRule
 from openpyxl.utils import (_get_column_letter)
 import csv
+import numpy as np
 
 def writeReport(filePath, measures, results, write_csv):
 	wb = Workbook()
@@ -39,3 +40,13 @@ def writeReport(filePath, measures, results, write_csv):
 	else:
 		wb.save(filePath)
 
+def writeCSV(filePath, rows):
+	with open(filePath, 'wb') as f:
+		c = csv.writer(f)
+		for i,r in enumerate(rows):
+			row = [cell for cell in r]
+			for i, val in enumerate(row):
+				if type(val) == float or type(val) == np.float64:
+					row[i] = "%.3f" % val
+					print row[i]
+			c.writerow(row)
