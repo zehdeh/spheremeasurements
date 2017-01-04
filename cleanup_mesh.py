@@ -5,9 +5,10 @@ import os
 import numpy as np
 from math import floor, ceil
 import matplotlib.pyplot as plt
-from src.OBJIO import loadOBJ, writeOBJ
+from src.OBJIO import loadOBJviaVTK, writeOBJ, getVTKMesh
 from opendr.topology import get_vert_connectivity
 from scipy.sparse.csgraph import connected_components
+from src.fitting import calculateMeanCurvature
 import scipy
 import networkx as nx
 
@@ -111,17 +112,17 @@ def pointPlaneDistance(point, vertices):
 
 def processMesh(fileName, folderPath):
 		print 'Processing ' + fileName + '...'
-		vertices, faces, normals = loadOBJ(folderPath + '/' + fileName)
+		vertices, faces, normals, polyData, reader = loadOBJviaVTK(folderPath + '/' + fileName)
 
 		vertices, faces, normals = removeIsolatedVertices(vertices, faces, normals)
 
 		radiusNominal = 80.065605
 
 		sphereCenter = houghTransformation(vertices, faces, normals, radiusNominal)
-		condition = lambda x: np.linalg.norm(sphereCenter - x, axis=1) < (radiusNominal+radiusNominal*0.025)
+		condition = lambda x: np.linalg.norm(sphereCenter - x, axis=1) < (radiusNominal*1.025)
 		vertices, faces, normals = removeVerticesByCondition(condition, vertices, faces, normals)
 
-		vertices, faces, normals = removeSmallIsolatedComponents(vertices, faces, normals)
+		#vertices, faces, normals = removeSmallIsolatedComponents(vertices, faces, normals)
 
 		if sys.argv[2].endswith('.obj'):
 			writeOBJ(sys.argv[2], vertices, faces, normals)
