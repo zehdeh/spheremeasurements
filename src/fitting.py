@@ -47,19 +47,16 @@ def fitPlane(vertices, p0=[0.1,0.1,0.1,0.1]):
 	res,flag = leastsq(residuals, p0, (None,vertices))
 	return res
 
-def calculateCurvature(polyData, ctype=0):
+def calculateCurvature(polyData, reader, ctype=0):
 	import vtk
 	from vtk.util import numpy_support
-	cleaner = vtk.vtkCleanPolyData()
-	cleaner.SetInputData(polyData)
-	cleaner.Update()
 
 	curvature = vtk.vtkCurvatures()
 	if ctype == 0:
 		curvature.SetCurvatureTypeToGaussian()
 	else:
 		curvature.SetCurvatureTypeToMean()
-	curvature.SetInputConnection(cleaner.GetOutputPort())
+	curvature.SetInputConnection(reader.GetOutputPort())
 	curvature.Update()
 
 	npcurv =  numpy_support.vtk_to_numpy(curvature.GetOutput().GetPointData().GetScalars())
@@ -67,8 +64,8 @@ def calculateCurvature(polyData, ctype=0):
 	return npcurv
 
 
-def calculateMeanCurvature(polyData):
-	return calculateCurvature(polyData, ctype=1)
+def calculateMeanCurvature(polyData, reader):
+	return calculateCurvature(polyData, reader, ctype=1)
 
 def calculateGaussianCurvature(polyData):
 	return calculateCurvature(polyData, ctype=0)

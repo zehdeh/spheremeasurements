@@ -55,7 +55,7 @@ class Sphere(object):
 		self._fileName = os.path.basename(filePath)
 		self._nominalRadius = nominalRadius
 
-		self._vertices, self._faces, self._normals, self.polyData = loadOBJviaVTK(filePath)
+		self._vertices, self._faces, self._normals, self.polyData, self._reader = loadOBJviaVTK(filePath)
 		self._curvature = None
 
 		centerPoint, fittedRadius = fitSphere(self._vertices, nominalRadius, fitRadius)
@@ -70,7 +70,7 @@ class Sphere(object):
 	@property
 	def curvature(self):
 		if self._curvature is None:
-			self._curvature = calculateMeanCurvature(self.polyData)
+			self._curvature = calculateMeanCurvature(self.polyData, self._reader)
 		return self._curvature
 	@property
 	def fileName(self):
@@ -101,9 +101,10 @@ class Sphere(object):
 		ybounds = [np.min(self._vertices[1]),np.max(self._vertices[1])]
 		zbounds = [np.min(self._vertices[2]),np.max(self._vertices[2])]
 		return [xbounds,ybounds,zbounds]
-	def fittingError(self,center, vertices):
-		x0,y0,z0,R = center
-		return (self._fittedRadius - distance([x0,y0,z0],vertices.T))
+	def relativeFittingError(self):
+		return self.fittingError() / self._vertices.shape[0]
+	def fittingError(self):
+		return (self._fittedRadius - distance(self._centerPoint,self._vertices.T))
 	def totalFittingError(self):
 		return np.sum(np.fabs(self._fittedRadius - distance(self._vertices,self._centerPoint)))
 		#return np.sum(np.abs(radiusErrorFunction(self.centerPoint.tolist() + [self.fittedRadius], self._vertices)))/len(self._vertices.T)
