@@ -5,6 +5,7 @@ import sys
 import numpy as np
 import matplotlib.pyplot as plt
 from src.OBJIO import loadOBJ, loadOBJviaVTK
+from src.shapes import Sphere
 from src.fitting import fitSphere, fittingErrorSphere, distance, calculateMeanCurvature
 from src.calibration import getStereoCamerasFromCalibration, StereoCamera, cameraDistance
 from scipy.optimize import least_squares
@@ -26,18 +27,18 @@ if __name__ == '__main__':
 	i = 0
 	dist = []
 	fittingErrors = []
+	curvatureStd = []
 	zeroPosition = 0
 	for fileName in os.listdir(cameraFocusFolderPath):
 		if fileName.endswith('.obj'):
 			filePath = os.path.join(cameraFocusFolderPath, fileName)
 
-			vertices, faces, normals = loadOBJ(filePath)
-
-			centerPoint, fittedRadius = fitSphere(vertices, nominalRadius, False)
-			fittingErrors.append(np.sum(np.fabs(nominalRadius - distance(vertices.T, centerPoint)))/vertices.shape[0])
+			sphere = Sphere(filePath, nominalRadius, False)
+			fittingErrors.append(np.sum(np.abs(sphere.relativeFittingError())))
+			curvatureStd.append(sphere.curvature.std())
 
 			fileName = fileName[:-11]
-			dist.append(float(distance(cameraPosition, centerPoint)))
+			dist.append(float(distance(cameraPosition, sphere.centerPoint)))
 
 			distanceStr = fileName[fileName.find('_')+1:]
 			if distanceStr == '0':
@@ -46,6 +47,7 @@ if __name__ == '__main__':
 	sortedIndices = np.argsort(dist)
 	dist = np.asarray(dist)[sortedIndices]
 	fittingErrors = np.asarray(fittingErrors)[sortedIndices]
+	curvatureStd = np.asarray(curvatureStd)[sortedIndices]
 
 	polyCoefficients = np.polyfit(dist, fittingErrors, 3)
 	fittedPolynomial = np.poly1d(polyCoefficients)
@@ -53,6 +55,8 @@ if __name__ == '__main__':
 	fig = plt.figure(1)
 
 	plt.plot(dist, fittingErrors)
+	plt.plot(dist, curvatureStd)
+	plt.plot([zeroPosition, zeroPosition],[0,0.15])
 	plt.plot(dist, fittedPolynomial(dist), color='r')
 	plt.show()
 	originalScale = dist
@@ -79,23 +83,24 @@ if __name__ == '__main__':
 		print 'Continuing here!'
 
 		fittingErrors = []
+		curvatureStd = []
 		dist = []
 
 		for fileName in os.listdir(cameraFolderName):
 			if fileName.endswith('.obj'):
 				filePath = os.path.join(cameraFolderName, fileName)
 				#vertices, faces, normals = loadOBJ(filePath)
+				sphere = Sphere(filePath, nominalRadius, False)
 
-				vertices, faces, normals, polyMesh = loadOBJviaVTK(filePath)
-
-				centerPoint, fittedRadius = fitSphere(vertices, nominalRadius, False)
-				fittingErrors.append(np.sum(np.fabs(nominalRadius - distance(vertices.T, centerPoint)))/vertices.shape[0])
+				fittingErrors.append(np.sum(np.abs(sphere.relativeFittingError())))
+				curvatureStd.append(sphere.curvature.std())
 				
-				dist.append(float(distance(centerPoint, cameraPosition)))
+				dist.append(float(distance(sphere.centerPoint, cameraPosition)))
 
 		sortedIndices = np.argsort(dist)
 		dist = np.array(dist)[sortedIndices]
 		fittingErrors = np.array(fittingErrors)[sortedIndices]
+		curvatureStd = np.array(curvatureStd)[sortedIndices]
 
 		params0 = [originalScale[0], originalScale[-1], 1, 0]
 		res = least_squares(fitPolynomial, params0, bounds=([originalScale[0], originalScale[0], 0, 0], [originalScale[-1], originalScale[-1], 100, 100]),args=(fittingErrors, fittedPolynomial))
@@ -116,9 +121,10 @@ if __name__ == '__main__':
 		print 'x0a: ' + str(xAbs)
 
 		fig2 = plt.figure(2)
-		plt.plot(dist, fittingErrors)
-		plt.plot(dist, fittedPolynomial(polyX)*yScale + yShift)
-		plt.plot([xAbs,xAbs], [0,5])
+		#plt.plot(dist, fittingErrors)
+		plt.plot(dist, curvatureStd)
+		#plt.plot(dist, fittedPolynomial(polyX)*yScale + yShift)
+		#plt.plot([xAbs,xAbs], [0,5])
 		plt.show()
 
 		visibilityMatrixFileName = os.path.join(cameraFocusCalibrationPath,\
@@ -139,7 +145,7 @@ if __name__ == '__main__':
 						y = (j*gridScale[1]) - (gridSize[1]*gridScale[1]/2) + gridScale[1]/2
 						z = (k*gridScale[2]) - (gridSize[2]*gridScale[2]/2) + gridScale[2]/2
 
-						print distance([x,y,z], cameraPosition)
+						#print distance([x,y,z], cameraPosition)
 		#print len(np.nonzero(stereoCamera.visibilityMatrix))
 		#	print i, j, k
 
