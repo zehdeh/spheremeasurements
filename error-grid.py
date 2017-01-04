@@ -10,7 +10,7 @@ from src.ui import MainWindow
 from src.calibration import getStereoCamerasFromCalibration, StereoCamera
 from scipy.ndimage.filters import convolve
 from src.shapes import Sphere
-from src.grid import generateErrorGrid, generateVectorField
+from src.grid import generateCurvatureGrid, generateVectorField
 
 def checkDir(directory):
 	if not os.path.isdir(directory):
@@ -55,7 +55,7 @@ if __name__ == '__main__':
 
 		if args.verbose:
 			print 'Generating error matrix...'
-		errorMatrix, nMatrix = generateErrorGrid(gridSize, gridScale, spheres)
+		errorMatrix, nMatrix = generateCurvatureGrid(gridSize, gridScale, spheres, args.verbose)
 		if args.verbose:
 			print 'Generating vector field...'
 		vectorField = generateVectorField(gridSize, gridScale, spheres, nMatrix, errorMatrix)
@@ -75,5 +75,5 @@ if __name__ == '__main__':
 	calibrationFolderPath = sys.argv[2]
 	stereoCameras = getStereoCamerasFromCalibration(calibrationFolderPath)
 	
-	window = MainWindow(stereoCameras, gridSize, gridScale, errorMatrix, vectorField, confidenceMatrix)
+	window = MainWindow(stereoCameras, gridSize, gridScale, errorMatrix, vectorField, confidenceMatrix, args.verbose)
 	sys.exit(app.exec_())
