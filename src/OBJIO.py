@@ -15,6 +15,7 @@ def loadOBJviaVTK(fileName):
 	locale.setlocale(locale.LC_NUMERIC, 'C')
 	reader = vtk.vtkOBJReader()
 	reader.SetFileName(fileName)
+	
 	reader.Update()
 
 	#cleaner = vtk.vtkCleanPolyData()
@@ -36,7 +37,7 @@ def loadOBJviaVTK(fileName):
 	if normals is not None:
 		npNormals = numpy_support.vtk_to_numpy(normals)
 
-	return vertices, faces, npNormals, polyData
+	return vertices, faces, npNormals, polyData, reader
 
 def getVTKMesh(vertices, faces, normals):
 	points = vtk.vtkPoints()
