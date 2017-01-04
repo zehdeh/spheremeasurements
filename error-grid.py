@@ -28,7 +28,7 @@ if __name__ == '__main__':
 	app = QApplication(sys.argv)
 
 	gridSize = [50,50,50]
-	scannerVolumeSize = [3000,3000,3000]
+	scannerVolumeSize = [2400,3000,2400]
 	gridScale = [scannerVolumeSize[0] / gridSize[0], scannerVolumeSize[1] / gridSize[1], scannerVolumeSize[2] / gridSize[2]]
 
 	vectorCacheFileName = os.path.join(args.folder,'vectorField' + '_' + str(gridSize[0]) + '_' + str(gridSize[1]) + '_' + str(gridSize[2]))
@@ -64,32 +64,16 @@ if __name__ == '__main__':
 		np.save(vectorCacheFileName, vectorField)
 		np.save(nMatrixCacheFileName, nMatrix)
 
-
-	if args.verbose:
-		print 'Applying convolution...'
-	originalErrorMatrix = errorMatrix
 	confidenceMatrix = np.zeros((gridSize[0], gridSize[1], gridSize[2]), dtype=np.float)
-	confidenceMatrix[np.nonzero(nMatrix)] = 1
-	for i in range(0):
-		sizeX = 3
-		boxFilter = np.zeros((sizeX,sizeX,sizeX))
-		boxFilter[:,:,:] = (1./float(sizeX**3))
-		errorMatrix = convolve(errorMatrix, boxFilter)
-		confidenceMatrix = convolve(confidenceMatrix, boxFilter)
-		errorMatrix[np.nonzero(nMatrix)] = originalErrorMatrix[np.nonzero(nMatrix)]
+	confidenceMatrix[np.nonzero(nMatrix)] = nMatrix[np.nonzero(nMatrix)]
 
-	#confidenceMatrix[np.nonzero(nMatrix)] = 1
 	confidenceMatrix = confidenceMatrix/confidenceMatrix.max()
-	if args.verbose:
-		print 'Finished applying convolution'
 
 	errorMatrix[np.nonzero(nMatrix)] = errorMatrix[np.nonzero(nMatrix)] / errorMatrix.max()
+	vectorField *= 10
 
 	calibrationFolderPath = sys.argv[2]
 	stereoCameras = getStereoCamerasFromCalibration(calibrationFolderPath)
-
-	for l,stereoCamera in stereoCameras.iteritems():
-		stereoCamera.visibilityMatrix = np.zeros((gridSize[0], gridSize[1], gridSize[2]), dtype=np.uint8)
 	
 	window = MainWindow(stereoCameras, gridSize, gridScale, errorMatrix, vectorField, confidenceMatrix)
 	sys.exit(app.exec_())

@@ -3,7 +3,8 @@ from math import sqrt
 from PyQt5 import QtGui, QtCore, QtWidgets
 from vtk.qt.QVTKRenderWindowInteractor import QVTKRenderWindowInteractor
 from vtk.util.vtkImageImportFromArray import vtkImageImportFromArray
-from vtk.util.numpy_support import numpy_to_vtk
+from vtk.util.numpy_support import numpy_to_vtk, vtk_to_numpy
+from scipy.ndimage.filters import convolve
 from src.utils import rodrigues
 import cv2
 
@@ -25,6 +26,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
 		self._errorMatrix = errorMatrix
 		self._vectorField = vectorField
+		self._confidenceMatrix = confidenceMatrix
 
 		self._mainVTKRenderer = vtk.vtkRenderer()
 		self._wireframeGridActor = None
@@ -34,7 +36,6 @@ class MainWindow(QtWidgets.QMainWindow):
 
 		self.vtkCameras = []
 		self.itemCameraMM = dict()
-		camPositions = vtk.vtkPoints()
 
 		self._stereoCameras = stereoCameras
 
@@ -45,24 +46,32 @@ class MainWindow(QtWidgets.QMainWindow):
 		interactorStyle = vtk.vtkInteractorStyleTerrain()
 		self._interactor.SetInteractorStyle(interactorStyle)
 		
-		self.confidenceMatrix = confidenceMatrix
 		self.errorGridViewer.GetRenderWindow().AddRenderer(self._mainVTKRenderer)
 		self.setupVolume()
 		self.setupErrorGrid()
 		self.setupVectorField()
 		tabWidget.addTab(self.errorGridViewer, 'Camera Visibility')
 
+		axes = vtk.vtkAxesActor()
+		axes.SetTotalLength(1000,1000,1000)
+		self._mainVTKRenderer.AddActor(axes)
+
 		self.setCentralWidget(tabWidget)
 		self._interactor.Initialize()
 		self.show()
+
+		self.setupCameras()
 	def setupCameras(self):
 		labels = vtk.vtkStringArray()
 		labels.SetName('label')
 
+		camPositions = vtk.vtkPoints()
 		for i,stereoCamera in self._stereoCameras.iteritems():
+			print stereoCamera.name
 			self.addCamera(self._mainVTKRenderer,stereoCamera.A)
 			self.addCamera(self._mainVTKRenderer,stereoCamera.B)
-			camPosition = self.addCamera(self._mainVTKRenderer,stereoCamera.C)
+			self.addCamera(self._mainVTKRenderer,stereoCamera.C)
+			camPosition = np.linalg.inv(stereoCamera.C.R).dot(stereoCamera.C.position)
 
 			labels.InsertNextValue(str(stereoCamera.name))
 			camPositions.InsertNextPoint(camPosition[0], camPosition[1], camPosition[2])
@@ -81,24 +90,32 @@ class MainWindow(QtWidgets.QMainWindow):
 		labelActor = vtk.vtkActor2D()
 		labelActor.SetMapper(labelMapper)
 
-		self._mainVTKRenderer.AddActor(labelActor)
+		#self._mainVTKRenderer.AddActor(labelActor)
 	def setupVolume(self):
 
 		alphaChannelFunc = vtk.vtkPiecewiseFunction()
 		alphaChannelFunc.AddPoint(0.0, 0.0)
-		alphaChannelFunc.AddPoint(0.8, 1.0)
+		alphaChannelFunc.AddPoint(1.0, 0.7)
+
+		mean = self._errorMatrix[np.nonzero(self._errorMatrix)].mean()
+		std = self._errorMatrix[np.nonzero(self._errorMatrix)].std()
+		upperBound = mean + std-0.02
+		lowerBound = 0
+		print upperBound
 
 		colorFunc = vtk.vtkColorTransferFunction()
-		colorFunc.AddRGBPoint(0.0, 1.0, 1.0, 1.0)
-		colorFunc.AddRGBPoint(0.01, 0.706, 0.016, 0.150)
+		colorFunc.AddRGBPoint(lowerBound, 0.0, 0.0, 1.0)
+		colorFunc.AddRGBPoint((upperBound - lowerBound)/2, 0.0, 1.0, 0.0)
+		colorFunc.AddRGBPoint(upperBound, 1.0, 0.0, 0.0)
 
 		scalarBar = vtk.vtkScalarBarActor()
 		scalarBar.SetLookupTable(colorFunc)
 
 		volumeProperty = vtk.vtkVolumeProperty()
 		volumeProperty.IndependentComponentsOff()
-		volumeProperty.SetColor(0,colorFunc)
+		volumeProperty.SetColor(colorFunc)
 		volumeProperty.SetScalarOpacity(alphaChannelFunc)
+		volumeProperty.ShadeOff()
 
 		self.volumeMapper = vtk.vtkSmartVolumeMapper()
 
@@ -110,19 +127,9 @@ class MainWindow(QtWidgets.QMainWindow):
 		self.volume.SetMapper(self.volumeMapper)
 		self.volume.SetProperty(volumeProperty)
 
-
 		self._mainVTKRenderer.AddVolume(self.volume)
 		#self._mainVTKRenderer.AddActor(scalarBar)
 
-	def onCameraToggle(self, item):
-		self.itemCameraMM[item].visible = (item.checkState() == 2)
-		self.rebuildCoverage()
-		self.imageImport.Update()
-		self.gaussianFilter.Update()
-		self.volumeMapper.SetInputConnection(self.imageImport.GetOutputPort())
-		self.volumeMapper.Update()
-		self.errorGridViewer.GetRenderWindow().Render()
-		self._mainVTKRenderer.ResetCamera()
 	def switchDisplayMode(self,btn,mode):
 		if btn.isChecked():
 			if mode == 0:
@@ -132,27 +139,19 @@ class MainWindow(QtWidgets.QMainWindow):
 				self.volume.VisibilityOff()
 				self.vectorActor.VisibilityOn()
 			self._mainVTKRenderer.GetRenderWindow().Render()
-	def rebuildCoverage(self):
-		alphaValues = np.zeros((self._gridSize[0], self._gridSize[1], self._gridSize[2]), dtype=np.float)
-		colorValues = np.zeros((self._gridSize[0], self._gridSize[1], self._gridSize[2]), dtype=np.float)
-
-		noCameras = float(len(self._stereoCameras))
-		for i,stereoCamera in self._stereoCameras.iteritems():
-			if stereoCamera.visible:
-				pass
-				#alphaValues += stereoCamera.visibilityMatrix / noCameras
-		#alphaValues[:,:,:] = 1.0
-		
-		#colorValues[:,:,:] = -1.0
-		
+	def rebuildCoverage(self, convolutionPasses = 0, growConvolution = True):
 		colorValues = self._errorMatrix
-			#colorValues = 255
-			#alphaValues += 10*errorMatrix
-		#colorValues = colorValues/np.max(colorValues)
+		alphaValues = self._confidenceMatrix
 
-		alphaValues = np.absolute(colorValues)
-		#alphaValues = np.abs(colorValues)
-		#alphaValues = self.confidenceMatrix
+		for i in range(convolutionPasses):
+			sizeX = 3+i if growConvolution else 3
+			boxFilter = np.zeros((sizeX,sizeX,sizeX))
+			boxFilter[:,:,:] = (1./float(sizeX**3))
+
+			colorValues = convolve(colorValues, boxFilter)
+			alphaValues = convolve(alphaValues, boxFilter)
+
+			colorValues[np.nonzero(self._errorMatrix)] = self._errorMatrix[np.nonzero(self._errorMatrix)]
 
 		alphaImporter = vtkImageImportFromArray()
 		alphaImporter.SetArray(alphaValues)
@@ -203,8 +202,7 @@ class MainWindow(QtWidgets.QMainWindow):
 		self._mainVTKRenderer.AddActor(self.vectorActor)
 
 	def setupErrorGrid(self):
-			#errorGrid[0:(gridSize[0]-1), gridSize[1]-1-i,0:(gridSize[2]-1)] = i
-		self.rebuildCoverage()
+		self.rebuildCoverage(2,True)
 		self.volumeMapper.SetInputConnection(self.imageImport.GetOutputPort())
 
 	def setupSettings(self):
@@ -246,6 +244,31 @@ class MainWindow(QtWidgets.QMainWindow):
 
 		grid.addWidget(wireFrameGridGroup, 2, 0)
 
+		convolutionGroup = QtWidgets.QGroupBox('Convolution')
+		convolutionPassesLabel = QtWidgets.QLabel('Passes:', convolutionGroup)
+		convolutionPassesSpinner = QtWidgets.QSpinBox(convolutionGroup)
+		convolutionPassesSpinner.setMinimum(0)
+		convolutionPassesSpinner.setValue(2)
+		convolutionGrowButton = QtWidgets.QCheckBox('Grow', convolutionGroup)
+		convolutionGrowButton.setCheckState(2)
+		convolutionApplyButton = QtWidgets.QPushButton('Apply', convolutionGroup)
+
+		def applyConvolution(passes, grow):
+			self.rebuildCoverage(passes,grow)
+			self.volumeMapper.SetInputConnection(self.imageImport.GetOutputPort())
+			self.volumeMapper.Update()
+			self.errorGridViewer.GetRenderWindow().Render()
+		convolutionApplyButton.clicked.connect(lambda: applyConvolution(convolutionPassesSpinner.value(), convolutionGrowButton.checkState() == 2))
+
+		vbox = QtWidgets.QHBoxLayout()
+		vbox.addWidget(convolutionPassesLabel)
+		vbox.addWidget(convolutionPassesSpinner)
+		vbox.addWidget(convolutionGrowButton)
+		vbox.addWidget(convolutionApplyButton)
+		convolutionGroup.setLayout(vbox)
+
+		grid.addWidget(convolutionGroup, 3, 0)
+
 		self.settingsPanel.setLayout(grid)
 		self.addDockWidget(QtCore.Qt.BottomDockWidgetArea, self.settingsDock)
 
@@ -278,15 +301,13 @@ class MainWindow(QtWidgets.QMainWindow):
 		planesArray = [0 for i in range(24)]
 
 		vtkCamera.GetFrustumPlanes(camera.w/camera.h, planesArray)
-		#print 'planes:'
-		#print np.min(planesArray)
-		#print np.max(planesArray)
 
 		planes = vtk.vtkPlanes()
 		planes.SetFrustumPlanes(planesArray)
 
 		frustum = vtk.vtkFrustumSource()
 		frustum.SetPlanes(planes)
+		#print frustum.GetOutput().GetBounds()
 		'''
 		cube = vtk.vtkCubeSource()
 		cube.SetXLength(100)
@@ -305,15 +326,11 @@ class MainWindow(QtWidgets.QMainWindow):
 		actor.SetMapper(mapper)
 		actor.GetProperty().SetColor(0.4,0.4,0.4)
 		actor.GetProperty().SetOpacity(0.5)
-		#print 'Bounds:'
-		#print np.min(actor.GetBounds())
-		#print np.max(actor.GetBounds())
+		if -3000 > np.min(actor.GetBounds()) or 3000 < np.max(actor.GetBounds()):
+			print 'Warning: camera dropped because it was out of bounds'
+			print frustum.GetOutput().GetBounds()
+			return
 
-		'''
-		print actor.GetXRange()
-		print actor.GetYRange()
-		print actor.GetZRange()
-		'''
 		#actor.SetUserMatrix(transform.GetMatrix())
 		#actor.SetPosition(camPosition[0], camPosition[1], camPosition[2])
 		actor.GetProperty().SetRepresentationToWireframe()
@@ -322,7 +339,6 @@ class MainWindow(QtWidgets.QMainWindow):
 		self.cameraActors.append(actor)
 		self.vtkCameras.append(vtkCamera)
 
-		return camPosition
 	def toggleWireFrameGrid(self, mode):
 		if self._wireframeGridActor is not None:
 			self._mainVTKRenderer.RemoveActor(self._wireframeGridActor)

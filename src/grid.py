@@ -50,7 +50,7 @@ def generateVectorField(gridSize, gridScale, spheres, nMatrix, errorMatrix=None)
 		vectorField = np.zeros((gridSize[0], gridSize[1], gridSize[2]), dtype=(np.float,3))
 		for vertex,normal in zip(sphere.vertices, sphere.normals):
 			mag = np.linalg.norm(normal)
-			if mag == 0: 
+			if mag == 0:
 				continue
 			i,j,k = getGridIndices(gridSize, gridScale, vertex)
 
