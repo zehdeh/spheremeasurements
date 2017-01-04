@@ -64,7 +64,6 @@ def getSphericalCoordinates(vertices, centerPoint):
 	r = np.sqrt(vertices.T[0]**2 + vertices.T[1]**2 + vertices.T[2]**2)
 	theta = np.arccos(vertices.T[2]/r)
 	phi = np.arctan2(vertices.T[1],vertices.T[0]) + np.pi
-	print r.min(), r.max()
 	return np.array([phi, theta, r])
 
 def getCartesianCoordinates(theta, phi, r, centerPoint):
