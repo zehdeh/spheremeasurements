@@ -10,19 +10,16 @@ from src.OBJIO import loadOBJ, loadOBJviaVTK, getVTKMesh
 import matplotlib.pyplot as plt
 from pymetis import part_graph
 from opendr.topology import get_vert_connectivity
+from src.shapes import Sphere
 
 
  
 class CurvaturesDemo():
-	def CurvaturesDemo(self):
-		#vertices, faces, normals = loadOBJ(sys.argv[1])
-		vertices, faces, normals, polyData = loadOBJviaVTK(sys.argv[1])
-		#polyData = getVTKMesh(vertices, faces, normals)
-
-		radiusNominal = float(sys.argv[2])
-
-		cp, radius = fitSphere(vertices, radiusNominal)
-		errors = fittingErrorSphere(cp.tolist() + [radius], vertices) - radiusNominal
+	def CurvaturesDemo(self, filePath, nominalRadius):
+		sphere = Sphere(filePath, nominalRadius, False)
+		errors = np.abs(sphere.fittingError())
+		print sphere.curvature.max()
+		print sphere.curvature.argmax()
 		#print 'Approximated radius: ' + str(radius)
 
 		#print 'Fitting error (min / max / mean): ' + str(errors.min()) + ' / ' + str(errors.max()) + ' / ' + str(np.mean(errors))
@@ -30,10 +27,7 @@ class CurvaturesDemo():
 
 		reader = vtk.vtkOBJReader()
 		reader.SetFileName(sys.argv[1])
-
-
 		reader.Update()
-		polydata = reader.GetOutput()
 
 		# Colour transfer function.
 		ctf = vtk.vtkColorTransferFunction()
@@ -56,27 +50,12 @@ class CurvaturesDemo():
 		min3 = mean - std
 		max3 = mean + std
 
-		polydata2 = vtk.vtkPolyData()
-		polydata2.DeepCopy(polydata)
-
-		cnct = get_vert_connectivity(vertices, faces)
-		nbrs = [np.nonzero(np.array(cnct[:,i].todense()))[0] for i in range(cnct.shape[1])]
-		edgeCuts, parts = part_graph(5,nbrs)
-
-		partsvtk = vtk.vtkUnsignedCharArray()
-		partsvtk.SetNumberOfComponents(1)
-		for p in parts:
-			partsvtk.InsertNextTuple([p])
-
-		polydata.GetPointData().SetScalars(scalars)
-		#polydata2.GetPointData().SetScalars(partsvtk)
-
 		# Now we have the sources, lets put them into a list.
 		sources = list()
 		sources.append(reader)
 		sources.append(reader)
-		sources.append(polydata)
-		sources.append(polydata2)
+		sources.append(sphere.polyData)
+		sources.append(sphere.polyData)
 
 		curvatures = list()        
 		for idx in range(2):
@@ -95,9 +74,7 @@ class CurvaturesDemo():
 			else:
 				curvatures[idx].SetCurvatureTypeToMean()
 				curvatures[idx].Update()
-				npcurv2 =  numpy_support.vtk_to_numpy(curvatures[idx].GetOutput().GetPointData().GetScalars())
-				for curv in npcurv2:
-					print curv
+				npcurv2 =  np.abs(numpy_support.vtk_to_numpy(curvatures[idx].GetOutput().GetPointData().GetScalars()))
 
 				mean = np.mean(npcurv2)
 				std = np.std(npcurv2)
@@ -108,7 +85,10 @@ class CurvaturesDemo():
 		fig = plt.figure()
 		xa = np.arange(-0.1, 0.1,0.001)
 		#plt.hist(npcurv1, bins=xa)
-		plt.hist(npcurv2, bins=xa)
+		plt.hist(npcurv2/npcurv2.max(), bins=xa)
+		print 'By vtk:'
+		print npcurv2.max()
+		print npcurv2.argmax()
 		plt.gca().set_yscale('log')
 		plt.show()
 
@@ -125,8 +105,6 @@ class CurvaturesDemo():
 				lut[idx].SetRange(min2, max2)
 			if idx == 2:
 				lut[idx].SetRange(min3, max3)
-			if idx == 3:
-				lut[idx].SetRange(np.min(parts), np.max(parts))
 			lut[idx].Build()
 
 
@@ -218,7 +196,7 @@ class CurvaturesDemo():
 				renderers[idx].AddActor(actors[idx])
 				renderers[idx].AddActor(textactors[idx])
 				renderers[idx].AddActor(scalarbars[idx])
-				renderers[idx].SetBackground(1.0,1.0,1.0)
+				renderers[idx].SetBackground(0.5,0.5,0.5)
 
 		interactor = vtk.vtkRenderWindowInteractor()
 		interactor.SetRenderWindow(renderWindow)
@@ -228,5 +206,7 @@ class CurvaturesDemo():
 		interactor.Start()
 
 if __name__ == "__main__":
+	nominalRadius = float(sys.argv[2])
+
 	po = CurvaturesDemo()
-	po.CurvaturesDemo()
+	po.CurvaturesDemo(sys.argv[1], nominalRadius)
