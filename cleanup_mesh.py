@@ -5,12 +5,13 @@ import os
 import numpy as np
 from math import floor, ceil
 import matplotlib.pyplot as plt
-from src.OBJIO import loadOBJviaVTK, writeOBJ, getVTKMesh
+from src.OBJIO import loadOBJ, writeOBJ
 from opendr.topology import get_vert_connectivity
 from scipy.sparse.csgraph import connected_components
 from src.fitting import calculateMeanCurvature
 import scipy
 import networkx as nx
+from src.vertexarea import getFaceAngles
 
 def centerModel(vertices):
 	avgs = [np.mean(x) for x in vertices.T]
@@ -112,9 +113,8 @@ def pointPlaneDistance(point, vertices):
 
 def processMesh(fileName, folderPath):
 		print 'Processing ' + fileName + '...'
-		vertices, faces, normals, polyData, reader = loadOBJviaVTK(folderPath + '/' + fileName)
+		vertices, faces, normals = loadOBJ(folderPath + '/' + fileName)
 
-		vertices, faces, normals = removeIsolatedVertices(vertices, faces, normals)
 
 		radiusNominal = 80.065605
 
@@ -124,6 +124,15 @@ def processMesh(fileName, folderPath):
 
 		#vertices, faces, normals = removeSmallIsolatedComponents(vertices, faces, normals)
 
+		faceLargestAngles = np.zeros(faces.shape[0])
+		for i,f in enumerate(faces):
+			a,b,c = getFaceAngles(f, vertices)
+			faceLargestAngles[i] = max(a,b,c)
+		
+		faces = faces[np.where(faceLargestAngles<np.pi - 0.2)]
+
+		vertices, faces, normals = removeIsolatedVertices(vertices, faces, normals)
+		
 		if sys.argv[2].endswith('.obj'):
 			writeOBJ(sys.argv[2], vertices, faces, normals)
 		else:
