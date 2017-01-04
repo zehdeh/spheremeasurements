@@ -114,13 +114,12 @@ def processMesh(fileName, folderPath):
 		print 'Processing ' + fileName + '...'
 		vertices, faces, normals, polyData, reader = loadOBJviaVTK(folderPath + '/' + fileName)
 
-		vertices, faces, normals = removeIsolatedVertices(vertices, faces, normals)
-
 		radiusNominal = 80.065605
 
 		sphereCenter = houghTransformation(vertices, faces, normals, radiusNominal)
 		condition = lambda x: np.linalg.norm(sphereCenter - x, axis=1) < (radiusNominal*1.025)
 		vertices, faces, normals = removeVerticesByCondition(condition, vertices, faces, normals)
+		vertices, faces, normals = removeIsolatedVertices(vertices, faces, normals)
 
 		#vertices, faces, normals = removeSmallIsolatedComponents(vertices, faces, normals)
 
