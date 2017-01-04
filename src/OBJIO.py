@@ -40,9 +40,11 @@ def loadOBJviaVTK(fileName):
 	return vertices, faces, npNormals, polyData, reader
 
 def getVTKMesh(vertices, faces, normals):
+	dataArray = numpy_support.numpy_to_vtk(vertices, array_type=vtk.VTK_FLOAT)
 	points = vtk.vtkPoints()
-	for v in vertices:
-		points.InsertNextPoint(v[0], v[1], v[2])
+	points.SetData(dataArray)
+	#for v in vertices:
+	#	points.InsertNextPoint(v[0], v[1], v[2])
 
 	polygons = vtk.vtkCellArray()
 	for f in faces:
