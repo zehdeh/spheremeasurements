@@ -18,13 +18,14 @@ class QVTKRenderWindowInteractorWheelfix(QVTKRenderWindowInteractor):
 			self._Iren.MouseWheelBackwardEvent()
 
 class MainWindow(QtWidgets.QMainWindow):
-	def __init__(self, stereoCameras, gridSize, gridScale, errorMatrix, vectorField, confidenceMatrix, verbose=False):
+	def __init__(self, stereoCameras, gridSize, gridScale, errorMatrix, curvatureMatrix, vectorField, confidenceMatrix, verbose=False):
 		QtWidgets.QMainWindow.__init__(self,parent=None)
 
 		self._gridSize = gridSize
 		self._gridScale = gridScale
 
 		self._errorMatrix = errorMatrix
+		self._curvatureMatrix = curvatureMatrix
 		self._vectorField = vectorField
 		self._confidenceMatrix = confidenceMatrix
 
@@ -41,8 +42,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
 		self._stereoCameras = stereoCameras
 
-		tabWidget = QtWidgets.QTabWidget();
-		self.errorGridViewer = QVTKRenderWindowInteractorWheelfix(tabWidget)
+		self.errorGridViewer = QVTKRenderWindowInteractorWheelfix(self)
 
 		self._interactor = self.errorGridViewer.GetRenderWindow().GetInteractor()
 		interactorStyle = vtk.vtkInteractorStyleTerrain()
@@ -52,14 +52,52 @@ class MainWindow(QtWidgets.QMainWindow):
 		self.setupVolume()
 		self.setupErrorGrid()
 		self.setupVectorField()
-		tabWidget.addTab(self.errorGridViewer, 'Camera Visibility')
+
+		self.viewDock = QtWidgets.QDockWidget('View',self)
+		self.viewChooserToolBox = QtWidgets.QToolBox()
+		self.analysisListWidget = QtWidgets.QListWidget(self.viewChooserToolBox)
+
+		errorViewButton = QtWidgets.QListWidgetItem('Error')
+		curvatureViewButton = QtWidgets.QListWidgetItem('Curvature')
+		def callback(e):
+			if e == errorViewButton:
+				print 'error'
+			else:
+				print 'curvature'
+
+		self.analysisListWidget.addItem(errorViewButton)
+		self.analysisListWidget.addItem(curvatureViewButton)
+		self.analysisListWidget.itemClicked.connect(lambda e: callback(e))
+
+		self.analysisListWidget.setCurrentItem(errorViewButton)
+
+		self.cameraListWidget = QtWidgets.QListWidget(self.viewChooserToolBox)
+
+		self.modelListWidget = QtWidgets.QListWidget(self.viewChooserToolBox)
+		self.modelListWidget.addItem('Curvature Model')
+
+		self.viewChooserToolBox.addItem(self.analysisListWidget, 'Analysis')
+		self.viewChooserToolBox.addItem(self.cameraListWidget, 'Camera Coverage')
+		self.viewChooserToolBox.addItem(self.modelListWidget, 'Model')
+
+
+		self.viewDock.setWidget(self.viewChooserToolBox)
+		self.viewDock.setFeatures(QtWidgets.QDockWidget.NoDockWidgetFeatures)
+
+		self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, self.viewDock)
 
 		axes = vtk.vtkAxesActor()
 		axes.SetTotalLength(1000,1000,1000)
 		self._mainVTKRenderer.AddActor(axes)
 
-		self.setCentralWidget(tabWidget)
+		self.setCentralWidget(self.errorGridViewer)
 		self._interactor.Initialize()
+
+		dw = QtWidgets.QDesktopWidget()
+
+		self.resize(dw.width()*0.7, dw.height()*0.7)
+		self.move((dw.width()-dw.width()*0.7)/2, (dw.height()-dw.height()*0.7)/2)
+
 		self.show()
 
 		self.setupCameras()
@@ -76,6 +114,12 @@ class MainWindow(QtWidgets.QMainWindow):
 
 			labels.InsertNextValue(str(stereoCamera.name))
 			camPositions.InsertNextPoint(camPosition[0], camPosition[1], camPosition[2])
+
+			camListItem = QtWidgets.QListWidgetItem('Camera ' + str(stereoCamera.name))
+			camListItem.setFlags(camListItem.flags() | QtCore.Qt.ItemIsUserCheckable);
+			camListItem.setCheckState(QtCore.Qt.Checked)
+
+			self.cameraListWidget.addItem(camListItem)
 
 		labelPolyData = vtk.vtkPolyData()
 		labelPolyData.SetPoints(camPositions)
