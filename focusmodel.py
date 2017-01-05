@@ -42,7 +42,7 @@ def buildModel(nominalRadius):
 				x0 = len(xModel)-1
 	
 	sortedIndices = np.argsort(xModel)
-	x0 = sortedIndices[x0]
+	x0 = int(np.where(sortedIndices == x0)[0])
 	xModel = np.asarray(xModel)[sortedIndices]
 	yModelCurv = np.asarray(yModelCurv)[sortedIndices]
 
@@ -61,11 +61,9 @@ def fitModel(xModel, yModelCurv, x0Model, xMeasured, yMeasured):
 	minStepSize = float((nMeasured)-1) / (nModel-1)*0.6
 	for stepSize in np.linspace(minStepSize, maxStepSize, num=numStepSizesToCheck):
 		indices = np.linspace(0, (nModel-1)*stepSize, nModel).astype(int)
-		#print 'stepSize: ' + str(stepSize)
 		for xPos in range(0, nMeasured - indices[-1]):
 			res = np.abs(yMeasuredCurv[indices + xPos] - yModelCurv)
 			rmse = np.sqrt(np.mean(res**2))
-			#print 'rmse: ' + str(rmse)
 			if rmse < lowestRMSE:
 				lowestRMSE = rmse
 				xPosLowest = xPos
