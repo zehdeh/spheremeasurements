@@ -1,12 +1,8 @@
-import abc
 import os
 import numpy as np
-from scipy.optimize import leastsq, least_squares
 from opendr.serialization import load_mesh
-from mpl_toolkits.mplot3d.art3d import Poly3DCollection
-from opendr.geometry import GaussianCurvature
 from src.fitting import distance, calculateMeanCurvature, fitSphere
-from src.OBJIO import loadOBJviaVTK, loadOBJ, getVTKMesh
+from src.OBJIO import loadOBJ, getVTKMesh
 
 def randomPartition(n, nData):
 	allIdxs = np.arange(nData)
@@ -55,7 +51,8 @@ class Sphere(object):
 		self._fileName = os.path.basename(filePath)
 		self._nominalRadius = nominalRadius
 
-		self._vertices, self._faces, self._normals, self.polyData, self._reader = loadOBJviaVTK(filePath)
+		self._vertices, self._faces, self._normals = loadOBJ(filePath)
+		self.polyData = getVTKMesh(self._vertices, self._faces, self._normals)
 		self._curvature = None
 
 		centerPoint, fittedRadius = fitSphere(self._vertices, nominalRadius, fitRadius)
@@ -70,7 +67,7 @@ class Sphere(object):
 	@property
 	def curvature(self):
 		if self._curvature is None:
-			self._curvature = calculateMeanCurvature(self.polyData, self._reader)
+			self._curvature = calculateMeanCurvature(self.polyData)
 		return self._curvature
 	@property
 	def fileName(self):

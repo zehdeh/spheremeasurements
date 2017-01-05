@@ -8,12 +8,8 @@ from src.fitting import fitSphere, fittingErrorSphere
 from src.mesh import Mesh
 from src.OBJIO import loadOBJ, loadOBJviaVTK, getVTKMesh
 import matplotlib.pyplot as plt
-from pymetis import part_graph
-from opendr.topology import get_vert_connectivity
 from src.shapes import Sphere
 
-
- 
 class CurvaturesDemo():
 	def CurvaturesDemo(self, filePath, nominalRadius):
 		sphere = Sphere(filePath, nominalRadius, False)
@@ -23,7 +19,6 @@ class CurvaturesDemo():
 		#print 'Approximated radius: ' + str(radius)
 
 		#print 'Fitting error (min / max / mean): ' + str(errors.min()) + ' / ' + str(errors.max()) + ' / ' + str(np.mean(errors))
-
 
 		reader = vtk.vtkOBJReader()
 		reader.SetFileName(sys.argv[1])

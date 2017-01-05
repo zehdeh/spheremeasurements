@@ -5,12 +5,13 @@ import os
 import numpy as np
 from math import floor, ceil
 import matplotlib.pyplot as plt
-from src.OBJIO import loadOBJviaVTK, writeOBJ, getVTKMesh
+from src.OBJIO import loadOBJ, writeOBJ, getVTKMesh
 from opendr.topology import get_vert_connectivity
 from scipy.sparse.csgraph import connected_components
 from src.fitting import calculateMeanCurvature
 import scipy
 import networkx as nx
+from src.vertexarea import getFaceAngles, getFaceArea
 
 def centerModel(vertices):
 	avgs = [np.mean(x) for x in vertices.T]
@@ -39,16 +40,9 @@ def removeSmallIsolatedComponents(vertices, faces, normals):
 def removeVerticesByCondition(condition, vertices, faces, normals):
 	mask = condition(vertices)
 	indices = [i for i,x in enumerate(zip(vertices,mask)) if x[1]]
-	indicesExclude = np.asarray([i for i,j in enumerate(vertices) if i not in indices])
 
-	vertices = vertices[indices]
-	normals = normals[indices]
-	faceHasBadVs = np.all(np.in1d(faces.ravel(), indicesExclude, invert=True).reshape(faces.shape), axis=1)
-	faces = faces[np.where(faceHasBadVs)]
+	return removeVerticesByIndex(vertices, faces, normals, indices)
 
-	faces = np.array([f - len(indicesExclude[f > indicesExclude]) for f in faces.ravel()]).reshape(faces.shape)
-
-	return vertices, np.asarray(faces), normals
 
 def removeIsolatedVertices(vertices, faces, normals):
 	referencedVertices = [i for f in faces for i in f]
@@ -60,6 +54,35 @@ def removeIsolatedVertices(vertices, faces, normals):
 	faces = np.array([f - len(isolatedIndices[f > isolatedIndices]) for f in faces.ravel()]).reshape(faces.shape)
 	
 	return vertices, faces, normals
+
+
+def removeVerticesByIndex(vertices, faces, normals, indices):
+	indicesExclude = np.asarray([i for i,j in enumerate(vertices) if i not in indices])
+
+	vertices = vertices[indices]
+	normals = normals[indices]
+	faceHasBadVs = np.all(np.in1d(faces.ravel(), indicesExclude, invert=True).reshape(faces.shape), axis=1)
+	faces = faces[np.where(faceHasBadVs)]
+
+	faces = np.array([f - len(indicesExclude[f > indicesExclude]) for f in faces.ravel()]).reshape(faces.shape)
+
+	return vertices, np.asarray(faces), normals
+
+def removePointsWithExtremeCurvature(vertices, faces, normals):
+	curvatureThreshold = 3
+	polyData = getVTKMesh(vertices,faces,normals)
+	curvature = calculateMeanCurvature(polyData)
+	indices = np.where(curvature < curvatureThreshold)[0]
+	indicesExclude = np.asarray([i for i,j in enumerate(vertices) if i not in indices])
+
+	vertices = vertices[indices]
+	normals = normals[indices]
+	faceHasBadVs = np.all(np.in1d(faces.ravel(), indicesExclude, invert=True).reshape(faces.shape), axis=1)
+	faces = faces[np.where(faceHasBadVs)]
+
+	faces = np.array([f - len(indicesExclude[f > indicesExclude]) for f in faces.ravel()]).reshape(faces.shape)
+
+	return vertices, np.asarray(faces), normals
 
 def houghTransformation(vertices, faces, normals, radius):
 	winners = np.zeros((2,3))
@@ -112,7 +135,7 @@ def pointPlaneDistance(point, vertices):
 
 def processMesh(fileName, folderPath):
 		print 'Processing ' + fileName + '...'
-		vertices, faces, normals, polyData, reader = loadOBJviaVTK(folderPath + '/' + fileName)
+		vertices, faces, normals = loadOBJ(folderPath + '/' + fileName)
 
 		radiusNominal = 80.065605
 
@@ -123,6 +146,19 @@ def processMesh(fileName, folderPath):
 
 		#vertices, faces, normals = removeSmallIsolatedComponents(vertices, faces, normals)
 
+		'''
+		faceLargestAngles = np.zeros(faces.shape[0])
+		for i,f in enumerate(faces):
+			a,b,c = getFaceAngles(f, vertices)
+			faceLargestAngles[i] = max(a,b,c)
+		
+		print faces[np.where(faceLargestAngles>np.pi - 0.2)]
+		faces = faces[np.where(faceLargestAngles<np.pi - 0.2)]
+		'''
+		vertices, faces, normals = removeIsolatedVertices(vertices, faces, normals)
+
+		vertices, faces, normals = removePointsWithExtremeCurvature(vertices, faces, normals)
+		
 		if sys.argv[2].endswith('.obj'):
 			writeOBJ(sys.argv[2], vertices, faces, normals)
 		else:
