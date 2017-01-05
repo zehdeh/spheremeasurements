@@ -18,6 +18,10 @@ if __name__ == '__main__':
 		if fileName.endswith('.obj'):
 			filePath = os.path.join(folderName, fileName)
 			vertices, faces, normals = loadOBJ(filePath)
+			if vertices.shape[0] == 0:
+				print 'Empty file!'
+				print 'Deleting ' + filePath
+				continue
 
 			centerPoint, fittedRadius = fitSphere(vertices, nominalRadius, False)
 			fittingError = np.sum(np.fabs(nominalRadius - distance(vertices.T, centerPoint)))/vertices.shape[0]
