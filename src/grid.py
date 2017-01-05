@@ -1,5 +1,12 @@
 import numpy as np
 
+def getVoxelCenter(gridSize, gridScale, i, j, k):
+	x = (i*gridScale[0]) - (gridSize[0]*gridScale[0]/2) + gridScale[0]/2
+	y = (j*gridScale[1]) - (gridSize[1]*gridScale[1]/2) + gridScale[1]/2
+	z = (k*gridScale[2]) - (gridSize[2]*gridScale[2]/2) + gridScale[2]/2
+
+	return x, y, z
+
 def getGridIndices(gridSize, gridScale, vertex):
 	x = vertex[0] + gridSize[0]*gridScale[0]/2
 	y = vertex[1] + gridSize[1]*gridScale[1]/2
