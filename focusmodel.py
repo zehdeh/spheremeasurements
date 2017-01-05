@@ -2,6 +2,7 @@
 
 import os
 import sys
+import argparse
 import numpy as np
 import matplotlib.pyplot as plt
 from src.OBJIO import loadOBJ, loadOBJviaVTK
@@ -29,7 +30,7 @@ def buildModel(nominalRadius):
 		if fileName.endswith('.obj'):
 			filePath = os.path.join(cameraFocusFolderPath, fileName)
 
-			sphere = Sphere(filePath, nominalRadius, False)
+			sphere = Sphere(filePath, nominalRadius, False, loadvtk=True)
 			fittingErrors.append(np.sum(np.abs(sphere.relativeFittingError())))
 			yModelCurv.append(sphere.curvature.std())
 
@@ -79,15 +80,20 @@ def fitModel(xModel, yModelCurv, x0Model, xMeasured, yMeasured):
 	return xPosLowest, stepSizeLowest, yScale, yShift
 
 if __name__ == '__main__':
-	nominalRadius = 80.065605
-	
-	xModel, yModelCurv, x0Model = buildModel(nominalRadius)
+	parser = argparse.ArgumentParser(description='Generates a model based on our camera focus experiment')
+	parser.add_argument("radius", help="The nominal radius to be used", type=float)
+	parser.add_argument("--show-plots", help="Show plots of curves during model generation", action='store_true')
+	parser.add_argument("--verbose", help="Show debug information", action='store_true')
+	args = parser.parse_args()
+
+	xModel, yModelCurv, x0Model = buildModel(args.radius)
 	nModel = yModelCurv.shape[0]
 
-	#fig = plt.figure(1)
-	#plt.plot(xModel, yModelCurv)
-	#plt.plot([xModel[x0Model], xModel[x0Model]],[0,np.max(yModelCurv)], linestyle='dashed')
-	#plt.show()
+	if args.show_plots:
+		fig = plt.figure(1)
+		plt.plot(xModel, yModelCurv)
+		plt.plot([xModel[x0Model], xModel[x0Model]],[0,np.max(yModelCurv)], linestyle='dashed')
+		plt.show()
 
 	cameraFolderName = 'res/final/onecam_fullvolume/cleanedup'
 
@@ -106,10 +112,12 @@ if __name__ == '__main__':
 
 		cameraFolderName = 'res/final/onecam_fullvolume/' + str(cameraNo).zfill(2) + '/cleanedup/'
 		if not os.path.exists(cameraFolderName):
-			print cameraFolderName + ' doesn\'t exist! Skipping camera ' + str(cameraNo)
+			if args.verbose:
+				print cameraFolderName + ' doesn\'t exist! Skipping camera ' + str(cameraNo)
 			continue
 
-		print 'Continuing here!'
+		if args.verbose:
+			print 'Continuing with camera ' + str(cameraNo)
 
 		fittingErrors = []
 		yMeasuredCurv = []
@@ -118,7 +126,7 @@ if __name__ == '__main__':
 		for fileName in os.listdir(cameraFolderName):
 			if fileName.endswith('.obj'):
 				filePath = os.path.join(cameraFolderName, fileName)
-				sphere = Sphere(filePath, nominalRadius, False)
+				sphere = Sphere(filePath, args.radius, False, loadvtk=True)
 
 				fittingErrors.append(np.sum(np.abs(sphere.relativeFittingError())))
 				yMeasuredCurv.append(sphere.curvature.std())
@@ -133,31 +141,36 @@ if __name__ == '__main__':
 
 		N = 10
 		yMeasuredCurv = np.convolve(yMeasuredCurv, np.ones(N)/N, mode='same')
+		if args.verbose:
+			print 'Fitting model..'
 		xPos, xStepSize, yScale, yShift = fitModel(xModel, yModelCurv, x0Model, xMeasured, yMeasuredCurv)
 
 		yModelAdapted = yModelCurv*yScale+yShift
 
 		indices = np.linspace(0, (nModel-1)*xStepSize, nModel).astype(int) + xPos
 		xModelAbsolute = xMeasured[indices]
-		print xModelAbsolute
 
 		fig = plt.figure()
 
-		plt.plot(np.arange(nMeasured), yMeasuredCurv)
-		plt.scatter(indices, yMeasuredCurv[indices], s=15,marker='o', facecolors='none', edgecolors='b')
-		plt.plot(indices, yModelAdapted)
-		plt.plot([indices[x0Model], indices[x0Model]], [0,np.max(yMeasuredCurv)], linestyle='dashed')
-		plt.show()
+		if args.show_plots:
+			plt.plot(np.arange(nMeasured), yMeasuredCurv)
+			plt.scatter(indices, yMeasuredCurv[indices], s=15,marker='o', facecolors='none', edgecolors='b')
+			plt.plot(indices, yModelAdapted)
+			plt.plot([indices[x0Model], indices[x0Model]], [0,np.max(yMeasuredCurv)], linestyle='dashed')
+			plt.show()
 
 		visibilityMatrixFileName = os.path.join(cameraFocusCalibrationPath,\
 		'visibility_' + str(cameraNo).zfill(2))
 		if os.path.isfile(visibilityMatrixFileName + '.npy'):
 			stereoCamera.visibilityMatrix = np.load(visibilityMatrixFileName + '.npy')
 		else:
-			print 'Generating visibility'
+			if args.verbose:
+				print 'Generating visibility matrix..'
 			stereoCamera.generateVisibilityMatrix(gridSize, gridScale)
 			np.save(visibilityMatrixFileName, stereoCamera.visibilityMatrix)
 
+		if args.verbose:
+			print 'Generating model matrix..'
 		cameraFocusModel = np.zeros((gridSize[0], gridSize[1], gridSize[2]), dtype=np.float)
 		for i in range(gridSize[0]):
 			for j in range(gridSize[1]):

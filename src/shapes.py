@@ -2,7 +2,7 @@ import os
 import numpy as np
 from opendr.serialization import load_mesh
 from src.fitting import distance, calculateMeanCurvature, fitSphere
-from src.OBJIO import loadOBJ, getVTKMesh
+from src.OBJIO import loadOBJ, getVTKMesh, loadOBJviaVTK
 
 def randomPartition(n, nData):
 	allIdxs = np.arange(nData)
@@ -47,12 +47,15 @@ def ransac(data,fitfun,errorfun,n,k,t,d):
 		return bestfit
 
 class Sphere(object):
-	def __init__(self, filePath, nominalRadius, fitRadius = True):
+	def __init__(self, filePath, nominalRadius, fitRadius = True, loadvtk=False):
 		self._fileName = os.path.basename(filePath)
 		self._nominalRadius = nominalRadius
 
-		self._vertices, self._faces, self._normals = loadOBJ(filePath)
-		self.polyData = getVTKMesh(self._vertices, self._faces, self._normals)
+		if loadvtk:
+			self._vertices, self._faces, self._normals, self.polyData = loadOBJviaVTK(filePath)
+		else:
+			self._vertices, self._faces, self._normals = loadOBJ(filePath)
+			self.polyData = getVTKMesh(self._vertices, self._faces, self._normals)
 		self._curvature = None
 
 		centerPoint, fittedRadius = fitSphere(self._vertices, nominalRadius, fitRadius)

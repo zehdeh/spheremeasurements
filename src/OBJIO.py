@@ -18,13 +18,7 @@ def loadOBJviaVTK(fileName):
 	
 	reader.Update()
 
-	#cleaner = vtk.vtkCleanPolyData()
-	#cleaner.SetInputConnection(reader.GetOutputPort())
-	#cleaner.SetTolerance(0.005)
-	#cleaner.Update()
-
 	polyData = reader.GetOutput()
-	#polyData = cleaner.GetOutput()
 
 	vertices =  numpy_support.vtk_to_numpy(polyData.GetPoints().GetData())
 	vertices = vertices.astype(dtype='float64')
@@ -37,7 +31,7 @@ def loadOBJviaVTK(fileName):
 	if normals is not None:
 		npNormals = numpy_support.vtk_to_numpy(normals)
 
-	return vertices, faces, npNormals, polyData, reader
+	return vertices, faces, npNormals, polyData
 
 def getVTKMesh(vertices, faces, normals):
 	dataArray = numpy_support.numpy_to_vtk(vertices, array_type=vtk.VTK_FLOAT)
