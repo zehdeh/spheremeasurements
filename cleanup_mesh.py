@@ -157,7 +157,7 @@ def processMesh(fileName, folderPath):
 		'''
 		vertices, faces, normals = removeIsolatedVertices(vertices, faces, normals)
 
-		vertices, faces, normals = removePointsWithExtremeCurvature(vertices, faces, normals)
+		#vertices, faces, normals = removePointsWithExtremeCurvature(vertices, faces, normals)
 		
 		if sys.argv[2].endswith('.obj'):
 			writeOBJ(sys.argv[2], vertices, faces, normals)
