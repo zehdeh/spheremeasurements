@@ -18,9 +18,10 @@ if __name__ == '__main__':
 		if fileName.endswith('.obj'):
 			filePath = os.path.join(folderName, fileName)
 			vertices, faces, normals = loadOBJ(filePath)
-			if vertices.shape[0] == 0:
-				print 'Empty file!'
+			if vertices.shape[0] < 200:
+				print 'Vertices: ' + str(vertices.shape[0])
 				print 'Deleting ' + filePath
+				os.remove(filePath)
 				continue
 
 			centerPoint, fittedRadius = fitSphere(vertices, nominalRadius, False)
@@ -28,9 +29,8 @@ if __name__ == '__main__':
 
 			centerPoint, fittedRadius = fitSphere(vertices, nominalRadius, True)
 
-			if vertices.shape[0] < 250 or fittingError > 5.5 or (fittedRadius/nominalRadius) > 1.1 or (fittedRadius/nominalRadius) < 0.9:
+			if fittingError > 5.5 or (fittedRadius/nominalRadius) > 1.1 or (fittedRadius/nominalRadius) < 0.9:
 				print 'Fitted Radius: ' + str(fittedRadius)
-				print 'Vertices: ' + str(vertices.shape[0])
 				print 'Fitting error: ' + str(fittingError)
 				print 'Deleting ' + filePath
 
