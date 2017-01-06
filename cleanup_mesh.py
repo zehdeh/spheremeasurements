@@ -2,6 +2,8 @@
 
 import sys
 import os
+
+import config.defaults
 import numpy as np
 from math import floor, ceil
 import matplotlib.pyplot as plt
@@ -137,24 +139,15 @@ def processMesh(fileName, folderPath):
 		print 'Processing ' + fileName + '...'
 		vertices, faces, normals = loadOBJ(folderPath + '/' + fileName)
 
-		radiusNominal = 80.065605
+		nominalRadius = config.defaults.nominalRadius
 
-		sphereCenter = houghTransformation(vertices, faces, normals, radiusNominal)
-		condition = lambda x: np.linalg.norm(sphereCenter - x, axis=1) < (radiusNominal*1.025)
+		sphereCenter = houghTransformation(vertices, faces, normals, nominalRadius)
+		condition = lambda x: np.linalg.norm(sphereCenter - x, axis=1) < (nominalRadius*config.defaults.cleanupRadiusTolerance)
 		vertices, faces, normals = removeVerticesByCondition(condition, vertices, faces, normals)
 		vertices, faces, normals = removeIsolatedVertices(vertices, faces, normals)
 
 		#vertices, faces, normals = removeSmallIsolatedComponents(vertices, faces, normals)
 
-		'''
-		faceLargestAngles = np.zeros(faces.shape[0])
-		for i,f in enumerate(faces):
-			a,b,c = getFaceAngles(f, vertices)
-			faceLargestAngles[i] = max(a,b,c)
-		
-		print faces[np.where(faceLargestAngles>np.pi - 0.2)]
-		faces = faces[np.where(faceLargestAngles<np.pi - 0.2)]
-		'''
 		vertices, faces, normals = removeIsolatedVertices(vertices, faces, normals)
 
 		#vertices, faces, normals = removePointsWithExtremeCurvature(vertices, faces, normals)
