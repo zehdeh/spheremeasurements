@@ -3,6 +3,8 @@
 import sys
 import os
 import numpy as np
+
+import config.defaults
 from src.OBJIO import loadOBJ
 from src.fitting import fitSphere, fittingErrorSphere, distance
 
@@ -18,7 +20,7 @@ if __name__ == '__main__':
 		if fileName.endswith('.obj'):
 			filePath = os.path.join(folderName, fileName)
 			vertices, faces, normals = loadOBJ(filePath)
-			if vertices.shape[0] < 200:
+			if vertices.shape[0] < config.defaults.minNumberVertices:
 				print 'Vertices: ' + str(vertices.shape[0])
 				print 'Deleting ' + filePath
 				os.remove(filePath)
