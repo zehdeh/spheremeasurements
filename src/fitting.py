@@ -7,7 +7,7 @@ def getBounds(vertices):
 	ybounds = [np.min(vertices[1]),np.max(vertices[1])]
 	zbounds = [np.min(vertices[2]),np.max(vertices[2])]
 
-	boundsTolerance = 0.4
+	boundsTolerance = 1.0
 	xTol = (xbounds[1] - xbounds[0])*boundsTolerance / 2
 	yTol = (ybounds[1] - ybounds[0])*boundsTolerance / 2
 	zTol = (zbounds[1] - zbounds[0])*boundsTolerance / 2
@@ -36,7 +36,12 @@ def fittingErrorSphere(center, vertices):
 
 def fitSphere(vertices, nominalRadius, fitRadius=True, useBounds=False):
 	bounds = getBounds(vertices.T)
-	p0 = [bounds[0][0],bounds[1][0],bounds[2][0],nominalRadius]
+
+	x0 = bounds[0][1] - ((bounds[0][1] - bounds[0][0]) / 2)
+	y0 = bounds[1][1] - ((bounds[1][1] - bounds[1][0]) / 2)
+	z0 = bounds[2][1] - ((bounds[2][1] - bounds[2][0]) / 2)
+
+	p0 = [x0,y0,z0,nominalRadius]
 
 	if fitRadius:
 		errorfun = lambda p,vertices: fittingErrorSphere(p,vertices) - p[3]

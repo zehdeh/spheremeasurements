@@ -4,6 +4,8 @@ import sys
 import vtk
 import numpy as np
 from vtk.util import numpy_support
+
+import config.defaults
 from src.fitting import fitSphere, fittingErrorSphere
 from src.mesh import Mesh
 from src.OBJIO import loadOBJ, loadOBJviaVTK, getVTKMesh
@@ -16,9 +18,6 @@ class CurvaturesDemo():
 		errors = np.abs(sphere.fittingError())
 		print sphere.curvature.max()
 		print sphere.curvature.argmax()
-		#print 'Approximated radius: ' + str(radius)
-
-		#print 'Fitting error (min / max / mean): ' + str(errors.min()) + ' / ' + str(errors.max()) + ' / ' + str(np.mean(errors))
 
 		reader = vtk.vtkOBJReader()
 		reader.SetFileName(sys.argv[1])
@@ -201,7 +200,5 @@ class CurvaturesDemo():
 		interactor.Start()
 
 if __name__ == "__main__":
-	nominalRadius = float(sys.argv[2])
-
 	po = CurvaturesDemo()
-	po.CurvaturesDemo(sys.argv[1], nominalRadius)
+	po.CurvaturesDemo(sys.argv[1], config.defaults.nominalRadius)

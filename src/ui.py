@@ -17,6 +17,7 @@ class QVTKRenderWindowInteractorWheelfix(QVTKRenderWindowInteractor):
 		else:
 			self._Iren.MouseWheelBackwardEvent()
 
+VIEWMODE = type('enum', (), dict(error=0,curvature=1))
 class MainWindow(QtWidgets.QMainWindow):
 	def __init__(self, stereoCameras, gridSize, gridScale, errorMatrix, curvatureMatrix, vectorField, confidenceMatrix, verbose=False):
 		QtWidgets.QMainWindow.__init__(self,parent=None)
@@ -42,6 +43,8 @@ class MainWindow(QtWidgets.QMainWindow):
 
 		self._stereoCameras = stereoCameras
 
+		self._viewMode = VIEWMODE.error
+
 		self.errorGridViewer = QVTKRenderWindowInteractorWheelfix(self)
 
 		self._interactor = self.errorGridViewer.GetRenderWindow().GetInteractor()
@@ -59,11 +62,16 @@ class MainWindow(QtWidgets.QMainWindow):
 
 		errorViewButton = QtWidgets.QListWidgetItem('Error')
 		curvatureViewButton = QtWidgets.QListWidgetItem('Curvature')
+
 		def callback(e):
 			if e == errorViewButton:
-				print 'error'
+				self._viewMode = VIEWMODE.error
+
+				self.repaintVolume()
 			else:
-				print 'curvature'
+				self._viewMode = VIEWMODE.curvature
+
+				self.repaintVolume()
 
 		self.analysisListWidget.addItem(errorViewButton)
 		self.analysisListWidget.addItem(curvatureViewButton)
@@ -101,6 +109,24 @@ class MainWindow(QtWidgets.QMainWindow):
 		self.show()
 
 		self.setupCameras()
+
+	def setupColorFunction(self):
+		plottedMatrix = self._errorMatrix if self._viewMode == VIEWMODE.error else self._curvatureMatrix
+
+		mean = self._errorMatrix[np.nonzero(plottedMatrix)].mean()
+		std = self._errorMatrix[np.nonzero(plottedMatrix)].std()/2.5
+		upperBound = mean + std
+		lowerBound = 0
+		if self._verbose:
+			print 'Color range (' + str(lowerBound) +',' + str(upperBound) + ')'
+
+		self._colorFunc = vtk.vtkColorTransferFunction()
+		self._colorFunc.AddRGBPoint(lowerBound, 0.0, 0.0, 1.0)
+		self._colorFunc.AddRGBPoint((upperBound - lowerBound)/2, 1.0, 1.0, 1.0)
+		self._colorFunc.AddRGBPoint(upperBound, 1.0, 0.0, 0.0)
+
+		self._scalarBar.SetLookupTable(self._colorFunc)
+
 	def setupCameras(self):
 		labels = vtk.vtkStringArray()
 		labels.SetName('label')
@@ -142,31 +168,20 @@ class MainWindow(QtWidgets.QMainWindow):
 		alphaChannelFunc.AddPoint(0.0, 0.0)
 		alphaChannelFunc.AddPoint(1.0, 0.7)
 
-		mean = self._errorMatrix[np.nonzero(self._errorMatrix)].mean()
-		std = self._errorMatrix[np.nonzero(self._errorMatrix)].std()
-		upperBound = mean + std-0.015
-		lowerBound = 0
-		if self._verbose:
-			print 'Color range (' + str(lowerBound) +',' + str(upperBound) + ')'
+		self._scalarBar = vtk.vtkScalarBarActor()
+		self._scalarBar.GetLabelTextProperty().ItalicOff()
+		self._scalarBar.GetLabelTextProperty().BoldOff()
+		self._scalarBar.SetNumberOfLabels(3)
+		self._scalarBar.AnnotationTextScalingOff()
+		self._scalarBar.SetMaximumWidthInPixels(100)
+		self._scalarBar.SetPosition(0.9, 0.15)
+		self._mainVTKRenderer.AddActor(self._scalarBar)
 
-		colorFunc = vtk.vtkColorTransferFunction()
-		colorFunc.AddRGBPoint(lowerBound, 0.0, 0.0, 1.0)
-		colorFunc.AddRGBPoint((upperBound - lowerBound)/2, 1.0, 1.0, 1.0)
-		colorFunc.AddRGBPoint(upperBound, 1.0, 0.0, 0.0)
-
-		scalarBar = vtk.vtkScalarBarActor()
-		scalarBar.SetLookupTable(colorFunc)
-		scalarBar.GetLabelTextProperty().ItalicOff()
-		scalarBar.GetLabelTextProperty().BoldOff()
-		scalarBar.SetNumberOfLabels(3)
-		scalarBar.AnnotationTextScalingOff()
-		scalarBar.SetMaximumWidthInPixels(100)
-		scalarBar.SetPosition(0.9, 0.15)
-
+		self.setupColorFunction()
 
 		volumeProperty = vtk.vtkVolumeProperty()
 		volumeProperty.IndependentComponentsOff()
-		volumeProperty.SetColor(colorFunc)
+		volumeProperty.SetColor(self._colorFunc)
 		volumeProperty.SetScalarOpacity(alphaChannelFunc)
 		volumeProperty.ShadeOff()
 
@@ -181,7 +196,6 @@ class MainWindow(QtWidgets.QMainWindow):
 		self.volume.SetProperty(volumeProperty)
 
 		self._mainVTKRenderer.AddVolume(self.volume)
-		self._mainVTKRenderer.AddActor(scalarBar)
 
 	def switchDisplayMode(self,btn,mode):
 		if btn.isChecked():
@@ -192,9 +206,21 @@ class MainWindow(QtWidgets.QMainWindow):
 				self.volume.VisibilityOff()
 				self.vectorActor.VisibilityOn()
 			self._mainVTKRenderer.GetRenderWindow().Render()
-	def rebuildCoverage(self, convolutionPasses = 0, growConvolution = True):
-		colorValues = self._errorMatrix
+	def repaintVolume(self):
+		self.generateVolumePlot()
+
+		self.volumeMapper.SetInputConnection(self.imageImport.GetOutputPort())
+		self.volumeMapper.Update()
+
+		self.setupColorFunction()
+
+		self.errorGridViewer.GetRenderWindow().Render()
+	def generateVolumePlot(self, convolutionPasses = 0, growConvolution = True):
+		colorValues = self._errorMatrix if self._viewMode == VIEWMODE.error else self._curvatureMatrix
 		alphaValues = self._confidenceMatrix
+
+		growConvolution = self._convolutionGrowButton.checkState() == QtCore.Qt.Checked
+		convolutionPasses = self._convolutionPassesSpinner.value()
 
 		for i in range(convolutionPasses):
 			sizeX = 3+i if growConvolution else 3
@@ -258,7 +284,7 @@ class MainWindow(QtWidgets.QMainWindow):
 		self._mainVTKRenderer.AddActor(self.vectorActor)
 
 	def setupErrorGrid(self):
-		self.rebuildCoverage(2,True)
+		self.generateVolumePlot()
 		self.volumeMapper.SetInputConnection(self.imageImport.GetOutputPort())
 
 	def setupSettings(self):
@@ -300,26 +326,21 @@ class MainWindow(QtWidgets.QMainWindow):
 
 		grid.addWidget(wireFrameGridGroup, 2, 0)
 
-		convolutionGroup = QtWidgets.QGroupBox('Convolution')
+		convolutionGroup = QtWidgets.QGroupBox('Box Filter')
 		convolutionPassesLabel = QtWidgets.QLabel('Passes:', convolutionGroup)
-		convolutionPassesSpinner = QtWidgets.QSpinBox(convolutionGroup)
-		convolutionPassesSpinner.setMinimum(0)
-		convolutionPassesSpinner.setValue(2)
-		convolutionGrowButton = QtWidgets.QCheckBox('Grow', convolutionGroup)
-		convolutionGrowButton.setCheckState(2)
+		self._convolutionPassesSpinner = QtWidgets.QSpinBox(convolutionGroup)
+		self._convolutionPassesSpinner.setMinimum(0)
+		self._convolutionPassesSpinner.setValue(2)
+		self._convolutionGrowButton = QtWidgets.QCheckBox('Grow', convolutionGroup)
+		self._convolutionGrowButton.setCheckState(2)
 		convolutionApplyButton = QtWidgets.QPushButton('Apply', convolutionGroup)
 
-		def applyConvolution(passes, grow):
-			self.rebuildCoverage(passes,grow)
-			self.volumeMapper.SetInputConnection(self.imageImport.GetOutputPort())
-			self.volumeMapper.Update()
-			self.errorGridViewer.GetRenderWindow().Render()
-		convolutionApplyButton.clicked.connect(lambda: applyConvolution(convolutionPassesSpinner.value(), convolutionGrowButton.checkState() == 2))
+		convolutionApplyButton.clicked.connect(lambda: self.repaintVolume())
 
 		vbox = QtWidgets.QHBoxLayout()
 		vbox.addWidget(convolutionPassesLabel)
-		vbox.addWidget(convolutionPassesSpinner)
-		vbox.addWidget(convolutionGrowButton)
+		vbox.addWidget(self._convolutionPassesSpinner)
+		vbox.addWidget(self._convolutionGrowButton)
 		vbox.addWidget(convolutionApplyButton)
 		convolutionGroup.setLayout(vbox)
 
