@@ -32,7 +32,8 @@ if __name__ == '__main__':
 	gridScale = [scannerVolumeSize[0] / gridSize[0], scannerVolumeSize[1] / gridSize[1], scannerVolumeSize[2] / gridSize[2]]
 
 	vectorCacheFileName = os.path.join(args.folder,'vectorField' + '_' + str(gridSize[0]) + '_' + str(gridSize[1]) + '_' + str(gridSize[2]))
-	errorCacheFileName = os.path.join(args.folder,'fittingError' + '_' + str(gridSize[0]) + '_' + str(gridSize[1]) + '_' + str(gridSize[2]))
+	errorCacheFileName = os.path.join(args.folder,'error' + '_' + str(gridSize[0]) + '_' + str(gridSize[1]) + '_' + str(gridSize[2]))
+	curvatureCacheFileName = os.path.join(args.folder,'curvature' + '_' + str(gridSize[0]) + '_' + str(gridSize[1]) + '_' + str(gridSize[2]))
 	nMatrixCacheFileName = os.path.join(args.folder,'nMatrix' + '_' + str(gridSize[0]) + '_' + str(gridSize[1]) + '_' + str(gridSize[2]))
 
 	if os.path.isfile(errorCacheFileName + '.npy') and not args.rebuild_cache:
@@ -40,6 +41,7 @@ if __name__ == '__main__':
 			print 'Using cache..'
 		nMatrix = np.load(nMatrixCacheFileName + '.npy')
 		errorMatrix = np.load(errorCacheFileName + '.npy')
+		curvatureMatrix = np.load(curvatureCacheFileName + '.npy')
 		vectorField = np.load(vectorCacheFileName + '.npy')
 	else:
 		spheres = []
@@ -48,7 +50,7 @@ if __name__ == '__main__':
 				if args.verbose:
 					print 'Loading ' + fileName[0:-4]
 				nominalRadius = 80.06505
-				spheres.append(Sphere(os.path.join(args.folder, fileName), nominalRadius))
+				spheres.append(Sphere(os.path.join(args.folder, fileName), nominalRadius, loadvtk=True))
 
 		if len(spheres) == 0:
 			raise RuntimeError('No scans were found')
@@ -57,10 +59,14 @@ if __name__ == '__main__':
 			print 'Generating error matrix...'
 		errorMatrix, nMatrix = generateErrorGrid(gridSize, gridScale, spheres, args.verbose)
 		if args.verbose:
+			print 'Generating curvature matrix...'
+		curvatureMatrix, nMatrix = generateErrorGrid(gridSize, gridScale, spheres, args.verbose)
+		if args.verbose:
 			print 'Generating vector field...'
 		vectorField = generateVectorField(gridSize, gridScale, spheres, nMatrix, errorMatrix)
 
 		np.save(errorCacheFileName, errorMatrix)
+		np.save(curvatureCacheFileName, curvatureMatrix)
 		np.save(vectorCacheFileName, vectorField)
 		np.save(nMatrixCacheFileName, nMatrix)
 
@@ -75,5 +81,5 @@ if __name__ == '__main__':
 	calibrationFolderPath = sys.argv[2]
 	stereoCameras = getStereoCamerasFromCalibration(calibrationFolderPath)
 	
-	window = MainWindow(stereoCameras, gridSize, gridScale, errorMatrix, vectorField, confidenceMatrix, args.verbose)
+	window = MainWindow(stereoCameras, gridSize, gridScale, errorMatrix, curvatureMatrix, vectorField, confidenceMatrix, args.verbose)
 	sys.exit(app.exec_())
