@@ -96,6 +96,14 @@ class MainWindow(QtWidgets.QMainWindow):
 
 		axes = vtk.vtkAxesActor()
 		axes.SetTotalLength(1000,1000,1000)
+
+		axes.GetXAxisCaptionActor2D().GetCaptionTextProperty().SetFontSize(20)
+		axes.GetXAxisCaptionActor2D().GetTextActor().SetTextScaleModeToNone()
+		axes.GetYAxisCaptionActor2D().GetCaptionTextProperty().SetFontSize(20)
+		axes.GetYAxisCaptionActor2D().GetTextActor().SetTextScaleModeToNone()
+		axes.GetZAxisCaptionActor2D().GetCaptionTextProperty().SetFontSize(20)
+		axes.GetZAxisCaptionActor2D().GetTextActor().SetTextScaleModeToNone()
+
 		self._mainVTKRenderer.AddActor(axes)
 
 		self.setCentralWidget(self.errorGridViewer)
