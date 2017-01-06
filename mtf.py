@@ -2,6 +2,7 @@
 
 import sys
 import math
+import argparse
 import numpy as np
 from src.OBJIO import loadOBJ
 import matplotlib.pyplot as plt
@@ -9,6 +10,8 @@ import matplotlib.pyplot as plt
 from src.utils import Arrow3D
 from src.fitting import fitPlane
 from scipy.spatial import distance
+from src.utils import checkOBJFile
+from src.reporting import writeCSV
 
 def MTF(x):
 	#y = np.diff(x)
@@ -133,11 +136,17 @@ def plotProjection(v, vProjected, n1, n2, plane1, plane2, c1, c2, centerPoint, c
 	plt.show()
 
 if __name__ == '__main__':
-	if len(sys.argv) < 2:
-		print 'Too few arguments'
-		sys.exit(0)
+	parser = argparse.ArgumentParser(description='Generates a spreadsheet')
+	parser.add_argument("filepath", help="The folder with the OBJ files", type=checkOBJFile)
+	parser.add_argument("--verbose", help="Show debug information", action='store_true')
+	parser.add_argument("--csv", help="Instead of plots, write csv file", action='store_true')
+	args = parser.parse_args()
 	
-	vertices, faces, normals = loadOBJ(sys.argv[1])
+	vertices, faces, normals = loadOBJ(args.filepath)
+	if args.verbose:
+		print 'Number of vertices: ' + str(vertices.shape[0])
+
+
 	centerPoint = np.mean(vertices, axis=0)
 	vertices = vertices - centerPoint
 
@@ -173,6 +182,8 @@ if __name__ == '__main__':
 	np.fill_diagonal(distances, np.inf)
 	nyquistRate = distances.min(axis=0).mean()
 	nyquistFrequency = 1/(2*nyquistRate)
+	if args.verbose:
+		print 'Nyquist frequency: ' + str(nyquistFrequency)
 
 	verticesUnprojected = vertices
 	v = vertices - centerPoint
@@ -185,9 +196,10 @@ if __name__ == '__main__':
 	perp2 = -np.cross(normal2, crossProduct)
 
 	
-	plotProjection(verticesUnprojected, vertices, normal1, normal2, plane1, plane2,\
-	verticesLeftCenter, verticesRightCenter, centerPoint,\
-	crossProduct, upVector, xVector, intersectionPoint1, perp1, perp2)
+	if not args.csv:
+		plotProjection(verticesUnprojected, vertices, normal1, normal2, plane1, plane2,\
+		verticesLeftCenter, verticesRightCenter, centerPoint,\
+		crossProduct, upVector, xVector, intersectionPoint1, perp1, perp2)
 
 
 	xCoordinates = xVector.dot(vertices.T - centerPoint[...,None])
@@ -210,6 +222,9 @@ if __name__ == '__main__':
 	binSize = nyquistRate/2
 	noBins = int(pow(2, math.floor(math.log(xSpread / binSize) / math.log(2))))
 
+	if args.verbose:
+		print 'Number of bins: ' + str(noBins)
+
 	perfectProfile1 = np.array([intersectionPoint + (binSize/2)*angularFactor1*perp1 + i*binSize*angularFactor1*perp1 for i in range(0,noBins/2)]).T
 	perfectProfile2 = np.array([intersectionPoint - (binSize/2)*angularFactor2*perp2 + i*binSize*angularFactor2*perp2 for i in range((noBins/2),0,-1)]).T
 
@@ -218,10 +233,11 @@ if __name__ == '__main__':
 
 	binsMeasuredProfile = np.zeros(noBins)
 
-	fig = plt.figure(1)
-	plt.subplot(211)
-	plt.plot([xTruePeak, xTruePeak], [yCoordinates.min(),intersectionPoint[1]], color='black')
-	plt.scatter(xCoordinates, yCoordinates)
+	if not args.csv:
+		fig = plt.figure(1)
+		plt.subplot(211)
+		plt.plot([xTruePeak, xTruePeak], [yCoordinates.min(),intersectionPoint[1]], color='black')
+		plt.scatter(xCoordinates, yCoordinates)
 
 	for i in range(0, noBins/2):
 		xMinLeft = xTruePeak - (i+1)*binSize
@@ -230,31 +246,32 @@ if __name__ == '__main__':
 		yInBinLeft = yCoordinates[np.all([xMinLeft < xCoordinates,xCoordinates < xMaxLeft], axis=0)]
 		if len(yInBinLeft) > 0:
 			binsMeasuredProfile[noBins/2 - i - 1] = yInBinLeft.mean()
-			plt.scatter(xMinLeft + (xMaxLeft - xMinLeft)/2,binsMeasuredProfile[noBins/2 - i - 1], color='g')
+			if not args.csv:
+				plt.scatter(xMinLeft + (xMaxLeft - xMinLeft)/2,binsMeasuredProfile[noBins/2 - i - 1], color='g')
 
 		xMinRight = xTruePeak + i*binSize
 		xMaxRight = xTruePeak + (i+1)*binSize
-		plt.plot([xMaxRight, xMaxRight], [yCoordinates.min(),intersectionPoint[1]], color='lightgray')
+		if not args.csv:
+			plt.plot([xMaxRight, xMaxRight], [yCoordinates.min(),intersectionPoint[1]], color='lightgray')
 		yInBinRight = yCoordinates[np.all([xMinRight < xCoordinates,xCoordinates < xMaxRight], axis=0)]
 		if len(yInBinRight) > 0:
 			binsMeasuredProfile[noBins / 2 + i] = yInBinRight.mean()
 			plt.scatter(xMinRight + (xMaxRight - xMinRight)/2,binsMeasuredProfile[noBins/2 + i], color='g')
 
-	plt.plot([xTruePeak-(noBins/2)*binSize, xTruePeak-(noBins/2)*binSize], [yCoordinates.min(),intersectionPoint[1]], color='black')
-	plt.plot([xTruePeak+(noBins/2)*binSize, xTruePeak+(noBins/2)*binSize], [yCoordinates.min(),intersectionPoint[1]], color='black')
+	if not args.csv:
+		plt.plot([xTruePeak-(noBins/2)*binSize, xTruePeak-(noBins/2)*binSize], [yCoordinates.min(),intersectionPoint[1]], color='black')
+		plt.plot([xTruePeak+(noBins/2)*binSize, xTruePeak+(noBins/2)*binSize], [yCoordinates.min(),intersectionPoint[1]], color='black')
 	
 	for i in range(noBins):
 		if binsMeasuredProfile[i] == 0 and i+1 < noBins:
 			binsMeasuredProfile[i] = (binsMeasuredProfile[i-1] + binsMeasuredProfile[i+1])/2
 	
-	plt.scatter(intersectionPoint[0], intersectionPoint[1], color='black')
-	#plt.scatter(perfectProfile1[0], perfectProfile1[1], color='r')
-	#plt.scatter(perfectProfile2[0], perfectProfile2[1], color='r')
+	if not args.csv:
+		plt.scatter(intersectionPoint[0], intersectionPoint[1], color='black')
+		plt.subplot(212)
 
-	plt.subplot(212)
-
-	plt.scatter(np.arange(0, noBins), binsMeasuredProfile)
-	plt.scatter(np.arange(0, noBins), binsPerfectProfile, color='r')
+		plt.scatter(np.arange(0, noBins), binsMeasuredProfile)
+		plt.scatter(np.arange(0, noBins), binsPerfectProfile, color='r')
 
 	xShift = min(binsMeasuredProfile)
 	binsMeasuredProfile = binsMeasuredProfile - xShift
@@ -276,14 +293,15 @@ if __name__ == '__main__':
 		binsMeasuredProfile[noBins*2 - i - 1] = -binsMeasuredProfile[i]
 		binsPerfectProfile[noBins*2 - i - 1] = -binsPerfectProfile[i]
 
-	plt.show()
-	fig = plt.figure()
-	plt.subplot(211)
+	if not args.csv:
+		plt.show()
+		fig = plt.figure()
+		plt.subplot(211)
 
-	plt.plot(np.arange(0,binsMeasuredProfile.shape[0]), binsMeasuredProfile)
-	plt.plot(np.arange(0,binsPerfectProfile.shape[0]), binsPerfectProfile, linestyle='--')
+		plt.plot(np.arange(0,binsMeasuredProfile.shape[0]), binsMeasuredProfile)
+		plt.plot(np.arange(0,binsPerfectProfile.shape[0]), binsPerfectProfile, linestyle='--')
 
-	plt.subplot(212)
+		plt.subplot(212)
 
 	Ymeasured = np.fft.fft(binsMeasuredProfile)
 	Yperfect = np.fft.fft(binsPerfectProfile)
@@ -295,20 +313,16 @@ if __name__ == '__main__':
 	frequencies = frequencies[freqIdxAboveZero]
 	H = H[freqIdxAboveZero]
 	#frequencies = np.fft.fftshift(frequencies)
+	frequencies /= 2*nyquistFrequency
 
-	plt.xlim([0,nyquistFrequency*1.2])
-	plt.ylim([0,1.1])
-	plt.plot([nyquistFrequency,nyquistFrequency], [H.min(),H.max()])
-	plt.plot(frequencies, H)
+	if not args.csv:
+		plt.xlim([0,0.6])
+		plt.ylim([0,1.1])
+		plt.plot([0.5,0.5], [H.min(),H.max()], linestyle='dashed')
+		plt.plot(frequencies, H)
 
-	#plt.plot(np.arange(0,Ymeasured.shape[0]), Ymeasured)
-	#plt.plot(np.arange(0,Yperfect.shape[0]), Yperfect, linestyle='--')
-
-
-	#plt.plot(np.arange(0, Ymeasured[::2].shape[0]), np.fabs(Ymeasured[::2].real))
-	#plt.plot(np.arange(0, Yperfect[::2].shape[0]), np.fabs(Yperfect[::2].real), linestyle='--')
-	#plt.plot(np.fft.fftfreq(Ymeasured.shape[0], d=nyquistRate/2), abs(Ymeasured))
-	#plt.plot(np.fft.fftfreq(Yperfect.shape[0], d=nyquistRate/2), abs(Yperfect), linestyle='--')
-
-	plt.show()
+		plt.show()
+	else:
+		outputData = np.vstack((frequencies, H)).T
+		writeCSV('mtf.csv', outputData)
 

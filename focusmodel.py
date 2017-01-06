@@ -101,6 +101,7 @@ if __name__ == '__main__':
 		plt.plot(xModel, yModelCurv)
 		plt.plot([xModel[x0Model], xModel[x0Model]],[0,np.max(yModelCurv)], linestyle='dashed')
 		plt.show()
+		plt.title('Model')
 
 	cameraFolderName = 'res/final/onecam_fullvolume/cleanedup'
 
@@ -163,6 +164,7 @@ if __name__ == '__main__':
 			plt.scatter(indices, yMeasuredCurv[indices], s=15,marker='o', facecolors='none', edgecolors='b')
 			plt.plot(indices, yModelAdapted)
 			plt.plot([indices[x0Model], indices[x0Model]], [0,np.max(yMeasuredCurv)], linestyle='dashed')
+			plt.title('Camera ' + str(cameraNo))
 			plt.show()
 
 		visibilityMatrixFileName = os.path.join(cameraFocusCalibrationPath,\

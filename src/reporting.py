@@ -48,5 +48,4 @@ def writeCSV(filePath, rows):
 			for i, val in enumerate(row):
 				if type(val) == float or type(val) == np.float64:
 					row[i] = "%.3f" % val
-					print row[i]
 			c.writerow(row)
