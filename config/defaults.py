@@ -6,4 +6,4 @@ gridScale = [scannerVolumeSize[0] / gridSize[0], scannerVolumeSize[1] / gridSize
 
 cleanupRadiusTolerance = 1.025
 
-minNumberVertices = 200
+minNumberVertices = 180
