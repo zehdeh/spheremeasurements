@@ -55,7 +55,7 @@ if __name__ == '__main__':
 					print 'Deleting ' + filePath
 
 				deleting = True
-			if (fittedRadius/nominalRadius) > 1.6 or (fittedRadius/nominalRadius) < 0.6:
+			if (fittedRadius/nominalRadius) > 1.2 or (fittedRadius/nominalRadius) < 0.8:
 				if args.verbose:
 					print 'Fitted Radius: ' + str(fittedRadius)
 					print 'Deleting ' + filePath
