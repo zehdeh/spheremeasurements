@@ -5,6 +5,8 @@ import sys
 import argparse
 import numpy as np
 import matplotlib.pyplot as plt
+
+import config.defaults
 from src.OBJIO import loadOBJ, loadOBJviaVTK
 from src.shapes import Sphere
 from src.fitting import fitSphere, fittingErrorSphere, distance, calculateMeanCurvature
@@ -79,10 +81,17 @@ def fitModel(xModel, yModelCurv, x0Model, xMeasured, yMeasured):
 
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser(description='Generates a model based on our camera focus experiment')
-	parser.add_argument("radius", help="The nominal radius to be used", type=float)
+	parser.add_argument("--radius", help="The nominal radius to be used", type=float)
 	parser.add_argument("--show-plots", help="Show plots of curves during model generation", action='store_true')
 	parser.add_argument("--verbose", help="Show debug information", action='store_true')
 	args = parser.parse_args()
+
+	if args.radius is None:
+		args.radius = config.defaults.nominalRadius
+
+	if args.verbose:
+		print 'Using radius ' + str(args.radius)
+		print 'Building model..'
 
 	xModel, yModelCurv, x0Model = buildModel(args.radius)
 	nModel = yModelCurv.shape[0]
@@ -98,9 +107,8 @@ if __name__ == '__main__':
 	cameraFocusCalibrationPath = 'calibrations/20161222142605764/'
 	stereoCameras = getStereoCamerasFromCalibration(cameraFocusCalibrationPath)
 
-	gridSize = [50,50,50]
-	scannerVolumeSize = [3000,3000,3000]
-	gridScale = [scannerVolumeSize[0] / gridSize[0], scannerVolumeSize[1] / gridSize[1], scannerVolumeSize[2] / gridSize[2]]
+	gridSize = config.defaults.gridSize
+	gridScale = config.defaults.gridScale
 	totalCameraFocusModel = np.zeros((gridSize[0], gridSize[1], gridSize[2]), dtype=np.float)
 
 	for cameraNo in stereoCameras:

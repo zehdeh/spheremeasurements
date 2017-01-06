@@ -9,6 +9,7 @@ import numpy as np
 import time
 import argparse
 
+import config.defaults
 import src.spherical_harmonics as sh
 from src.vertexarea import getVertexAreas
 from src.shapes import Sphere
@@ -53,11 +54,17 @@ if __name__ == '__main__':
 	parser = argparse.ArgumentParser(description='Generates a spreadsheet')
 	parser.add_argument("path", help="The folder or the obj-file", type=checkOBJpath)
 	parser.add_argument("frequencies", help="The number of frequencies to analyze", type=int)
-	parser.add_argument("radius", help="The nominal radius", type=float)
+	parser.add_argument("--radius", help="The nominal radius", type=float)
 	parser.add_argument("--verbose", help="Show debug information", action='store_true')
 	parser.add_argument("--csv", help="Instead of plot, write csv file", action='store_true')
 	parser.add_argument("-o", "--output", help="Path for csv file", default='spherical_harmonics.csv', type=str)
 	args = parser.parse_args()
+
+	if args.radius is None:
+		args.radius = config.defaults.nominalRadius
+	
+	if args.verbose:
+		print 'Using radius ' + str(args.radius)
 
 	if args.path.endswith('.obj'):
 		folderPath = ''

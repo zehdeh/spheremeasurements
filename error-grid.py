@@ -5,6 +5,7 @@ import os
 import argparse
 import numpy as np
 
+import config.defaults
 from PyQt5.QtWidgets import QApplication
 from src.ui import MainWindow
 from src.calibration import getStereoCamerasFromCalibration, StereoCamera
@@ -20,16 +21,22 @@ def checkDir(directory):
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser(description='Displays the error as a volume rendering')
 	parser.add_argument("folder", help="The folder with the OBJ files", type=checkDir)
+	parser.add_argument("--radius", help="The nominal radius to be used", type=float)
 	parser.add_argument("calibration", help="If you are interested in camera distance, provide a calibration folder", type=checkDir)
 	parser.add_argument("--verbose", help="Show debug information", action='store_true')
 	parser.add_argument("--rebuild-cache", help="Rebuild the cache files", action='store_true')
 	args = parser.parse_args()
 
+	if args.radius is None:
+		args.radius = config.defaults.nominalRadius
+	
+	if args.verbose:
+		print 'Using radius ' + str(args.radius)
+
 	app = QApplication(sys.argv)
 
-	gridSize = [50,50,50]
-	scannerVolumeSize = [2400,3000,2400]
-	gridScale = [scannerVolumeSize[0] / gridSize[0], scannerVolumeSize[1] / gridSize[1], scannerVolumeSize[2] / gridSize[2]]
+	gridSize = config.defaults.gridSize
+	gridScale = config.defaults.gridScale
 
 	vectorCacheFileName = os.path.join(args.folder,'vectorField' + '_' + str(gridSize[0]) + '_' + str(gridSize[1]) + '_' + str(gridSize[2]))
 	errorCacheFileName = os.path.join(args.folder,'error' + '_' + str(gridSize[0]) + '_' + str(gridSize[1]) + '_' + str(gridSize[2]))
@@ -49,8 +56,7 @@ if __name__ == '__main__':
 			if fileName.endswith('.obj'):
 				if args.verbose:
 					print 'Loading ' + fileName[0:-4]
-				nominalRadius = 80.06505
-				spheres.append(Sphere(os.path.join(args.folder, fileName), nominalRadius, loadvtk=True))
+				spheres.append(Sphere(os.path.join(args.folder, fileName), args.nominalRadius, loadvtk=True))
 
 		if len(spheres) == 0:
 			raise RuntimeError('No scans were found')

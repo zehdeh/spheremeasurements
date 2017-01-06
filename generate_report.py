@@ -8,6 +8,8 @@ import opendr
 import numpy as np
 import argparse
 import os
+
+import config.defaults
 from src.reporting import writeReport
 from src.measure import Measure, getMeasures
 from src.shapes import Sphere
@@ -20,7 +22,7 @@ def checkDir(directory):
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser(description='Generates a spreadsheet')
 	parser.add_argument("folder", help="The folder with the OBJ files", type=checkDir)
-	parser.add_argument("radius", help="The nominal radius to be used", type=float)
+	parser.add_argument("--radius", help="The nominal radius to be used", type=float)
 	parser.add_argument("--fit-radius", help="Fit the radius instead of using the nominal value", action='store_true', default=False)
 	parser.add_argument("-o", "--output", help="The name of the file that is to be written", type=str, default='report')
 	parser.add_argument("--csv", help="Generate a raw CSV file instead of an excel sheet", action='store_true', default=False)
@@ -30,6 +32,12 @@ if __name__ == '__main__':
 	parser.add_argument("--verbose", help="Show debug information", action='store_true')
 
 	args = parser.parse_args()
+
+	if args.radius is None:
+		args.radius = config.defaults.nominalRadius
+	
+	if args.verbose:
+		print 'Using radius ' + str(args.radius)
 	
 	spheres = []
 	for fileName in os.listdir(args.folder):
