@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 from src.utils import Arrow3D
 from src.fitting import fitPlane
 from scipy.spatial import distance
-from src.utils import checkOBJFile
+from src.utils import checkFile
 from src.reporting import writeCSV
 
 def MTF(x):
@@ -143,7 +143,7 @@ def plotProjection(v, vProjected, n1, n2, plane1, plane2, c1, c2, centerPoint, c
 
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser(description='Generates a spreadsheet')
-	parser.add_argument("filepath", help="The folder with the OBJ files", type=checkOBJFile)
+	parser.add_argument("filepath", help="The folder with the OBJ files", type=lambda x: checkFile(x,'.obj'))
 	parser.add_argument("--verbose", help="Show debug information", action='store_true')
 	parser.add_argument("--csv", help="Instead of plots, write csv file", action='store_true')
 	args = parser.parse_args()

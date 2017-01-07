@@ -1,22 +1,19 @@
-from math import sin,cos,sqrt,acos,fabs
-from matplotlib.patches import FancyArrowPatch
-from mpl_toolkits.mplot3d import proj3d
-from src.fitting import distance
 import numpy as np
 import scipy
 import os
+import argparse
+from math import sin,cos,sqrt,acos,fabs
+from matplotlib.patches import FancyArrowPatch
+from mpl_toolkits.mplot3d import proj3d
 
-def checkOBJFile(filePath):
+from src.fitting import distance
+
+def checkFile(filePath, fileType):
 	if not os.path.isfile(filePath):
-		raise argparse.ArgumentTypeError("{0} is not a valid path".format(directory))
-	if not filePath.endswith('.obj'):
-		raise argparse.ArgumentTypeError("{0} is not an OBJ file".format(directory))
+		raise argparse.ArgumentTypeError("{0} is not a valid path".format(filePath))
+	if not filePath.endswith(fileType):
+		raise argparse.ArgumentTypeError("{0} is not a {1} file".format(filePath, fileType))
 	return filePath
-
-def checkFile(directory):
-	if not os.path.isfile(directory):
-		raise argparse.ArgumentTypeError("{0} is not a valid file".format(directory))
-	return directory
 
 def checkDir(directory):
 	if not os.path.isdir(directory):
