@@ -4,6 +4,19 @@ from mpl_toolkits.mplot3d import proj3d
 from src.fitting import distance
 import numpy as np
 import scipy
+import os
+
+def checkOBJFile(filePath):
+	if not os.path.isfile(filePath):
+		raise argparse.ArgumentTypeError("{0} is not a valid path".format(directory))
+	if not filePath.endswith('.obj'):
+		raise argparse.ArgumentTypeError("{0} is not an OBJ file".format(directory))
+	return filePath
+
+def checkDir(directory):
+	if not os.path.isdir(directory):
+		raise argparse.ArgumentTypeError("{0} is not a valid path".format(directory))
+	return directory
 
 def rodrigues(src):
 	dst = np.zeros(3)

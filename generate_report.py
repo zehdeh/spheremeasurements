@@ -13,11 +13,7 @@ import config.defaults
 from src.reporting import writeReport
 from src.measure import Measure, getMeasures
 from src.shapes import Sphere
-
-def checkDir(directory):
-	if not os.path.isdir(directory):
-		raise argparse.ArgumentTypeError("readable_dir:{0} is not a valid path".format(directory))
-	return directory
+from src.utils import checkDir
 
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser(description='Generates a spreadsheet')

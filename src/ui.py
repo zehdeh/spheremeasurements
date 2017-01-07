@@ -95,7 +95,7 @@ class MainWindow(QtWidgets.QMainWindow):
 		self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, self.viewDock)
 
 		axes = vtk.vtkAxesActor()
-		axes.SetTotalLength(1000,1000,1000)
+		axes.SetTotalLength(500,500,500)
 
 		axes.GetXAxisCaptionActor2D().GetCaptionTextProperty().SetFontSize(20)
 		axes.GetXAxisCaptionActor2D().GetTextActor().SetTextScaleModeToNone()
@@ -224,12 +224,13 @@ class MainWindow(QtWidgets.QMainWindow):
 
 		self.errorGridViewer.GetRenderWindow().Render()
 	def generateVolumePlot(self, convolutionPasses = 0, growConvolution = True):
-		colorValues = self._errorMatrix if self._viewMode == VIEWMODE.error else self._curvatureMatrix
+		dataMatrix = self._errorMatrix if self._viewMode == VIEWMODE.error else self._curvatureMatrix
 		alphaValues = self._confidenceMatrix
 
 		growConvolution = self._convolutionGrowButton.checkState() == QtCore.Qt.Checked
 		convolutionPasses = self._convolutionPassesSpinner.value()
 
+		colorValues = dataMatrix
 		for i in range(convolutionPasses):
 			sizeX = 3+i if growConvolution else 3
 			boxFilter = np.zeros((sizeX,sizeX,sizeX))
@@ -238,7 +239,7 @@ class MainWindow(QtWidgets.QMainWindow):
 			colorValues = convolve(colorValues, boxFilter)
 			alphaValues = convolve(alphaValues, boxFilter)
 
-			colorValues[np.nonzero(self._errorMatrix)] = self._errorMatrix[np.nonzero(self._errorMatrix)]
+			colorValues[np.nonzero(dataMatrix)] = dataMatrix[np.nonzero(dataMatrix)]
 
 		alphaImporter = vtkImageImportFromArray()
 		alphaImporter.SetArray(alphaValues)
