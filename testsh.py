@@ -41,6 +41,11 @@ def processSphere(filePath, nominalRadius, Lmax, verbose):
 			print 'Finished calculating areas'
 
 		finalYs, coefficients = sh.simple_transform(sphericalCoordinates, Lmax, vertexAreas)
+		if verbose:
+			print 'Coefficients:'
+			for l in range(Lmax):
+				print l
+				print coefficients[l**2:(l**2 + 2*l + 1)]
 		np.save(cacheFileName, finalYs)
 
 	return finalYs

@@ -69,6 +69,8 @@ def plotProjection(v, vProjected, n1, n2, plane1, plane2, c1, c2, centerPoint, c
 	[p0[1],p0[1]+n1[1]*50],\
 	[p0[2],p0[2]+n1[2]*50],\
 	mutation_scale=20,\
+	color='black',\
+	linewidth=2,\
 	arrowstyle="-|>")
 	ax.add_artist(arrow)
 
@@ -81,15 +83,19 @@ def plotProjection(v, vProjected, n1, n2, plane1, plane2, c1, c2, centerPoint, c
 	[p0[1],p0[1]+n2[1]*50],\
 	[p0[2],p0[2]+n2[2]*50],\
 	mutation_scale=20,\
+	color='black',\
+	linewidth=2,\
 	arrowstyle="-|>")
 	ax.add_artist(arrow)
 
 	p0 = ip
 	arrow = Arrow3D(\
-	[p0[0],p0[0]+crossProduct[0]*50],\
-	[p0[1],p0[1]+crossProduct[1]*50],\
-	[p0[2],p0[2]+crossProduct[2]*50],\
-	mutation_scale=20,\
+	[p0[0],p0[0]+crossProduct[0]*100],\
+	[p0[1],p0[1]+crossProduct[1]*100],\
+	[p0[2],p0[2]+crossProduct[2]*100],\
+	color='black',\
+	linewidth=2,\
+	mutation_scale=30,\
 	arrowstyle="-|>")
 	ax.add_artist(arrow)
 
@@ -99,7 +105,7 @@ def plotProjection(v, vProjected, n1, n2, plane1, plane2, c1, c2, centerPoint, c
 	[p0[2],p0[2]+upVector[2]*50],\
 	mutation_scale=20,\
 	arrowstyle="-|>")
-	ax.add_artist(arrow)
+	#ax.add_artist(arrow)
 
 	arrow = Arrow3D(\
 	[p0[0],p0[0]+xVector[0]*50],\
@@ -107,7 +113,7 @@ def plotProjection(v, vProjected, n1, n2, plane1, plane2, c1, c2, centerPoint, c
 	[p0[2],p0[2]+xVector[2]*50],\
 	mutation_scale=20,\
 	arrowstyle="-|>")
-	ax.add_artist(arrow)
+	#ax.add_artist(arrow)
 
 	arrow = Arrow3D(\
 	[p0[0],p0[0]+perp1[0]*50],\
@@ -116,7 +122,7 @@ def plotProjection(v, vProjected, n1, n2, plane1, plane2, c1, c2, centerPoint, c
 	color='r',\
 	mutation_scale=20,\
 	arrowstyle="-|>")
-	ax.add_artist(arrow)
+	#ax.add_artist(arrow)
 
 	arrow = Arrow3D(\
 	[p0[0],p0[0]+perp2[0]*50],\
@@ -125,11 +131,11 @@ def plotProjection(v, vProjected, n1, n2, plane1, plane2, c1, c2, centerPoint, c
 	color='r',\
 	mutation_scale=20,\
 	arrowstyle="-|>")
-	ax.add_artist(arrow)
+	#ax.add_artist(arrow)
 
-	ax.scatter(v.T[0],v.T[1],v.T[2], color='b', marker='.')
+	ax.scatter(v.T[0],v.T[1],v.T[2], s=30,color='b', marker='.')
 	#ax.scatter(vProjected.T[0],vProjected.T[1],vProjected.T[2], color='yellow', marker='o')
-	ax.scatter(ip[0],ip[1],ip[2], color='black', marker='o')
+	ax.scatter(ip[0],ip[1],ip[2],color='black', marker='o')
 	plt.xlabel('x')
 	plt.ylabel('y')
 	
@@ -242,7 +248,7 @@ if __name__ == '__main__':
 	for i in range(0, noBins/2):
 		xMinLeft = xTruePeak - (i+1)*binSize
 		xMaxLeft = xTruePeak - i*binSize
-		plt.plot([xMinLeft, xMinLeft], [yCoordinates.min(),intersectionPoint[1]], color='lightgray')
+		plt.plot([xMinLeft, xMinLeft], [yCoordinates.min(),intersectionPoint[1]], color='gray')
 		yInBinLeft = yCoordinates[np.all([xMinLeft < xCoordinates,xCoordinates < xMaxLeft], axis=0)]
 		if len(yInBinLeft) > 0:
 			binsMeasuredProfile[noBins/2 - i - 1] = yInBinLeft.mean()
