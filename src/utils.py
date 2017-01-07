@@ -13,6 +13,11 @@ def checkOBJFile(filePath):
 		raise argparse.ArgumentTypeError("{0} is not an OBJ file".format(directory))
 	return filePath
 
+def checkFile(directory):
+	if not os.path.isfile(directory):
+		raise argparse.ArgumentTypeError("{0} is not a valid file".format(directory))
+	return directory
+
 def checkDir(directory):
 	if not os.path.isdir(directory):
 		raise argparse.ArgumentTypeError("{0} is not a valid path".format(directory))
