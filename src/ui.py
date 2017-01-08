@@ -33,6 +33,7 @@ class MainWindow(QtWidgets.QMainWindow):
 		self._verbose = verbose
 
 		self._mainVTKRenderer = vtk.vtkRenderer()
+		#self._mainVTKRenderer.SetBackground(0.5,0.5,0.5)
 		self._wireframeGridActor = None
 
 		self.cameraActors = []
@@ -404,7 +405,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
 			actor = vtk.vtkActor()
 			actor.SetMapper(mapper)
-			actor.GetProperty().SetColor(0.4,0.4,0.4)
+			actor.GetProperty().SetColor(1.0,1.0,1.0)
 			actor.GetProperty().SetOpacity(0.5)
 			outOfBounds = -3000 > np.min(actor.GetBounds()) or 3000 < np.max(actor.GetBounds())
 

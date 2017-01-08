@@ -19,7 +19,7 @@ if __name__ == '__main__':
 	dataMatrix = np.load(args.file)
 	twoDimMatrix = np.sum(dataMatrix,axis=args.axis).astype(np.float)
 	twoDimMatrix /= twoDimMatrix.max()
-	
+
 	fig = plt.figure(facecolor='white')
 	if args.axis == 0:
 		temp = twoDimMatrix[::-1,:]
@@ -36,5 +36,6 @@ if __name__ == '__main__':
 		plt.xlabel('x')
 		plt.ylabel('y')
 	plt.imshow(twoDimMatrix, interpolation='none')
+	plt.colorbar()
 	plt.show()
 

@@ -97,10 +97,11 @@ if __name__ == '__main__':
 	nModel = yModelCurv.shape[0]
 
 	if args.show_plots:
-		fig = plt.figure(1)
+		fig = plt.figure(facecolor='white')
 		plt.plot(xModel, yModelCurv)
 		plt.plot([xModel[x0Model], xModel[x0Model]],[0,np.max(yModelCurv)], linestyle='dashed')
 		plt.show()
+		plt.xlabel('x')
 		plt.title('Model')
 
 	cameraFolderName = 'res/final/onecam_fullvolume/cleanedup'
@@ -111,6 +112,7 @@ if __name__ == '__main__':
 	gridSize = config.defaults.gridSize
 	gridScale = config.defaults.gridScale
 	totalCameraFocusModel = np.zeros((gridSize[0], gridSize[1], gridSize[2]), dtype=np.float)
+	totalVisibilityMatrix = np.zeros((gridSize[0], gridSize[1], gridSize[2]), dtype=np.int)
 
 	for cameraNo in stereoCameras:
 		stereoCamera = stereoCameras[cameraNo]
@@ -129,8 +131,9 @@ if __name__ == '__main__':
 		fittingErrors = []
 		yMeasuredCurv = []
 		xMeasured = []
+		files = os.listdir(cameraFolderName)
 
-		for fileName in os.listdir(cameraFolderName):
+		for fileName in files:
 			if fileName.endswith('.obj'):
 				filePath = os.path.join(cameraFolderName, fileName)
 				sphere = Sphere(filePath, args.radius, False, loadvtk=True)
@@ -146,6 +149,12 @@ if __name__ == '__main__':
 		yMeasuredCurv = np.array(yMeasuredCurv)[sortedIndices]
 		nMeasured = yMeasuredCurv.shape[0]
 
+		if args.verbose:
+			iExtremeCurvatures = np.argsort(yMeasuredCurv)[-11:-1]
+			print 'Models with extreme values:'
+			for i in iExtremeCurvatures:
+				print files[i] + ' ' + str(yMeasuredCurv[i])
+
 		N = 10
 		yMeasuredCurv = np.convolve(yMeasuredCurv, np.ones(N)/N, mode='same')
 		if args.verbose:
@@ -157,14 +166,16 @@ if __name__ == '__main__':
 		indices = np.linspace(0, (nModel-1)*xStepSize, nModel).astype(int) + xPos
 		xModelAbsolute = xMeasured[indices]
 
-		fig = plt.figure()
-
 		if args.show_plots:
-			plt.plot(np.arange(nMeasured), yMeasuredCurv)
-			plt.scatter(indices, yMeasuredCurv[indices], s=15,marker='o', facecolors='none', edgecolors='b')
-			plt.plot(indices, yModelAdapted)
-			plt.plot([indices[x0Model], indices[x0Model]], [0,np.max(yMeasuredCurv)], linestyle='dashed')
+			fig = plt.figure(facecolor='white')
+			plt.plot(xMeasured, yMeasuredCurv)
+			plt.scatter(xModelAbsolute, yMeasuredCurv[indices], s=20,marker='o', facecolors='none', edgecolors='b')
+			plt.plot(xModelAbsolute, yModelAdapted, linewidth='2')
+			plt.plot([xModelAbsolute[x0Model], xModelAbsolute[x0Model]], [0,np.max(yMeasuredCurv)], linestyle='dashed')
 			plt.title('Camera ' + str(cameraNo))
+			plt.xlabel('x')
+			plt.ylabel('std. of curvature')
+			plt.ylim(0, 0.1)
 			plt.show()
 
 		visibilityMatrixFileName = os.path.join(cameraFocusCalibrationPath,\
@@ -176,6 +187,7 @@ if __name__ == '__main__':
 				print 'Generating visibility matrix..'
 			stereoCamera.generateVisibilityMatrix(gridSize, gridScale)
 			np.save(visibilityMatrixFileName, stereoCamera.visibilityMatrix)
+		totalVisibilityMatrix += stereoCamera.visibilityMatrix
 
 		if args.verbose:
 			print 'Generating model matrix..'
@@ -194,3 +206,11 @@ if __name__ == '__main__':
 
 						cameraFocusModel[i,j,k] = (yModelAdapted[lowerBound]+yModelAdapted[upperBound])/2
 		totalCameraFocusModel += cameraFocusModel
+	np.save(os.path.join(cameraFocusCalibrationPath,'total_visibility'), totalVisibilityMatrix)
+
+	totalCameraFocusModel[np.nonzero(totalVisibilityMatrix)] /= totalVisibilityMatrix[np.nonzero(totalVisibilityMatrix)]
+
+	totalVisibilityMatrix = totalVisibilityMatrix.astype(np.float)/totalVisibilityMatrix.max()
+	totalCameraFocusModel *= totalVisibilityMatrix
+
+	np.save(os.path.join(cameraFocusCalibrationPath,'focusmodel'),totalCameraFocusModel)
