@@ -17,6 +17,9 @@ if __name__ == '__main__':
 		raise argparse.ArgumentTypeError("Invalid axis: {0}".format(args.axis))
 
 	dataMatrix = np.load(args.file)
+	print np.unravel_index(np.argmax(dataMatrix),[50,50,50])
+	print np.max(dataMatrix)
+	print np.mean(dataMatrix)
 	twoDimMatrix = np.sum(dataMatrix,axis=args.axis).astype(np.float)
 	twoDimMatrix /= twoDimMatrix.max()
 

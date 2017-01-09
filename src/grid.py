@@ -40,6 +40,9 @@ def generateGrid(gridSize, gridScale, spheres, evaluationFunction, verbose=False
 		for vertex,error in zip(sphere.vertices, errors):
 			i,j,k = getGridIndices(gridSize, gridScale, vertex)
 
+			if i == 36 and j == 26 and k == 5:
+				print sphere.fileName
+
 			if error > maxError:
 				maxError = error
 				sphereWithMaxError = sphere.fileName
