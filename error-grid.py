@@ -12,8 +12,6 @@ from src.calibration import getStereoCamerasFromCalibration, StereoCamera
 from scipy.ndimage.filters import convolve
 from src.shapes import Sphere
 from src.grid import generateCurvatureGrid, generateVectorField, generateErrorGrid
-import matplotlib.pyplot as plt
-
 
 def checkDir(directory):
 	if not os.path.isdir(directory):
@@ -85,16 +83,17 @@ if __name__ == '__main__':
 
 	errorMatrix[np.nonzero(nMatrix)] = errorMatrix[np.nonzero(nMatrix)] / errorMatrix.max()
 	vectorField *= 10
-	fig = plt.figure()
 
 	if args.verbose:
 		print 'Maximum cell:' + str(np.unravel_index(np.argmax(errorMatrix),gridSize))
 		xa = np.arange(0.0, 0.1,0.001)
-		plt.hist(errorMatrix.ravel(), bins=xa)
-		plt.show()
 
 	calibrationFolderPath = sys.argv[2]
 	stereoCameras = getStereoCamerasFromCalibration(calibrationFolderPath)
+	for i,stereoCamera in stereoCameras.iteritems():
+		stereoCamera.visibilityMatrix = np.load(os.path.join(calibrationFolderPath,'visibility_' +  str(stereoCamera.name).zfill(2) + '.npy'))
+
+	focusModel = np.load(os.path.join(calibrationFolderPath,'focusmodel.npy'))
 	
-	window = MainWindow(stereoCameras, gridSize, gridScale, errorMatrix, curvatureMatrix, vectorField, confidenceMatrix, args.verbose)
+	window = MainWindow(stereoCameras, gridSize, gridScale, errorMatrix, curvatureMatrix, vectorField, confidenceMatrix, focusModel, args.verbose)
 	sys.exit(app.exec_())

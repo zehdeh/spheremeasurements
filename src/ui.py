@@ -17,9 +17,10 @@ class QVTKRenderWindowInteractorWheelfix(QVTKRenderWindowInteractor):
 		else:
 			self._Iren.MouseWheelBackwardEvent()
 
-VIEWMODE = type('enum', (), dict(error=0,curvature=1))
+VIEWMODE = type('enum', (), dict(error=0,curvature=1,visibility=2,model=3))
 class MainWindow(QtWidgets.QMainWindow):
-	def __init__(self, stereoCameras, gridSize, gridScale, errorMatrix, curvatureMatrix, vectorField, confidenceMatrix, verbose=False):
+	def __init__(self, stereoCameras, gridSize, gridScale, errorMatrix,\
+	curvatureMatrix, vectorField, confidenceMatrix, focusModel, verbose=False):
 		QtWidgets.QMainWindow.__init__(self,parent=None)
 
 		self._gridSize = gridSize
@@ -29,6 +30,7 @@ class MainWindow(QtWidgets.QMainWindow):
 		self._curvatureMatrix = curvatureMatrix
 		self._vectorField = vectorField
 		self._confidenceMatrix = confidenceMatrix
+		self.focusModel = focusModel
 
 		self._verbose = verbose
 
@@ -88,7 +90,19 @@ class MainWindow(QtWidgets.QMainWindow):
 		self.viewChooserToolBox.addItem(self.analysisListWidget, 'Analysis')
 		self.viewChooserToolBox.addItem(self.cameraListWidget, 'Camera Coverage')
 		self.viewChooserToolBox.addItem(self.modelListWidget, 'Model')
-
+		
+		def switchMode(e):
+			if e == 0:
+				if self.analysisListWidget.selectedItems()[0] == errorViewButton:
+					self._viewMode = VIEWMODE.error
+				else:
+					self._viewMode = VIEWMODE.curvature
+			elif e == 1:
+				self._viewMode = VIEWMODE.visibility
+			else:
+				self._viewMode = VIEWMODE.model
+			self.repaintVolume()
+		self.viewChooserToolBox.currentChanged.connect(lambda e: switchMode(e))
 
 		self.viewDock.setWidget(self.viewChooserToolBox)
 		self.viewDock.setFeatures(QtWidgets.QDockWidget.NoDockWidgetFeatures)
@@ -120,21 +134,40 @@ class MainWindow(QtWidgets.QMainWindow):
 		self.setupCameras()
 
 	def setupColorFunction(self):
-		plottedMatrix = self._errorMatrix if self._viewMode == VIEWMODE.error else self._curvatureMatrix
-
-		mean = self._errorMatrix[np.nonzero(plottedMatrix)].mean()
-		std = self._errorMatrix[np.nonzero(plottedMatrix)].std()/2.5
-		upperBound = mean + std
-		lowerBound = 0
-		if self._verbose:
-			print 'Color range (' + str(lowerBound) +',' + str(upperBound) + ')'
-
+		self.alphaChannelFunc = vtk.vtkPiecewiseFunction()
+		self.alphaChannelFunc.AddPoint(0.0, 0.0)
 		self._colorFunc = vtk.vtkColorTransferFunction()
-		self._colorFunc.AddRGBPoint(lowerBound, 0.0, 0.0, 1.0)
-		self._colorFunc.AddRGBPoint((upperBound - lowerBound)/2, 1.0, 1.0, 1.0)
-		self._colorFunc.AddRGBPoint(upperBound, 1.0, 0.0, 0.0)
+
+		if self._viewMode == VIEWMODE.visibility:
+			self._colorFunc.AddRGBPoint(0.0, 0.0, 0.0, 1.0)
+			self._colorFunc.AddRGBPoint(1.0, 1.0, 1.0, 1.0)
+
+			self.alphaChannelFunc.AddPoint(1.0, 0.4)
+		elif self._viewMode == VIEWMODE.model:
+			self._colorFunc.AddRGBPoint(0, 0.0, 0.0, 1.0)
+			self._colorFunc.AddRGBPoint(0.5, 1.0, 1.0, 1.0)
+			self._colorFunc.AddRGBPoint(1.0, 1.0, 0.0, 0.0)
+
+			self.alphaChannelFunc.AddPoint(1.0, 0.3)
+		else:
+			plottedMatrix = self._errorMatrix if self._viewMode == VIEWMODE.error else self._curvatureMatrix
+
+			mean = self._errorMatrix[np.nonzero(plottedMatrix)].mean()
+			std = self._errorMatrix[np.nonzero(plottedMatrix)].std()/2.5
+			upperBound = mean + std + 0.01
+			lowerBound = 0
+			if self._verbose:
+				print 'Color range (' + str(lowerBound) +',' + str(upperBound) + ')'
+
+			self._colorFunc.AddRGBPoint(lowerBound, 0.0, 0.0, 1.0)
+			self._colorFunc.AddRGBPoint(upperBound* 0.5, 1.0, 1.0, 1.0)
+			self._colorFunc.AddRGBPoint(upperBound, 1.0, 0.0, 0.0)
+
+			self.alphaChannelFunc.AddPoint(1.0, 0.7)
 
 		self._scalarBar.SetLookupTable(self._colorFunc)
+		self.volumeProperty.SetColor(self._colorFunc)
+		self.volumeProperty.SetScalarOpacity(self.alphaChannelFunc)
 
 	def setupCameras(self):
 		labels = vtk.vtkStringArray()
@@ -154,7 +187,10 @@ class MainWindow(QtWidgets.QMainWindow):
 			camListItem.setFlags(camListItem.flags() | QtCore.Qt.ItemIsUserCheckable);
 			camListItem.setCheckState(QtCore.Qt.Checked)
 
+
 			self.cameraListWidget.addItem(camListItem)
+		
+		self.cameraListWidget.itemChanged.connect(lambda: self.repaintVolume())
 
 		labelPolyData = vtk.vtkPolyData()
 		labelPolyData.SetPoints(camPositions)
@@ -173,9 +209,6 @@ class MainWindow(QtWidgets.QMainWindow):
 		self._mainVTKRenderer.AddActor(labelActor)
 	def setupVolume(self):
 
-		alphaChannelFunc = vtk.vtkPiecewiseFunction()
-		alphaChannelFunc.AddPoint(0.0, 0.0)
-		alphaChannelFunc.AddPoint(1.0, 0.7)
 
 		self._scalarBar = vtk.vtkScalarBarActor()
 		self._scalarBar.GetLabelTextProperty().ItalicOff()
@@ -186,13 +219,10 @@ class MainWindow(QtWidgets.QMainWindow):
 		self._scalarBar.SetPosition(0.9, 0.15)
 		self._mainVTKRenderer.AddActor(self._scalarBar)
 
+		self.volumeProperty = vtk.vtkVolumeProperty()
+		self.volumeProperty.IndependentComponentsOff()
+		self.volumeProperty.ShadeOff()
 		self.setupColorFunction()
-
-		volumeProperty = vtk.vtkVolumeProperty()
-		volumeProperty.IndependentComponentsOff()
-		volumeProperty.SetColor(self._colorFunc)
-		volumeProperty.SetScalarOpacity(alphaChannelFunc)
-		volumeProperty.ShadeOff()
 
 		self.volumeMapper = vtk.vtkSmartVolumeMapper()
 
@@ -202,7 +232,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
 		self.volume.SetPosition(0,0,0)
 		self.volume.SetMapper(self.volumeMapper)
-		self.volume.SetProperty(volumeProperty)
+		self.volume.SetProperty(self.volumeProperty)
 
 		self._mainVTKRenderer.AddVolume(self.volume)
 
@@ -225,22 +255,42 @@ class MainWindow(QtWidgets.QMainWindow):
 
 		self.errorGridViewer.GetRenderWindow().Render()
 	def generateVolumePlot(self, convolutionPasses = 0, growConvolution = True):
-		dataMatrix = self._errorMatrix if self._viewMode == VIEWMODE.error else self._curvatureMatrix
-		alphaValues = self._confidenceMatrix
+		if self._viewMode == VIEWMODE.visibility:
+			totalVisibility = np.zeros((self._gridSize[0], self._gridSize[1], self._gridSize[2]))
 
-		growConvolution = self._convolutionGrowButton.checkState() == QtCore.Qt.Checked
-		convolutionPasses = self._convolutionPassesSpinner.value()
+			for i in range(self.cameraListWidget.count()):
+				if self.cameraListWidget.item(i).checkState() == 2:
+					totalVisibility += self._stereoCameras[i+1].visibilityMatrix
 
-		colorValues = dataMatrix
-		for i in range(convolutionPasses):
-			sizeX = 3+i if growConvolution else 3
-			boxFilter = np.zeros((sizeX,sizeX,sizeX))
-			boxFilter[:,:,:] = (1./float(sizeX**3))
+			totalVisibility /= totalVisibility.max()
+			colorValues = totalVisibility
+			alphaValues = totalVisibility
+		elif self._viewMode == VIEWMODE.model:
+			totalVisibility = np.zeros((self._gridSize[0], self._gridSize[1], self._gridSize[2]))
 
-			colorValues = convolve(colorValues, boxFilter)
-			alphaValues = convolve(alphaValues, boxFilter)
+			for i,stereoCamera in self._stereoCameras.iteritems():
+				totalVisibility += stereoCamera.visibilityMatrix
+			totalVisibility /= totalVisibility.max()
 
-			colorValues[np.nonzero(dataMatrix)] = dataMatrix[np.nonzero(dataMatrix)]
+			colorValues = self.focusModel / self.focusModel.max()
+			alphaValues = totalVisibility
+		else:
+			dataMatrix = self._errorMatrix if self._viewMode == VIEWMODE.error else self._curvatureMatrix
+			alphaValues = self._confidenceMatrix
+
+			growConvolution = self._convolutionGrowButton.checkState() == QtCore.Qt.Checked
+			convolutionPasses = self._convolutionPassesSpinner.value()
+
+			colorValues = dataMatrix
+			for i in range(convolutionPasses):
+				sizeX = 3+i if growConvolution else 3
+				boxFilter = np.zeros((sizeX,sizeX,sizeX))
+				boxFilter[:,:,:] = (1./float(sizeX**3))
+
+				colorValues = convolve(colorValues, boxFilter)
+				alphaValues = convolve(alphaValues, boxFilter)
+
+				colorValues[np.nonzero(dataMatrix)] = dataMatrix[np.nonzero(dataMatrix)]
 
 		alphaImporter = vtkImageImportFromArray()
 		alphaImporter.SetArray(alphaValues)
