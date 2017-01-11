@@ -4,6 +4,7 @@ import sys
 import os
 import argparse
 import numpy as np
+from matplotlib import pyplot as plt
 from math import floor,ceil
 
 import config.defaults
@@ -11,7 +12,7 @@ from src.OBJIO import loadOBJ, writeOBJ, getVTKMesh
 from src.utils import checkFile
 
 def houghTransformation(vertices, faces, normals, radius):
-	winners = np.zeros((2,3))
+	winners = np.zeros((4,3))
 	for i,dim in enumerate([1,2]):
 		otherDims = [0,1,2]
 		otherDims.remove(dim)
@@ -44,14 +45,23 @@ def houghTransformation(vertices, faces, normals, radius):
 			k = int(floor(b))
 			grid[j,k] += 1
 		
-		winnerIndex = np.unravel_index(np.argmax(grid), grid.shape)
-		winners[i,otherDims[0]] = lowerBounds[0] + winnerIndex[0]
-		winners[i,otherDims[1]] = lowerBounds[1] + winnerIndex[1]
+		sortedIndices = np.argsort(grid.ravel())
+		unraveledSortedIndices = np.unravel_index(sortedIndices[-2:], grid.shape)
+		print unraveledSortedIndices
+		winners[i,otherDims[0]] = lowerBounds[0] + unraveledSortedIndices[0][0]
+		winners[i,otherDims[1]] = lowerBounds[1] + unraveledSortedIndices[0][1]
 
-		#plt.scatter(vertices.T[otherDims[0]], vertices.T[otherDims[1]])
-		#plt.scatter(centers.T[0], centers.T[1], color='r')
+		winners[i+2,otherDims[0]] = lowerBounds[0] + unraveledSortedIndices[1][0]
+		winners[i+2,otherDims[1]] = lowerBounds[1] + unraveledSortedIndices[1][1]
+
+		fig = plt.figure()
+		plt.axis('equal')
+		plt.scatter(vertices.T[otherDims[0]], vertices.T[otherDims[1]])
+		plt.scatter(centers.T[0], -centers.T[1], color='r')
 		#plt.scatter(winners[i,otherDims[0]], winners[i,otherDims[1]], color='r')
-		#plt.show()
+		#plt.scatter(winners[i+2,otherDims[0]], winners[i+2,otherDims[1]], color='r')
+		plt.show()
+	print winners
 	return np.array([np.mean(winners.T[0]), winners[1,1], winners[0,2]])
 
 if __name__ == '__main__':
