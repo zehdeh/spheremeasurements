@@ -17,3 +17,19 @@
 * res/ - contains all the meshes
 * src/ - commonly used code
 * testsh.sh - calculates the sh frequencies for a given sphere mesh
+
+Requirements:
+-------------
+Via apt-get:
+* python-numpy
+* python-scipy
+* python-pyqt5
+* python-matplotlib
+* python-pip
+
+Via pip:
+* setuptools==12.0.5
+* opendr
+
+custom built:
+* VTK7.1+
