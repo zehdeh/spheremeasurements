@@ -31,12 +31,56 @@ Via pip: (use > pip install setuptools==12.0.5)
 * setuptools==12.0.5
 * opendr
 
-Note: If you get "Failed building wheel for opendr" error during opendr install with 
+Note: If you get "Failed building wheel for opendr" error during opendr install with <code>
   error: contexts/ctx_mesa.c: No such file or directory
-  error: command 'x86_64-linux-gnu-gcc' failed with exit status 1
+  error: command 'x86_64-linux-gnu-gcc' failed with exit status 1</code>
 
-Try to update grafice card drivers, for exmaple use binary nVidia driveres.
-Using Additional Drivers -> Select  Using NVIDA binary drivers - version.... (proprietary, tested) 
+try to update the graphics card drivers, for example use the binary nVidia drivers (using Additional Drivers -> Select "Using NVIDA binary drivers - version.... (proprietary, tested)")
 
 custom built:
 * VTK7.1+
+
+VTK install instructions:
+-------------------------
+_Option 1)_
+* Install prebuilt package:
+<code>
+sudo dpkg --i vtk-7.deb
+</code>
+* Go down to common steps
+
+_Option 2)_
+* Build your own package:
+
+* Download [latest version of vtk](http://www.vtk.org/download/)
+<code>
+tar -xf VTKDOWNLOAD.tar.gz
+cd VTKDOWNLOAD
+mkdir build
+cd build
+cmake ..
+ccmake
+</code>
+* Switch VTK_WRAP_PYTHON to ON
+
+* Press [c] to configure
+
+* Press [q] to quit
+<code>
+sudo checkinstall --pkgname=vtk-7
+</code>
+* Follow instructions (Should I include files - No)
+* Continue with common steps
+
+**Common steps:**
+* Create file (sudo) /etc/ld.so.conf.d/vtk7.conf with content:<code>
+/usr/local/lib/
+</code>
+* <code>sudo ldconfig</code>
+* Edit file (sudo) /usr/lib/python2.7/sitecustomize.py
+* Add this at the bottom:
+<code>
+import sys
+sys.path.insert(0, '/opt/VTK-7.0.0/lib/python3.5/site-packages')
+</code>
+	
