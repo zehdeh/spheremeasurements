@@ -31,9 +31,9 @@ Via pip: (use > pip install setuptools==12.0.5)
 * setuptools==12.0.5
 * opendr
 
-Note: If you get "Failed building wheel for opendr" error during opendr install with <code>
+Note: If you get an "Failed building wheel for opendr" error during the opendr install with <pre><code>
   error: contexts/ctx_mesa.c: No such file or directory
-  error: command 'x86_64-linux-gnu-gcc' failed with exit status 1</code>
+  error: command 'x86_64-linux-gnu-gcc' failed with exit status 1</code></pre>
 
 try to update the graphics card drivers, for example use the binary nVidia drivers (using Additional Drivers -> Select "Using NVIDA binary drivers - version.... (proprietary, tested)")
 
@@ -79,8 +79,7 @@ sudo checkinstall --pkgname=vtk-7
 * <code>sudo ldconfig</code>
 * Edit file (sudo) /usr/lib/python2.7/sitecustomize.py
 * Add this at the bottom:
-<code>
-import sys
+<pre><code>import sys
 sys.path.insert(0, '/opt/VTK-7.0.0/lib/python3.5/site-packages')
-</code>
+</code></pre>
 	
