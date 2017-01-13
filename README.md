@@ -80,6 +80,6 @@ sudo checkinstall --pkgname=vtk-7
 * Edit file (sudo) /usr/lib/python2.7/sitecustomize.py
 * Add this at the bottom:
 <pre><code>import sys
-sys.path.insert(0, '/opt/VTK-7.0.0/lib/python3.5/site-packages')
+sys.path.insert(0, '/usr/local/lib/python2.7/site-packages')
 </code></pre>
 	
