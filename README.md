@@ -26,6 +26,9 @@ Via apt-get:
 * python-pyqt5
 * python-matplotlib
 * python-pip
+* cmake
+* ccmake
+* checkinstall
 
 Via pip:
 * setuptools==12.0.5
@@ -33,3 +36,23 @@ Via pip:
 
 custom built:
 * VTK7.1+
+
+VTK install instructions:
+-------------------------
+*Option 1)*
+Install prebuilt package:
+	sudo dpkg --i vtk-7.deb
+*Option 2)*
+Build your own package:
+	tar -xf VTKDOWNLOAD.tar.gz
+	cd VTKDOWNLOAD
+	mkdir build
+	cd build
+	cmake ..
+	ccmake
+Switch VTK_WRAP_PYTHON to ON
+Press [c] to configure
+Press [q] to quit
+	sudo checkinstall --pkgname=vtk-7
+Follow instructions (Should I include files - No)
+	
