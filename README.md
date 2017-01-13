@@ -20,39 +20,22 @@
 
 Requirements:
 -------------
-Via apt-get:
+Via apt-get: (use > sudo apt-get install python-numpy)
 * python-numpy
 * python-scipy
 * python-pyqt5
 * python-matplotlib
 * python-pip
-* cmake
-* ccmake
-* checkinstall
 
-Via pip:
+Via pip: (use > pip install setuptools==12.0.5)
 * setuptools==12.0.5
 * opendr
 
+Note: If you get "Failed building wheel for opendr" error during opendr install with 
+  error: contexts/ctx_mesa.c: No such file or directory
+  error: command 'x86_64-linux-gnu-gcc' failed with exit status 1
+
+Try to update grafice card drivers, for exmaple use binary nVidia driveres.
+
 custom built:
 * VTK7.1+
-
-VTK install instructions:
--------------------------
-*Option 1)*
-Install prebuilt package:
-	sudo dpkg --i vtk-7.deb
-*Option 2)*
-Build your own package:
-	tar -xf VTKDOWNLOAD.tar.gz
-	cd VTKDOWNLOAD
-	mkdir build
-	cd build
-	cmake ..
-	ccmake
-Switch VTK_WRAP_PYTHON to ON
-Press [c] to configure
-Press [q] to quit
-	sudo checkinstall --pkgname=vtk-7
-Follow instructions (Should I include files - No)
-	
