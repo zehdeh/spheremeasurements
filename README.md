@@ -36,6 +36,7 @@ Note: If you get "Failed building wheel for opendr" error during opendr install 
   error: command 'x86_64-linux-gnu-gcc' failed with exit status 1
 
 Try to update grafice card drivers, for exmaple use binary nVidia driveres.
+Using Additional Drivers -> Select  Using NVIDA binary drivers - version.... (proprietary, tested) 
 
 custom built:
 * VTK7.1+
