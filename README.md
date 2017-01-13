@@ -26,6 +26,7 @@ Via apt-get: (use > sudo apt-get install python-numpy)
 * python-pyqt5
 * python-matplotlib
 * python-pip
+* python-openpyxl
 
 Via pip: (use > pip install setuptools==12.0.5)
 * setuptools==12.0.5
