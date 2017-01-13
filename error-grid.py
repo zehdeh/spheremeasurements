@@ -91,7 +91,14 @@ if __name__ == '__main__':
 	calibrationFolderPath = sys.argv[2]
 	stereoCameras = getStereoCamerasFromCalibration(calibrationFolderPath)
 	for i,stereoCamera in stereoCameras.iteritems():
-		stereoCamera.visibilityMatrix = np.load(os.path.join(calibrationFolderPath,'visibility_' +  str(stereoCamera.name).zfill(2) + '.npy'))
+		visibilityFileName = os.path.join(calibrationFolderPath,'visibility_' +  str(stereoCamera.name).zfill(2) + '.npy')
+		if os.path.isfile(visibilityFileName):
+			stereoCamera.visibilityMatrix = np.load(os.path.join(visibilityFileName))
+		else:
+			if args.verbose:
+				print 'Warning: could not load visibility matrix! Did you run focusmodel?'
+			stereoCamera.visibilityMatrix = np.zeros((gridSize[0], gridSize[1], gridSize[2]), dtype=np.int)
+
 
 	focusModel = np.load(os.path.join(calibrationFolderPath,'focusmodel.npy'))
 	
